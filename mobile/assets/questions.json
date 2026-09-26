@@ -1,0 +1,803 @@
+{
+  "version": 1,
+  "name": "齿间演示题库",
+  "isDemo": true,
+  "questions": [
+    {
+      "id": "demo-001",
+      "subject": "口腔解剖生理学",
+      "chapter": "牙体解剖",
+      "type": "A1",
+      "stem": "正常恒牙列中，单个象限的前磨牙数通常为多少？",
+      "options": {
+        "A": "1 颗",
+        "B": "2 颗",
+        "C": "3 颗",
+        "D": "4 颗"
+      },
+      "answer": "B",
+      "explanation": "每个象限通常有两颗前磨牙，分别为第一、第二前磨牙。",
+      "warning": "勿将恒牙前磨牙与乳磨牙混淆。",
+      "topics": [
+        "牙位",
+        "恒牙列"
+      ],
+      "tags": [
+        "高频",
+        "助理医师"
+      ],
+      "modes": [
+        "考研",
+        "本科期末",
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "demo-foundation",
+      "paperName": "基础知识演示卷（非真题）",
+      "durationMinutes": 15,
+      "order": 1,
+      "points": 1,
+      "reference": "演示资料：教材书名、版次、章节与页码待专业人员核对。未作为正式题库发布。",
+      "citation": {
+        "publisher": "人民卫生出版社",
+        "title": "口腔解剖生理学",
+        "edition": null,
+        "chapter": "牙体解剖",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": true,
+      "sourceType": "original_demo",
+      "license": "项目演示内容，未经医学审核",
+      "rubric": null
+    },
+    {
+      "id": "demo-002",
+      "subject": "口腔组织病理学",
+      "chapter": "牙体组织",
+      "type": "A1",
+      "stem": "成熟釉质的主要特点是？",
+      "options": {
+        "A": "具有持续的细胞性再生能力",
+        "B": "高度矿化，成熟后不含细胞",
+        "C": "以胶原纤维为主",
+        "D": "含丰富血管"
+      },
+      "answer": "B",
+      "explanation": "成熟釉质是高度矿化的组织，不含细胞与血管。",
+      "warning": "再矿化不等于成釉细胞重新生成釉质。",
+      "topics": [
+        "釉质"
+      ],
+      "tags": [
+        "易混淆",
+        "助理医师"
+      ],
+      "modes": [
+        "考研",
+        "本科期末",
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "demo-foundation",
+      "paperName": "基础知识演示卷（非真题）",
+      "durationMinutes": 15,
+      "order": 2,
+      "points": 1,
+      "reference": "演示资料：教材书名、版次、章节与页码待专业人员核对。未作为正式题库发布。",
+      "citation": {
+        "publisher": "人民卫生出版社",
+        "title": "口腔组织病理学",
+        "edition": null,
+        "chapter": "牙体组织",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": true,
+      "sourceType": "original_demo",
+      "license": "项目演示内容，未经医学审核",
+      "rubric": null
+    },
+    {
+      "id": "demo-003",
+      "subject": "牙体牙髓病学",
+      "chapter": "牙髓病",
+      "type": "A2",
+      "stem": "演示病例：患者主诉自发性牙痛。为定位可疑患牙，以下哪项检查最有助于评价牙髓感觉反应？",
+      "options": {
+        "A": "牙髓温度测试",
+        "B": "仅询问职业",
+        "C": "仅测身高",
+        "D": "仅检查唾液颜色"
+      },
+      "answer": "A",
+      "explanation": "温度测试用于评估牙髓感觉反应，应结合病史、其他检查综合判断。",
+      "warning": "感觉测试不能单独证明牙髓血供状态，也不能独立确诊。",
+      "topics": [
+        "牙髓检查"
+      ],
+      "tags": [
+        "高频",
+        "案例题",
+        "助理医师"
+      ],
+      "modes": [
+        "考研",
+        "本科期末",
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "demo-foundation",
+      "paperName": "基础知识演示卷（非真题）",
+      "durationMinutes": 15,
+      "order": 3,
+      "points": 1,
+      "reference": "演示资料：教材书名、版次、章节与页码待专业人员核对。未作为正式题库发布。",
+      "citation": {
+        "publisher": "人民卫生出版社",
+        "title": "牙体牙髓病学",
+        "edition": null,
+        "chapter": "牙髓病",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": true,
+      "sourceType": "original_demo",
+      "license": "项目演示内容，未经医学审核",
+      "rubric": null
+    },
+    {
+      "id": "demo-004",
+      "subject": "牙周病学",
+      "chapter": "牙周检查",
+      "type": "A1",
+      "stem": "牙周探诊深度通常指哪两个位置之间的距离？",
+      "options": {
+        "A": "龈缘至袋底",
+        "B": "釉牙骨质界至根尖",
+        "C": "牙尖至根尖",
+        "D": "龈缘至牙尖"
+      },
+      "answer": "A",
+      "explanation": "探诊深度记录龈缘至龈沟或牙周袋底的距离。临床附着水平采用不同参照点。",
+      "warning": "不要把探诊深度与临床附着丧失等同。",
+      "topics": [
+        "牙周探诊",
+        "附着水平"
+      ],
+      "tags": [
+        "易混淆",
+        "助理医师"
+      ],
+      "modes": [
+        "考研",
+        "本科期末",
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "demo-foundation",
+      "paperName": "基础知识演示卷（非真题）",
+      "durationMinutes": 15,
+      "order": 4,
+      "points": 1,
+      "reference": "演示资料：教材书名、版次、章节与页码待专业人员核对。未作为正式题库发布。",
+      "citation": {
+        "publisher": "人民卫生出版社",
+        "title": "牙周病学",
+        "edition": null,
+        "chapter": "牙周检查",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": true,
+      "sourceType": "original_demo",
+      "license": "项目演示内容，未经医学审核",
+      "rubric": null
+    },
+    {
+      "id": "demo-005",
+      "subject": "口腔黏膜病学",
+      "chapter": "临床检查",
+      "type": "A1",
+      "stem": "记录口腔黏膜损害时，下列哪项属于基本形态描述？",
+      "options": {
+        "A": "部位、大小、颜色与表面特征",
+        "B": "只记录患者姓名",
+        "C": "只记录就诊时间",
+        "D": "只记录收费项目"
+      },
+      "answer": "A",
+      "explanation": "损害的部位、范围、颜色、形态及表面特征属于基础临床描述。",
+      "warning": "形态描述是诊断基础，不能替代病因判断。",
+      "topics": [
+        "黏膜检查"
+      ],
+      "tags": [
+        "高频",
+        "助理医师"
+      ],
+      "modes": [
+        "考研",
+        "本科期末",
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "demo-foundation",
+      "paperName": "基础知识演示卷（非真题）",
+      "durationMinutes": 15,
+      "order": 5,
+      "points": 1,
+      "reference": "演示资料：教材书名、版次、章节与页码待专业人员核对。未作为正式题库发布。",
+      "citation": {
+        "publisher": "人民卫生出版社",
+        "title": "口腔黏膜病学",
+        "edition": null,
+        "chapter": "临床检查",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": true,
+      "sourceType": "original_demo",
+      "license": "项目演示内容，未经医学审核",
+      "rubric": null
+    },
+    {
+      "id": "demo-006",
+      "subject": "口腔颌面外科学",
+      "chapter": "病史与检查",
+      "type": "A1",
+      "stem": "进行有创口腔操作前，病史采集中应关注哪项？",
+      "options": {
+        "A": "药物使用、过敏与系统疾病史",
+        "B": "只记录牙齿颜色",
+        "C": "只询问惯用手",
+        "D": "只观察发型"
+      },
+      "answer": "A",
+      "explanation": "系统疾病、用药和过敏史影响诊疗评估，应完整采集。",
+      "warning": "本题仅考查病史采集，不提供个体诊疗建议。",
+      "topics": [
+        "术前评估"
+      ],
+      "tags": [
+        "易混淆",
+        "助理医师"
+      ],
+      "modes": [
+        "考研",
+        "本科期末",
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "demo-foundation",
+      "paperName": "基础知识演示卷（非真题）",
+      "durationMinutes": 15,
+      "order": 6,
+      "points": 1,
+      "reference": "演示资料：教材书名、版次、章节与页码待专业人员核对。未作为正式题库发布。",
+      "citation": {
+        "publisher": "人民卫生出版社",
+        "title": "口腔颌面外科学",
+        "edition": null,
+        "chapter": "病史与检查",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": true,
+      "sourceType": "original_demo",
+      "license": "项目演示内容，未经医学审核",
+      "rubric": null
+    },
+    {
+      "id": "demo-007",
+      "subject": "口腔修复学",
+      "chapter": "可摘局部义齿",
+      "type": "A1",
+      "stem": "RPA 卡环组合中的 R 通常表示什么？",
+      "options": {
+        "A": "支托（Rest）",
+        "B": "树脂（Resin）",
+        "C": "牙根（Root）",
+        "D": "旋转（Rotation）"
+      },
+      "answer": "A",
+      "explanation": "RPA 由近中支托、邻面板和 Akers 卡环构成。",
+      "warning": "字母缩写指卡环组件，不是制作材料。",
+      "topics": [
+        "RPA",
+        "卡环"
+      ],
+      "tags": [
+        "高频",
+        "助理医师"
+      ],
+      "modes": [
+        "考研",
+        "本科期末",
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "demo-foundation",
+      "paperName": "基础知识演示卷（非真题）",
+      "durationMinutes": 15,
+      "order": 7,
+      "points": 1,
+      "reference": "演示资料：教材书名、版次、章节与页码待专业人员核对。未作为正式题库发布。",
+      "citation": {
+        "publisher": "人民卫生出版社",
+        "title": "口腔修复学",
+        "edition": null,
+        "chapter": "可摘局部义齿",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": true,
+      "sourceType": "original_demo",
+      "license": "项目演示内容，未经医学审核",
+      "rubric": null
+    },
+    {
+      "id": "demo-008",
+      "subject": "口腔正畸学",
+      "chapter": "错畸形检查",
+      "type": "A1",
+      "stem": "牙列拥挤通常与以下哪种关系有关？",
+      "options": {
+        "A": "牙量相对大于骨量所提供的排列空间",
+        "B": "牙量与骨量完全无关",
+        "C": "所有牙齿均缺失",
+        "D": "所有恒牙均未发育"
+      },
+      "answer": "A",
+      "explanation": "牙列拥挤常表现为牙齿排列所需空间与可用牙弓空间不协调。",
+      "warning": "拥挤的病因与诊断仍需结合完整资料。",
+      "topics": [
+        "牙列拥挤",
+        "间隙分析"
+      ],
+      "tags": [
+        "易混淆",
+        "助理医师"
+      ],
+      "modes": [
+        "考研",
+        "本科期末",
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "demo-foundation",
+      "paperName": "基础知识演示卷（非真题）",
+      "durationMinutes": 15,
+      "order": 8,
+      "points": 1,
+      "reference": "演示资料：教材书名、版次、章节与页码待专业人员核对。未作为正式题库发布。",
+      "citation": {
+        "publisher": "人民卫生出版社",
+        "title": "口腔正畸学",
+        "edition": null,
+        "chapter": "错畸形检查",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": true,
+      "sourceType": "original_demo",
+      "license": "项目演示内容，未经医学审核",
+      "rubric": null
+    },
+    {
+      "id": "demo-009",
+      "subject": "口腔修复学",
+      "chapter": "可摘局部义齿",
+      "type": "A3",
+      "stem": "RPA 的支托通常设置在哪一侧？",
+      "options": {
+        "A": "近中",
+        "B": "远中",
+        "C": "根尖",
+        "D": "游离端黏膜"
+      },
+      "answer": "A",
+      "explanation": "典型 RPA 采用近中支托，以适应游离端义齿的功能性转动。",
+      "warning": "不要与采用远中支托的设计混淆。",
+      "topics": [
+        "RPA",
+        "近中支托"
+      ],
+      "tags": [
+        "高频",
+        "案例题"
+      ],
+      "modes": [
+        "考研",
+        "本科期末",
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "demo-integrated",
+      "paperName": "综合题型演示卷（非真题）",
+      "durationMinutes": 15,
+      "order": 9,
+      "points": 1,
+      "reference": "演示资料：教材书名、版次、章节与页码待专业人员核对。未作为正式题库发布。",
+      "citation": {
+        "publisher": "人民卫生出版社",
+        "title": "口腔修复学",
+        "edition": null,
+        "chapter": "可摘局部义齿",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": true,
+      "sourceType": "original_demo",
+      "license": "项目演示内容，未经医学审核",
+      "rubric": null,
+      "groupId": "group-a3",
+      "sharedStem": "共同题干：后牙游离端缺失，拟采用 RPA 卡环设计。以下题目考查组件与基本固位关系。"
+    },
+    {
+      "id": "demo-010",
+      "subject": "口腔修复学",
+      "chapter": "可摘局部义齿",
+      "type": "A3",
+      "stem": "RPA 卡环中适合进入固位倒凹的部分是？",
+      "options": {
+        "A": "有弹性的卡环尖端",
+        "B": "全部粗硬臂段",
+        "C": "支托整体",
+        "D": "邻面板的所有部分"
+      },
+      "answer": "A",
+      "explanation": "弹性的固位尖端进入适量倒凹；其他部位应避免形成不利阻碍。",
+      "warning": "不要将普通圆环形卡环的所有位置规则机械套用到 RPA。",
+      "topics": [
+        "RPA",
+        "倒凹"
+      ],
+      "tags": [
+        "易混淆",
+        "案例题"
+      ],
+      "modes": [
+        "考研",
+        "本科期末",
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "demo-integrated",
+      "paperName": "综合题型演示卷（非真题）",
+      "durationMinutes": 15,
+      "order": 10,
+      "points": 1,
+      "reference": "演示资料：教材书名、版次、章节与页码待专业人员核对。未作为正式题库发布。",
+      "citation": {
+        "publisher": "人民卫生出版社",
+        "title": "口腔修复学",
+        "edition": null,
+        "chapter": "可摘局部义齿",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": true,
+      "sourceType": "original_demo",
+      "license": "项目演示内容，未经医学审核",
+      "rubric": null,
+      "groupId": "group-a3",
+      "sharedStem": "共同题干：后牙游离端缺失，拟采用 RPA 卡环设计。以下题目考查组件与基本固位关系。"
+    },
+    {
+      "id": "demo-011",
+      "subject": "牙周病学",
+      "chapter": "牙周检查",
+      "type": "B",
+      "stem": "选择“龈缘至袋底距离”对应的术语。",
+      "options": {
+        "A": "探诊深度",
+        "B": "临床附着水平",
+        "C": "牙冠长度",
+        "D": "根长"
+      },
+      "answer": "A",
+      "explanation": "探诊深度的冠方参照点为龈缘。",
+      "warning": "龈缘位置改变可影响探诊深度。",
+      "topics": [
+        "牙周探诊"
+      ],
+      "tags": [
+        "高频"
+      ],
+      "modes": [
+        "考研",
+        "本科期末",
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "demo-integrated",
+      "paperName": "综合题型演示卷（非真题）",
+      "durationMinutes": 15,
+      "order": 11,
+      "points": 1,
+      "reference": "演示资料：教材书名、版次、章节与页码待专业人员核对。未作为正式题库发布。",
+      "citation": {
+        "publisher": "人民卫生出版社",
+        "title": "牙周病学",
+        "edition": null,
+        "chapter": "牙周检查",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": true,
+      "sourceType": "original_demo",
+      "license": "项目演示内容，未经医学审核",
+      "rubric": null,
+      "groupId": "group-b",
+      "sharedStem": "共用备选答案：A 探诊深度；B 临床附着水平；C 牙冠长度；D 根长。每个选项可选一次、多次或不选。"
+    },
+    {
+      "id": "demo-012",
+      "subject": "牙周病学",
+      "chapter": "牙周检查",
+      "type": "B",
+      "stem": "选择通常以“釉牙骨质界”为参照点评价的指标。",
+      "options": {
+        "A": "探诊深度",
+        "B": "临床附着水平",
+        "C": "牙冠长度",
+        "D": "根长"
+      },
+      "answer": "B",
+      "explanation": "临床附着水平以釉牙骨质界作为参照，记录其与探诊袋底的关系。",
+      "warning": "探诊深度和附着水平的参照点不同。",
+      "topics": [
+        "附着水平"
+      ],
+      "tags": [
+        "易混淆"
+      ],
+      "modes": [
+        "考研",
+        "本科期末",
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "demo-integrated",
+      "paperName": "综合题型演示卷（非真题）",
+      "durationMinutes": 15,
+      "order": 12,
+      "points": 1,
+      "reference": "演示资料：教材书名、版次、章节与页码待专业人员核对。未作为正式题库发布。",
+      "citation": {
+        "publisher": "人民卫生出版社",
+        "title": "牙周病学",
+        "edition": null,
+        "chapter": "牙周检查",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": true,
+      "sourceType": "original_demo",
+      "license": "项目演示内容，未经医学审核",
+      "rubric": null,
+      "groupId": "group-b",
+      "sharedStem": "共用备选答案：A 探诊深度；B 临床附着水平；C 牙冠长度；D 根长。每个选项可选一次、多次或不选。"
+    },
+    {
+      "id": "demo-013",
+      "subject": "口腔修复学",
+      "chapter": "可摘局部义齿",
+      "type": "A4",
+      "stem": "已知基牙观测线位置，确定倒凹区域时还必须明确什么？",
+      "options": {
+        "A": "选定的义齿就位方向",
+        "B": "病人惯用手",
+        "C": "病历纸张尺寸",
+        "D": "检查椅颜色"
+      },
+      "answer": "A",
+      "explanation": "观测线与倒凹相对于选定的就位方向确定。",
+      "warning": "改变模型倾斜与就位方向会改变观测结果。",
+      "topics": [
+        "观测线",
+        "就位道"
+      ],
+      "tags": [
+        "高频",
+        "案例题"
+      ],
+      "modes": [
+        "考研",
+        "本科期末",
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "demo-integrated",
+      "paperName": "综合题型演示卷（非真题）",
+      "durationMinutes": 15,
+      "order": 13,
+      "points": 1,
+      "reference": "演示资料：教材书名、版次、章节与页码待专业人员核对。未作为正式题库发布。",
+      "citation": {
+        "publisher": "人民卫生出版社",
+        "title": "口腔修复学",
+        "edition": null,
+        "chapter": "可摘局部义齿",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": true,
+      "sourceType": "original_demo",
+      "license": "项目演示内容，未经医学审核",
+      "rubric": null,
+      "groupId": "group-a4",
+      "sharedStem": "共同情境：在诊断模型上选择就位方向并观测基牙。第 1 步确定观测关系，第 2 步评估卡环设计。"
+    },
+    {
+      "id": "demo-014",
+      "subject": "口腔修复学",
+      "chapter": "可摘局部义齿",
+      "type": "A4",
+      "stem": "继续设计时，若较粗硬的臂段进入不适宜的倒凹，可能出现什么问题？",
+      "options": {
+        "A": "摘戴受阻",
+        "B": "必然增加牙髓血供",
+        "C": "必然消除一切旋转",
+        "D": "必然改变牙根数"
+      },
+      "answer": "A",
+      "explanation": "粗硬部分无法像固位尖端那样有效弹性变形，可能阻碍摘戴。",
+      "warning": "不能把倒凹越深简单理解为设计越好。",
+      "topics": [
+        "倒凹",
+        "卡环"
+      ],
+      "tags": [
+        "易混淆",
+        "案例题"
+      ],
+      "modes": [
+        "考研",
+        "本科期末",
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "demo-integrated",
+      "paperName": "综合题型演示卷（非真题）",
+      "durationMinutes": 15,
+      "order": 14,
+      "points": 1,
+      "reference": "演示资料：教材书名、版次、章节与页码待专业人员核对。未作为正式题库发布。",
+      "citation": {
+        "publisher": "人民卫生出版社",
+        "title": "口腔修复学",
+        "edition": null,
+        "chapter": "可摘局部义齿",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": true,
+      "sourceType": "original_demo",
+      "license": "项目演示内容，未经医学审核",
+      "rubric": null,
+      "groupId": "group-a4",
+      "sharedStem": "共同情境：在诊断模型上选择就位方向并观测基牙。第 1 步确定观测关系，第 2 步评估卡环设计。"
+    },
+    {
+      "id": "demo-015",
+      "subject": "口腔修复学",
+      "chapter": "可摘局部义齿",
+      "type": "简答题",
+      "stem": "简述 RPA 卡环组合的主要组成，并说明为何需评估基牙观测线。",
+      "options": {},
+      "answer": null,
+      "explanation": "应答要点：近中支托、远中邻面板、Akers 卡环；结合就位方向评估观测线及倒凹，兼顾固位与功能性转动。",
+      "warning": "注意区分基牙的倾斜与义齿基托的功能性下沉。",
+      "topics": [
+        "RPA",
+        "科室考核"
+      ],
+      "tags": [
+        "高频",
+        "科室考核"
+      ],
+      "modes": [
+        "考研",
+        "本科期末",
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "demo-integrated",
+      "paperName": "综合题型演示卷（非真题）",
+      "durationMinutes": 15,
+      "order": 15,
+      "points": 5,
+      "reference": "演示资料：教材书名、版次、章节与页码待专业人员核对。未作为正式题库发布。",
+      "citation": {
+        "publisher": "人民卫生出版社",
+        "title": "口腔修复学",
+        "edition": null,
+        "chapter": "可摘局部义齿",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": true,
+      "sourceType": "original_demo",
+      "license": "项目演示内容，未经医学审核",
+      "rubric": "应答要点：近中支托、远中邻面板、Akers 卡环；结合就位方向评估观测线及倒凹，兼顾固位与功能性转动。"
+    },
+    {
+      "id": "demo-016",
+      "subject": "牙周病学",
+      "chapter": "牙周检查",
+      "type": "案例分析",
+      "stem": "演示案例：两次检查的龈缘位置不同。为什么不能仅以探诊深度变小认定支持组织恢复？",
+      "options": {},
+      "answer": null,
+      "explanation": "分析要点：探诊深度以龈缘为参照；龈缘变化会改变测值；应结合临床附着水平、出血等完整资料比较。",
+      "warning": "单一数值变化不足以替代完整临床评估。",
+      "topics": [
+        "牙周探诊",
+        "复试笔试"
+      ],
+      "tags": [
+        "易混淆",
+        "案例题",
+        "复试笔试"
+      ],
+      "modes": [
+        "考研",
+        "本科期末",
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "demo-integrated",
+      "paperName": "综合题型演示卷（非真题）",
+      "durationMinutes": 15,
+      "order": 16,
+      "points": 5,
+      "reference": "演示资料：教材书名、版次、章节与页码待专业人员核对。未作为正式题库发布。",
+      "citation": {
+        "publisher": "人民卫生出版社",
+        "title": "牙周病学",
+        "edition": null,
+        "chapter": "牙周检查",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": true,
+      "sourceType": "original_demo",
+      "license": "项目演示内容，未经医学审核",
+      "rubric": "分析要点：探诊深度以龈缘为参照；龈缘变化会改变测值；应结合临床附着水平、出血等完整资料比较。"
+    }
+  ]
+}
