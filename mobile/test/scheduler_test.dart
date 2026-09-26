@@ -28,4 +28,14 @@ void main() {
     expect(state.states['q1']!.due,'2026-01-04');
   });
   test('business day uses UTC+8',(){expect(dayOf(DateTime.parse('2026-01-01T16:00:00Z')),'2026-01-02');});
+  test('batch events still use the unchanged staircase reducer',(){
+    final events=[
+      event(1,'2026-01-01',grade:'wrong',answer:'B'),
+      event(2,'2026-01-02',grade:'mastered'),
+    ];
+    final state=LearningState(events,bank);
+    expect(state.attempts.length,2);
+    expect(state.states['q1']!.stage,1);
+    expect(state.states['q1']!.due,'2026-01-04');
+  });
 }

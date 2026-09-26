@@ -77,6 +77,21 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(validate(bank),[])
         self.assertTrue(validate(bank,production=True))
 
+    def test_settings_sync_validation_and_account_isolation(self):
+        token=self.register('settings')
+        settings={'dailyNewLimit':25,'dailyReviewTarget':None,
+                  'updatedAt':'2026-01-01T04:00:00Z'}
+        status,data=self.request('/v1/sync',{'events':[],'settings':settings},token)
+        self.assertEqual(status,200)
+        self.assertEqual(data['settings']['dailyNewLimit'],25)
+        self.assertIsNone(data['settings']['dailyReviewTarget'])
+        stale={**settings,'dailyNewLimit':5,'updatedAt':'2025-01-01T04:00:00Z'}
+        self.assertEqual(self.request('/v1/sync',{'events':[],'settings':stale},token)[1]['settings']['dailyNewLimit'],25)
+        invalid={**settings,'dailyReviewTarget':201}
+        self.assertEqual(self.request('/v1/sync',{'events':[],'settings':invalid},token)[0],400)
+        other=self.register('settings-other')
+        self.assertIsNone(self.request('/v1/state',token=other)[1]['settings'])
+
     def test_bad_bank(self):
         bank=json.loads(server.BANK.read_text())
         bank['questions'][0]['answer']='Z'

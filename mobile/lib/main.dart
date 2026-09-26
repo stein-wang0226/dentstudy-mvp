@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'models.dart';
 import 'store.dart';
 import 'reminders.dart';
+import 'batch_session.dart';
 
 const ink = Color(0xFF173C3C), teal = Color(0xFF087F78), paper = Color(0xFFF5F7F3);
 final store = StudyStore();
@@ -55,13 +56,38 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   @override void dispose(){reminderTimer?.cancel();store.removeListener(changed);WidgetsBinding.instance.removeObserver(this);super.dispose();}
   void changed(){if(mounted)setState((){});reminderTimer?.cancel();if(store.prefs.getBool('reminders')??false){reminderTimer=Timer(const Duration(milliseconds:500),(){if(mounted)safely(context,()=>reminders.refresh(store));});}}
   @override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.resumed){changed();if(store.token.isNotEmpty)safely(context,store.sync);}}
-  Future<void> start(List<Question> selected,{bool exam=false,bool review=false}) async {
+  Future<void> start(List<Question> selected,{bool exam=false,bool review=false,bool fixedDeep=false}) async {
     if(selected.isEmpty){message(context,'当前条件下没有题目');return;}
     final due=store.due;
     if(!review && due.isNotEmpty && selected.any((q)=>store.learning.states[q.id]?.lastDay==null)) {
       message(context,'还有 ${due.length} 道到期题目，完成首页复习后解锁新题');return;
     }
-    await Navigator.of(context).push(MaterialPageRoute(builder:(_)=>StudySession(questions:selected,exam:exam,review:review)));
+    var sessionQuestions=[...selected];
+    if(!exam) {
+      var newSlots=store.remainingNew;
+      sessionQuestions=sessionQuestions.where((q){
+        if(store.learning.states[q.id]?.lastDay!=null)return true;
+        if(newSlots==0)return false;
+        newSlots--;return true;
+      }).toList();
+      if(sessionQuestions.isEmpty){
+        message(context,'今日新题上限已完成，可在“我的 → 学习设置”调整');return;
+      }
+    }
+    var batch=false;
+    if(!exam&&!fixedDeep){
+      final choice=await showModalBottomSheet<String>(context:context,builder:(c)=>SafeArea(child:Padding(padding:const EdgeInsets.all(20),child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+        const Text('选择刷题模式',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold)),const SizedBox(height:8),
+        const Text('本次题目会遵守今日新题上限与旧题优先规则。'),const SizedBox(height:16),
+        ListTile(leading:const Icon(Icons.chrome_reader_mode_outlined),title:const Text('逐题深度模式'),subtitle:const Text('每题立即看解析并标记掌握度'),onTap:()=>Navigator.pop(c,'deep')),
+        ListTile(leading:const Icon(Icons.playlist_add_check_circle_outlined),title:const Text('批量刷题模式'),subtitle:const Text('连续作答，整批完成后统一看解析和评级'),onTap:()=>Navigator.pop(c,'batch')),
+      ]))));
+      if(choice==null)return;
+      batch=choice=='batch';
+    }
+    await Navigator.of(context).push(MaterialPageRoute(builder:(_)=>batch
+      ?BatchStudySession(questions:sessionQuestions,store:store,review:review)
+      :StudySession(questions:sessionQuestions,exam:exam,review:review)));
     if(mounted){changed(); if(store.token.isNotEmpty) await safely(context,store.sync);}
     if(mounted && (store.prefs.getBool('reminders')??false)) await safely(context,()=>reminders.refresh(store));
   }
@@ -78,19 +104,31 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     final objective=attempts.where((a)=>a['correct']!=null).toList();
     final accuracy=objective.isEmpty?'—':'${(objective.where((a)=>a['correct']==true).length/objective.length*100).round()}%';
     final learned=state.states.values.where((s)=>s.lastDay!=null).length;
+    final reviewTarget=store.dailyReviewTarget;
+    final reviewProgress=reviewTarget==null
+      ?(store.todayReviewCount+due.length==0?1.0:store.todayReviewCount/(store.todayReviewCount+due.length))
+      :(reviewTarget==0?1.0:min(1,store.todayReviewCount/reviewTarget));
+    final newProgress=store.dailyNewLimit==0?1.0:min(1,store.todayNewCount/store.dailyNewLimit);
+    final newQuestions=store.bank.where((q)=>state.states[q.id]?.lastDay==null).take(store.remainingNew).toList();
     return [heading('让每一次练习，都记得更久。',sub:'${day.replaceAll('-',' / ')}  ·  先巩固，再进阶'),
       box(Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Row(children:[const Icon(Icons.autorenew,color:Color(0xFFB6E4D5)),const SizedBox(width:8),const Text('今日待巩固',style:TextStyle(color:Colors.white,fontSize:16)),const Spacer(),pill('间隔复习')]),
+        Row(children:[const Icon(Icons.autorenew,color:Color(0xFFB6E4D5)),const SizedBox(width:8),const Text('今日学习计划',style:TextStyle(color:Colors.white,fontSize:16)),const Spacer(),pill('间隔复习')]),
         const SizedBox(height:20),RichText(text:TextSpan(children:[TextSpan(text:'${due.length}',style:const TextStyle(fontSize:64,fontWeight:FontWeight.w700,color:Colors.white)),const TextSpan(text:'  道题',style:TextStyle(color:Colors.white70,fontSize:16))])),
-        Text(due.isEmpty?'到期复习已完成，开始今天的新知识吧。':'优先复习做错的题，把薄弱点变成得分点。',style:const TextStyle(color:Colors.white70,height:1.6)),const SizedBox(height:22),
-        SizedBox(width:double.infinity,child:FilledButton(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFD7F0BA),foregroundColor:ink),onPressed:()=>due.isEmpty?start(store.bank.where((q)=>state.states[q.id]?.lastDay==null).take(10).toList()):start(due,review:true),child:Text(due.isEmpty?'开始学习新题  →':'开始今日巩固  →'))),
-        const SizedBox(height:10),Text(due.isEmpty?'新题已解锁 · 建议每次 10 道':'完成 ${due.length} 道到期复习后解锁新题',style:const TextStyle(fontSize:12,color:Colors.white70))]),color:ink),
+        const Text('今日待复习',style:TextStyle(color:Colors.white70)),const SizedBox(height:16),
+        _goalProgress('复习进度','${store.todayReviewCount} / ${reviewTarget==null?'无限制':reviewTarget}',reviewProgress),
+        const SizedBox(height:14),_goalProgress('新题进度','${store.todayNewCount} / ${store.dailyNewLimit}',newProgress),
+        const SizedBox(height:22),
+        SizedBox(width:double.infinity,child:FilledButton(style:FilledButton.styleFrom(backgroundColor:const Color(0xFFD7F0BA),foregroundColor:ink),onPressed:()=>due.isEmpty?start(newQuestions):start(due,review:true),child:Text(due.isEmpty?'开始学习新题  →':'开始今日巩固  →'))),
+        const SizedBox(height:10),Text(due.isNotEmpty?'完成 ${due.length} 道到期复习后解锁新题':store.remainingNew==0?'今日新题上限已完成':'还可学习 ${store.remainingNew} 道新题',style:const TextStyle(fontSize:12,color:Colors.white70))]),color:ink),
       const SizedBox(height:16),Row(children:[metric('${attempts.length}','今日练习'),const SizedBox(width:12),metric(accuracy,'客观题正确率'),const SizedBox(width:12),metric('$learned','累计学过')]),
       heading('按你的节奏学习',sub:'当前学习方向 · ${store.mode}'),
       Wrap(spacing:10,runSpacing:10,children:[action('章节练习',Icons.menu_book,()=>setState(()=>tab=1)),action('专项突破',Icons.track_changes,()=>setState(()=>tab=1)),action('随机 5 题',Icons.shuffle,(){final qs=[...store.bank]..shuffle(Random());start(qs.take(5).toList());}),action('限时模考',Icons.timer_outlined,()=>choosePaper())]),
       heading('复习节奏'),box(Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Wrap(spacing:8,runSpacing:8,children:intervals.map((d)=>pill('$d 天')).toList()),const SizedBox(height:12),const Text('做错 → 次日重来\n蒙对 → 缩短间隔\n完全掌握 → 到期复习后延长间隔',style:TextStyle(fontSize:14,height:1.9)),const SizedBox(height:10),const Text('当天重复答对不跳级；满 14 天后维持 14 天复习。',style:TextStyle(color:Colors.blueGrey,fontSize:12))])),
       const SizedBox(height:20),const Text('演示题库 · 非历年真题\n医学内容与教材出处待专业审核，当前用于体验产品流程。',style:TextStyle(fontSize:12,color:Colors.blueGrey))];
   }
+  Widget _goalProgress(String label,String value,double progress)=>Column(children:[
+    Row(children:[Text(label,style:const TextStyle(color:Colors.white)),const Spacer(),Text(value,style:const TextStyle(color:Colors.white70))]),
+    const SizedBox(height:7),LinearProgressIndicator(value:progress,minHeight:7,borderRadius:BorderRadius.circular(6),color:const Color(0xFFD7F0BA),backgroundColor:Colors.white12)]);
   Widget metric(String value,String label)=>Expanded(child:box(Column(children:[Text(value,style:const TextStyle(fontSize:25,fontWeight:FontWeight.w700,color:ink)),Text(label,style:const TextStyle(fontSize:11,color:Colors.blueGrey))])));
   Widget action(String label,IconData icon,VoidCallback callback)=>OutlinedButton.icon(onPressed:callback,icon:Icon(icon,size:18),label:Text(label),style:OutlinedButton.styleFrom(padding:const EdgeInsets.all(17),side:BorderSide(color:teal.withAlpha(40)),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14))));
   Widget selector(String label,String value,List<String> values,ValueChanged<String> change)=>DropdownButtonFormField<String>(initialValue:values.contains(value)?value:'全部',isExpanded:true,decoration:InputDecoration(labelText:label,contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:10)),items:values.map((v)=>DropdownMenuItem(value:v,child:Text(v,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:13)))).toList(),onChanged:(v){if(v!=null)change(v);});
@@ -106,7 +144,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     Wrap(spacing:8,runSpacing:8,children:[FilledButton.icon(onPressed:()=>start(qs),icon:const Icon(Icons.play_arrow),label:Text('练习筛选结果 · ${qs.length}')),OutlinedButton.icon(onPressed:choosePaper,icon:const Icon(Icons.timer_outlined),label:const Text('套卷模考'))]),const SizedBox(height:16),...questionList(qs)];}
   List<Widget> notebooks(){final s=store.learning;final qs=filtered(store.bank.where((q)=>favorites?s.states[q.id]?.favorite==true:s.states[q.id]?.wrong==true).toList());return[
     heading('我的题本',sub:'错题自动归集，收藏留给重点'),SegmentedButton<bool>(segments:const[ButtonSegment(value:false,label:Text('错题本'),icon:Icon(Icons.history_edu)),ButtonSegment(value:true,label:Text('收藏夹'),icon:Icon(Icons.bookmark_outline))],selected:{favorites},onSelectionChanged:(v)=>setState(()=>favorites=v.first)),const SizedBox(height:18),...filters(),
-    FilledButton(onPressed:()=>start(qs),child:Text('练习这 ${qs.length} 道题')),const SizedBox(height:16),...questionList(qs,canRemove:!favorites)];}
+    FilledButton(onPressed:()=>start(qs,fixedDeep:true),child:Text('练习这 ${qs.length} 道题')),const SizedBox(height:16),...questionList(qs,canRemove:!favorites)];}
   List<Widget> questionList(List<Question> qs,{bool canRemove=false})=>qs.isEmpty?[box(const Text('暂时没有题目。调整筛选条件，或先完成一次练习。'))]:qs.map((q)=>Padding(padding:const EdgeInsets.only(bottom:10),child:Card(elevation:0,margin:EdgeInsets.zero,child:ListTile(contentPadding:const EdgeInsets.all(16),title:Text(q.stem,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:15,height:1.5)),subtitle:Padding(padding:const EdgeInsets.only(top:8),child:Text('${q.subject} · ${q.type}  ${q.tags.take(2).join(' / ')}',style:const TextStyle(fontSize:11))),trailing:canRemove?IconButton(tooltip:'移出错题本（保留复习排期）',icon:const Icon(Icons.remove_circle_outline),onPressed:()=>safely(context,()=>store.add(q.id,'removeWrong',null))):const Icon(Icons.chevron_right),onTap:()=>start(q.groupId==null?[q]:store.questions.where((x)=>x.groupId==q.groupId).toList()))))).toList();
   Future<void> choosePaper() async {
     final papers=store.bank.map((q)=>q.data['paperId'] as String).toSet();
@@ -121,7 +159,25 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     final rows=subjects.map((subject){final ids=store.questions.where((q)=>q.subject==subject).map((q)=>q.id).toSet(); final a=objective.where((a)=>ids.contains(a['questionId'])).toList(); return {'subject':subject,'total':a.length,'correct':a.where((a)=>a['correct']==true).length};}).toList()..sort((a,b)=>((a['total'] as int)==0?2:(a['correct'] as int)/(a['total'] as int)).compareTo((b['total'] as int)==0?2:(b['correct'] as int)/(b['total'] as int)));
     return [heading('学习看得见',sub:'跨学习方向汇总 · 客观题按每次作答统计'),Row(children:[metric('${s.attempts.length}','总练习次数'),const SizedBox(width:12),metric(objective.isEmpty?'—':'${(objective.where((a)=>a['correct']==true).length/objective.length*100).round()}%','客观题正确率')]),heading('近 7 天练习量'),box(SizedBox(height:180,child:Row(crossAxisAlignment:CrossAxisAlignment.end,children:List.generate(7,(i)=>Expanded(child:Column(mainAxisAlignment:MainAxisAlignment.end,children:[Text('${counts[i]}',style:const TextStyle(fontSize:12)),const SizedBox(height:5),Container(height:max(4,110*counts[i]/maxCount).toDouble(),width:22,decoration:BoxDecoration(color:i==6?teal:const Color(0xFFB9D8CE),borderRadius:BorderRadius.circular(6))),const SizedBox(height:10),Text(days[i].substring(5),style:const TextStyle(fontSize:10,color:Colors.blueGrey))])))))),heading('薄弱科目',sub:'按正确率升序排列；主观题不计入自动正确率'),box(Column(children:rows.map((r){final n=r['total'] as int;final rate=n==0?0.0:(r['correct'] as int)/n;return Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Column(children:[Row(children:[Expanded(child:Text(r['subject'] as String)),Text(n==0?'未练习':'${(rate*100).round()}% · $n 次',style:const TextStyle(fontSize:12,color:Colors.blueGrey))]),const SizedBox(height:8),LinearProgressIndicator(value:rate,minHeight:6,borderRadius:BorderRadius.circular(5),color:rate<0.6?const Color(0xFFD99455):teal,backgroundColor:paper)]));}).toList()))];
   }
-  List<Widget> profile()=>[heading('把进步留在每一天',sub:store.email.isEmpty?'当前为本机访客模式':store.email),box(Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(store.syncMessage),const SizedBox(height:10),Text('待同步记录：${store.pending.length} 条',style:const TextStyle(fontSize:12,color:Colors.blueGrey)),const SizedBox(height:16),Wrap(spacing:10,runSpacing:10,children:[FilledButton(onPressed:store.syncing?null:()=>store.token.isEmpty?accountDialog():safely(context,store.sync),child:Text(store.syncing?'同步中…':store.token.isEmpty?'登录 / 注册':'立即同步')),if(store.token.isNotEmpty)OutlinedButton(onPressed:store.syncing?null:()=>safely(context,store.importGuest),child:const Text('导入本机访客记录')),if(store.token.isNotEmpty)TextButton(onPressed:()=>safely(context,store.logout),child:const Text('退出登录'))])])),heading('学习设置'),box(Column(children:[SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('每日复习提醒'),subtitle:const Text('本地通知 · 北京时间 20:00 · 未来 14 天'),value:store.prefs.getBool('reminders')??false,onChanged:(v)=>safely(context,()async{if(v && !await reminders.enable())throw Exception('通知权限未获允许，请在系统设置中开启');await store.prefs.setBool('reminders',v);await reminders.refresh(store);changed();})),const Divider(),ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.download_for_offline_outlined),title:const Text('下载 / 更新离线题库'),subtitle:Text('已缓存 ${store.questions.length} 道题；断网可答题'),onTap:()=>safely(context,()async{await store.download();if(mounted)message(context,'离线题库已更新');})),ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.dns_outlined),title:const Text('配置后端地址'),subtitle:Text(store.baseUrl),onTap:apiDialog)])),heading('关于题库'),box(const Text('当前内置的是演示习题，不代表院校真题或权威答案。正式题库需完成授权、解析审核与教材版本/章节/页码核对。\n\n研究生科室考核、复试笔试可在考研模式下按标签筛选；执医模式可筛选助理医师。\n\n当前提供本地提醒；跨设备服务端推送需接入 APNs / FCM 等服务。',style:TextStyle(fontSize:13,height:1.8)))];
+  List<Widget> profile()=>[heading('把进步留在每一天',sub:store.email.isEmpty?'当前为本机访客模式':store.email),box(Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(store.syncMessage),const SizedBox(height:10),Text('待同步记录：${store.pending.length} 条',style:const TextStyle(fontSize:12,color:Colors.blueGrey)),const SizedBox(height:16),Wrap(spacing:10,runSpacing:10,children:[FilledButton(onPressed:store.syncing?null:()=>store.token.isEmpty?accountDialog():safely(context,store.sync),child:Text(store.syncing?'同步中…':store.token.isEmpty?'登录 / 注册':'立即同步')),if(store.token.isNotEmpty)OutlinedButton(onPressed:store.syncing?null:()=>safely(context,store.importGuest),child:const Text('导入本机访客记录')),if(store.token.isNotEmpty)TextButton(onPressed:()=>safely(context,store.logout),child:const Text('退出登录'))])])),heading('学习设置'),box(Column(children:[
+    ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.flag_outlined),title:const Text('每日学习目标'),subtitle:Text('新题上限 ${store.dailyNewLimit} · 复习目标 ${store.dailyReviewTarget==null?'无限制':store.dailyReviewTarget}'),onTap:goalsDialog),const Divider(),
+    SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('每日复习提醒'),subtitle:const Text('本地通知 · 北京时间 20:00 · 未来 14 天'),value:store.prefs.getBool('reminders')??false,onChanged:(v)=>safely(context,()async{if(v && !await reminders.enable())throw Exception('通知权限未获允许，请在系统设置中开启');await store.prefs.setBool('reminders',v);await reminders.refresh(store);changed();})),const Divider(),ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.download_for_offline_outlined),title:const Text('下载 / 更新离线题库'),subtitle:Text('已缓存 ${store.questions.length} 道题；断网可答题'),onTap:()=>safely(context,()async{await store.download();if(mounted)message(context,'离线题库已更新');})),ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.dns_outlined),title:const Text('配置后端地址'),subtitle:Text(store.baseUrl),onTap:apiDialog)])),heading('关于题库'),box(const Text('当前内置的是演示习题，不代表院校真题或权威答案。正式题库需完成授权、解析审核与教材版本/章节/页码核对。\n\n研究生科室考核、复试笔试可在考研模式下按标签筛选；执医模式可筛选助理医师。\n\n当前提供本地提醒；跨设备服务端推送需接入 APNs / FCM 等服务。',style:TextStyle(fontSize:13,height:1.8)))];
+  Future<void> goalsDialog() async {
+    final newField=TextEditingController(text:'${store.dailyNewLimit}');
+    final reviewField=TextEditingController(text:'${store.dailyReviewTarget??20}');
+    var unlimited=store.dailyReviewTarget==null;
+    final result=await showDialog<(int,int?)>(context:context,builder:(c)=>StatefulBuilder(builder:(c,set)=>AlertDialog(title:const Text('每日学习目标'),content:Column(mainAxisSize:MainAxisSize.min,children:[
+      TextField(controller:newField,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'每日新题上限（0–100）')),
+      const SizedBox(height:12),SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('复习题不设上限'),value:unlimited,onChanged:(v)=>set(()=>unlimited=v)),
+      if(!unlimited)TextField(controller:reviewField,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'每日复习题目标（0–200）')),
+      const SizedBox(height:8),const Text('到期复习仍需全部完成，才能解锁新题。',style:TextStyle(fontSize:12,color:Colors.blueGrey)),
+    ]),actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('取消')),FilledButton(onPressed:(){
+      final n=int.tryParse(newField.text),r=unlimited?null:int.tryParse(reviewField.text);
+      if(n==null||n<0||n>100||(!unlimited&&(r==null||r<0||r>200))){message(c,'请输入允许范围内的整数');return;}
+      Navigator.pop(c,(n,r));
+    },child:const Text('保存'))])));
+    if(result!=null&&mounted)await safely(context,()async{await store.setGoals(result.$1,result.$2);await reminders.refresh(store);});
+  }
   Future<void> apiDialog() async {
     final field=TextEditingController(text:store.baseUrl);
     final value=await showDialog<String>(context:context,builder:(c)=>AlertDialog(title:const Text('后端地址'),content:TextField(controller:field,decoration:const InputDecoration(hintText:'https://api.example.com')),actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('取消')),FilledButton(onPressed:()=>Navigator.pop(c,field.text),child:const Text('保存'))]));

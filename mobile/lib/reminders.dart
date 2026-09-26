@@ -31,8 +31,11 @@ class Reminders {
       if(!date.isAfter(now)) continue;
       final day='${date.year}-${date.month.toString().padLeft(2,'0')}-${date.day.toString().padLeft(2,'0')}';
       final count=states.where((s)=>s.due!=null && s.due!.compareTo(day)<=0).length;
-      if(count==0) continue;
-      await plugin.zonedSchedule(i, '今日口腔复习', '按当前计划有 $count 道题待巩固，打开后查看最新任务。', date,
+      if(count==0 && store.remainingNew==0) continue;
+      final reviewGoal=store.dailyReviewTarget==null?'不限':'${store.dailyReviewTarget}';
+      final body='复习 ${store.todayReviewCount}/$reviewGoal（当前待复习 $count）'
+        ' · 新题 ${store.todayNewCount}/${store.dailyNewLimit}';
+      await plugin.zonedSchedule(i, '今日口腔学习进度', body, date,
         const NotificationDetails(android:AndroidNotificationDetails('review','复习提醒', channelDescription:'每天20点提醒到期复习'), iOS:DarwinNotificationDetails()),
         androidScheduleMode:AndroidScheduleMode.inexactAllowWhileIdle);
     }

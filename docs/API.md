@@ -12,7 +12,22 @@ API 默认 `http://127.0.0.1:8787`，JSON UTF-8。私有接口使用 `Authorizat
 | POST | `/v1/sync` | `{events:[...]}`，最多 500 条；返回完整快照 |
 | GET | `/v1/state` | 返回当前账号快照 |
 
-快照：`events` 原始日志，`states` 每题排期/题本状态，`attempts` 用于统计的作答记录，`plan` 含今日 due、新题与 newLocked。
+快照：`events` 原始日志，`states` 每题排期/题本状态，`attempts` 用于统计的作答记录，`plan` 含今日 due、新题与 newLocked，`settings` 为账号级学习目标。
+
+`/v1/sync` 可同时带 `settings`：
+
+```json
+{
+  "events": [],
+  "settings": {
+    "dailyNewLimit": 20,
+    "dailyReviewTarget": null,
+    "updatedAt": "2026-09-26T08:30:00.000Z"
+  }
+}
+```
+
+`dailyNewLimit` 为 0–100；`dailyReviewTarget` 为 0–200，`null` 表示无限制。服务端按 `updatedAt` 保留较新的设置。
 
 答题事件：
 

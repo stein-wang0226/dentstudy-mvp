@@ -37,6 +37,10 @@ def initialize():
           REFERENCES users(id), expires INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS events(user_id TEXT NOT NULL REFERENCES users(id),
           id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(user_id,id));
+        CREATE TABLE IF NOT EXISTS settings(user_id TEXT PRIMARY KEY REFERENCES users(id),
+          daily_new_limit INTEGER NOT NULL DEFAULT 10,
+          daily_review_target INTEGER,
+          updated_at TEXT NOT NULL);
         ''')
 
 
@@ -79,6 +83,30 @@ def validate_event(event, bank):
             raise ValueError('无效答题模式')
         return
     raise ValueError('无效事件内容')
+
+
+def validate_settings(value):
+    if not isinstance(value, dict):
+        raise ValueError('学习目标必须为 JSON 对象')
+    new_limit = value.get('dailyNewLimit')
+    review_target = value.get('dailyReviewTarget')
+    if isinstance(new_limit, bool) or not isinstance(new_limit, int) or not 0 <= new_limit <= 100:
+        raise ValueError('每日新题上限必须为 0–100')
+    if review_target is not None and (
+            isinstance(review_target, bool) or not isinstance(review_target, int)
+            or not 0 <= review_target <= 200):
+        raise ValueError('每日复习目标必须为无限制或 0–200')
+    try:
+        updated_at = datetime.fromisoformat(value['updatedAt'].replace('Z', '+00:00'))
+        if updated_at.tzinfo is None or updated_at.timestamp() > time.time() + 300:
+            raise ValueError()
+    except (ValueError, TypeError, KeyError):
+        raise ValueError('学习目标更新时间必须带时区且不能位于未来')
+    return dict(
+        dailyNewLimit=new_limit,
+        dailyReviewTarget=review_target,
+        updatedAt=updated_at.astimezone(timezone.utc).isoformat(
+            timespec='microseconds').replace('+00:00', 'Z'))
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -130,7 +158,13 @@ class Handler(BaseHTTPRequestHandler):
     def snapshot(self, db, uid):
         events = [json.loads(r['payload']) for r in db.execute('SELECT payload FROM events WHERE user_id=?', (uid,))]
         states, attempts = reduce_events(events, questions())
-        return dict(events=events, states=states, attempts=attempts, plan=plan(states, questions()))
+        row = db.execute('SELECT * FROM settings WHERE user_id=?', (uid,)).fetchone()
+        settings = None if row is None else dict(
+            dailyNewLimit=row['daily_new_limit'],
+            dailyReviewTarget=row['daily_review_target'],
+            updatedAt=row['updated_at'])
+        return dict(events=events, states=states, attempts=attempts,
+                    plan=plan(states, questions()), settings=settings)
 
     def do_POST(self):
         try:
@@ -168,6 +202,9 @@ class Handler(BaseHTTPRequestHandler):
                     incoming = data.get('events')
                     if not isinstance(incoming, list) or len(incoming) > 500:
                         raise ValueError('每次同步最多 500 条事件')
+                    incoming_settings = data.get('settings')
+                    if incoming_settings is not None:
+                        incoming_settings = validate_settings(incoming_settings)
                     bank = {q['id']: q for q in questions()}
                     for event in incoming:
                         validate_event(event, bank)
@@ -176,6 +213,20 @@ class Handler(BaseHTTPRequestHandler):
                         if existing and existing['payload'] != payload:
                             raise ValueError('事件 ID 冲突，请保留原始事件重试')
                         db.execute('INSERT OR IGNORE INTO events VALUES(?,?,?)', (uid, event['id'], payload))
+                    if incoming_settings is not None:
+                        existing = db.execute(
+                            'SELECT updated_at FROM settings WHERE user_id=?', (uid,)).fetchone()
+                        if existing is None or incoming_settings['updatedAt'] > existing['updated_at']:
+                            db.execute('''INSERT INTO settings
+                              (user_id,daily_new_limit,daily_review_target,updated_at)
+                              VALUES(?,?,?,?)
+                              ON CONFLICT(user_id) DO UPDATE SET
+                                daily_new_limit=excluded.daily_new_limit,
+                                daily_review_target=excluded.daily_review_target,
+                                updated_at=excluded.updated_at''',
+                              (uid, incoming_settings['dailyNewLimit'],
+                               incoming_settings['dailyReviewTarget'],
+                               incoming_settings['updatedAt']))
                     db.commit()
                     return self.respond(200, self.snapshot(db, uid))
                 self.respond(404, {'error': '接口不存在'})
