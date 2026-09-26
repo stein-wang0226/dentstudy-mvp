@@ -145,7 +145,9 @@ class _BatchStudySessionState extends State<BatchStudySession> {
     return [
       _progress(),
       const SizedBox(height: 24),
-      Wrap(spacing: 8, children: [_pill(question.type), _pill(question.subject)]),
+      Wrap(
+          spacing: 8,
+          children: [_pill(question.type), _pill(question.subject)]),
       if (question.sharedStem.isNotEmpty) ...[
         const SizedBox(height: 16),
         _card(Text(question.sharedStem,
@@ -160,12 +162,14 @@ class _BatchStudySessionState extends State<BatchStudySession> {
         ...question.options.entries.map((option) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: OutlinedButton(
-                onPressed: () => setState(() => answers[question.id] = option.key),
+                onPressed: () =>
+                    setState(() => answers[question.id] = option.key),
                 style: OutlinedButton.styleFrom(
                   alignment: Alignment.centerLeft,
                   padding: const EdgeInsets.all(18),
-                  backgroundColor:
-                      selected == option.key ? const Color(0xFFE7F1EE) : Colors.white,
+                  backgroundColor: selected == option.key
+                      ? const Color(0xFFE7F1EE)
+                      : Colors.white,
                   side: BorderSide(
                       color: selected == option.key
                           ? _teal
@@ -197,7 +201,8 @@ class _BatchStudySessionState extends State<BatchStudySession> {
         ),
       ]),
       const SizedBox(height: 12),
-      Text('已作答 ${answers.values.where((a) => a.trim().isNotEmpty).length} / ${widget.questions.length} · 完成本批后统一看解析',
+      Text(
+          '已作答 ${answers.values.where((a) => a.trim().isNotEmpty).length} / ${widget.questions.length} · 完成本批后统一看解析',
           style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
     ];
   }
@@ -237,8 +242,7 @@ class _BatchStudySessionState extends State<BatchStudySession> {
           subtitle: Text('整批提交后进入复习队列，无需再次确认。'),
         )
       else ...[
-        const Text('请确认掌握程度',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        const Text('请确认掌握程度', style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
         Wrap(spacing: 8, runSpacing: 8, children: [
           _gradeChoice('做错', 'wrong', Colors.deepOrange, grade),
@@ -269,7 +273,8 @@ class _BatchStudySessionState extends State<BatchStudySession> {
     ];
   }
 
-  Widget _gradeChoice(String text, String value, Color color, String? selected) =>
+  Widget _gradeChoice(
+          String text, String value, Color color, String? selected) =>
       FilledButton(
         onPressed: () => setState(() => grades[question.id] = value),
         style: FilledButton.styleFrom(
@@ -296,7 +301,8 @@ class _BatchStudySessionState extends State<BatchStudySession> {
   Widget _progress() => Column(children: [
         Row(children: [
           Text('${index + 1} / ${widget.questions.length}',
-              style: const TextStyle(color: _teal, fontWeight: FontWeight.bold)),
+              style:
+                  const TextStyle(color: _teal, fontWeight: FontWeight.bold)),
           const Spacer(),
           Text(reviewing ? '解析与评级' : '连续作答',
               style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
