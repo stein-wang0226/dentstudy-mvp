@@ -316,10 +316,10 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
             : store.todayReviewCount / (store.todayReviewCount + due.length))
         : (reviewTarget == 0
             ? 1.0
-            : min(1, store.todayReviewCount / reviewTarget));
+            : min(1.0, store.todayReviewCount / reviewTarget).toDouble());
     final newProgress = store.dailyNewLimit == 0
         ? 1.0
-        : min(1, store.todayNewCount / store.dailyNewLimit);
+        : min(1.0, store.todayNewCount / store.dailyNewLimit).toDouble();
     final newQuestions = store.bank
         .where((q) => state.states[q.id]?.lastDay == null)
         .take(store.remainingNew)
