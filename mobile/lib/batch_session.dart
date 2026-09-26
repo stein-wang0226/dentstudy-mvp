@@ -182,7 +182,7 @@ class _BatchStudySessionState extends State<BatchStudySession> {
           minLines: 5,
           maxLines: 10,
           decoration: const InputDecoration(hintText: '写下你的分析要点'),
-          onChanged: (value) => answers[question.id] = value,
+          onChanged: (value) => setState(() => answers[question.id] = value),
         ),
       const SizedBox(height: 18),
       Row(children: [
