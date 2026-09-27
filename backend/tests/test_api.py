@@ -91,6 +91,10 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.request('/v1/sync',{'events':[],'settings':stale},token)[1]['settings']['dailyNewLimit'],25)
         invalid={**settings,'dailyReviewTarget':201}
         self.assertEqual(self.request('/v1/sync',{'events':[],'settings':invalid},token)[0],400)
+        expanded={**settings,'dailyNewLimit':1000000,'updatedAt':'2026-01-02T04:00:00Z'}
+        self.assertEqual(self.request('/v1/sync',{'events':[],'settings':expanded},token)[1]['settings']['dailyNewLimit'],1000000)
+        too_large={**expanded,'dailyNewLimit':1000001}
+        self.assertEqual(self.request('/v1/sync',{'events':[],'settings':too_large},token)[0],400)
         other=self.register('settings-other')
         self.assertIsNone(self.request('/v1/state',token=other)[1]['settings'])
 

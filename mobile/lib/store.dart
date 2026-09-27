@@ -47,14 +47,17 @@ class StudyStore extends ChangeNotifier {
       answeredToday.where((id) => !learnedBeforeToday.contains(id)).length;
   int get todayReviewCount =>
       answeredToday.where(learnedBeforeToday.contains).length;
-  int get dailyPracticeLimit => isVip ? 5000 : 200;
+  int? get dailyPracticeLimit => isVip ? null : 200;
   int get todayPracticeCount => events
       .where((event) =>
           event['kind'] == 'review' &&
           dayOf(DateTime.parse(event['at'])) == today)
       .length;
-  int get remainingPractice =>
-      (dailyPracticeLimit - todayPracticeCount).clamp(0, dailyPracticeLimit);
+  int? get remainingPractice {
+    final limit = dailyPracticeLimit;
+    return limit == null ? null : (limit - todayPracticeCount).clamp(0, limit);
+  }
+
   int get remainingNew =>
       (dailyNewLimit - todayNewCount).clamp(0, dailyNewLimit);
   Future<void> init() async {
@@ -108,7 +111,7 @@ class StudyStore extends ChangeNotifier {
       };
   Future<void> setGoals(int newLimit, int? reviewTarget) async {
     if (newLimit < 0 ||
-        newLimit > 100 ||
+        newLimit > 1000000 ||
         (reviewTarget != null && (reviewTarget < 0 || reviewTarget > 200))) {
       throw Exception('学习目标超出允许范围');
     }
@@ -138,10 +141,10 @@ class StudyStore extends ChangeNotifier {
   Future<void> addMany(List<Map<String, dynamic>> additions) async {
     final reviewCount =
         additions.where((addition) => addition['kind'] == 'review').length;
-    if (reviewCount > remainingPractice) {
-      throw Exception(isVip
-          ? '今日 VIP 刷题量已达到 5000 道'
-          : '今日免费刷题量已达到 200 道，升级 VIP 后可刷 5000 道');
+    final remaining = remainingPractice;
+    if (remaining != null && reviewCount > remaining) {
+      throw Exception(
+          isVip ? 'VIP 不设每日刷题上限' : '今日免费刷题量已达到 200 道，升级 VIP 后可不限量刷题');
     }
     final random = Random.secure();
     for (final addition in additions) {

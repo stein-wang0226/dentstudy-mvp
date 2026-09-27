@@ -156,13 +156,15 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
       message(context, '当前条件下没有题目');
       return;
     }
-    if (store.remainingPractice == 0) {
-      message(context,
-          store.isVip ? '今天已完成 5000 道，明天再继续' : '今天已完成 200 道，升级 VIP 后可刷 5000 道');
+    final remainingPractice = store.remainingPractice;
+    if (remainingPractice == 0) {
+      message(context, '今天已完成 200 道，升级 VIP 后可不限量刷题');
       return;
     }
-    if (exam && selected.length > store.remainingPractice) {
-      message(context, '今日剩余刷题量不足以完成这套试卷（还可刷 ${store.remainingPractice} 道）');
+    if (exam &&
+        remainingPractice != null &&
+        selected.length > remainingPractice) {
+      message(context, '今日剩余刷题量不足以完成这套试卷（还可刷 $remainingPractice 道）');
       return;
     }
     final due = store.due;
@@ -173,9 +175,10 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
       return;
     }
     var sessionQuestions = [...selected];
-    if (!exam && sessionQuestions.length > store.remainingPractice) {
-      sessionQuestions =
-          sessionQuestions.take(store.remainingPractice).toList();
+    if (!exam &&
+        remainingPractice != null &&
+        sessionQuestions.length > remainingPractice) {
+      sessionQuestions = sessionQuestions.take(remainingPractice).toList();
       message(context, '本次按今日剩余额度安排 ${sessionQuestions.length} 道');
     }
     if (!exam) {
@@ -836,7 +839,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                       style: const TextStyle(
                           fontSize: 18, fontWeight: FontWeight.bold)),
                   Text(
-                      '今日 ${store.todayPracticeCount} / ${store.dailyPracticeLimit} 道',
+                      '今日 ${store.todayPracticeCount} / ${store.dailyPracticeLimit ?? '不限量'} 道',
                       style:
                           const TextStyle(fontSize: 12, color: Colors.blueGrey))
                 ])),
@@ -845,7 +848,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                   onPressed: vipDialog, child: Text('${purchases.price} 开通'))
           ]),
           const SizedBox(height: 12),
-          Text(store.isVip ? '每日刷题上限 5000 道' : '普通用户每日 200 道；VIP 每日 5000 道'),
+          Text(store.isVip ? 'VIP 每日刷题不限量' : '普通用户每日 200 道；VIP 不限量'),
         ])),
         heading('学习设置'),
         box(Column(children: [
@@ -918,7 +921,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                             const SizedBox(height: 18),
                             const ListTile(
                                 leading: Icon(Icons.bolt, color: teal),
-                                title: Text('每日最多刷 5000 道'),
+                                title: Text('每日刷题不限量'),
                                 subtitle: Text('普通用户每日最多 200 道')),
                             Text(purchases.message,
                                 textAlign: TextAlign.center,
@@ -968,7 +971,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                           controller: newField,
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
-                              labelText: '每日新题上限（0–100）')),
+                              labelText: '每日新题上限（0–1,000,000）')),
                       const SizedBox(height: 12),
                       SwitchListTile(
                           contentPadding: EdgeInsets.zero,
@@ -998,10 +1001,10 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                                     : int.tryParse(reviewField.text);
                             if (n == null ||
                                 n < 0 ||
-                                n > 100 ||
+                                n > 1000000 ||
                                 (!unlimited &&
                                     (r == null || r < 0 || r > 200))) {
-                              message(c, '请输入允许范围内的整数');
+                              message(c, '新题上限为 0–1,000,000；复习目标为 0–200');
                               return;
                             }
                             Navigator.pop(c, (n, r));

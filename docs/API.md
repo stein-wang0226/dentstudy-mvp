@@ -27,7 +27,7 @@ API 默认 `http://127.0.0.1:8787`，JSON UTF-8。私有接口使用 `Authorizat
 }
 ```
 
-`dailyNewLimit` 为 0–100；`dailyReviewTarget` 为 0–200，`null` 表示无限制。服务端按 `updatedAt` 保留较新的设置。
+`dailyNewLimit` 为 0–1,000,000；`dailyReviewTarget` 为 0–200，`null` 表示无限制。服务端按 `updatedAt` 保留较新的设置。
 
 答题事件：
 

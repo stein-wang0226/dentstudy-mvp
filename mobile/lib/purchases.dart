@@ -36,7 +36,7 @@ class VipPurchases extends ChangeNotifier {
         message = 'VIP 商品尚未在应用商店配置';
       } else {
         product = response.productDetails.first;
-        message = '一次购买，解锁每日 5000 道';
+        message = '一次购买，解锁每日不限量刷题';
       }
     } catch (error) {
       available = false;
@@ -88,7 +88,7 @@ class VipPurchases extends ChangeNotifier {
             purchase.verificationData.serverVerificationData.hashCode
                 .toString());
         loading = false;
-        message = 'VIP 已生效，每日可刷 5000 道';
+        message = 'VIP 已生效，每日刷题不限量';
       }
       if (purchase.pendingCompletePurchase) {
         await _store.completePurchase(purchase);

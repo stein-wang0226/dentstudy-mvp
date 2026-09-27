@@ -91,8 +91,8 @@ def validate_settings(value):
         raise ValueError('学习目标必须为 JSON 对象')
     new_limit = value.get('dailyNewLimit')
     review_target = value.get('dailyReviewTarget')
-    if isinstance(new_limit, bool) or not isinstance(new_limit, int) or not 0 <= new_limit <= 100:
-        raise ValueError('每日新题上限必须为 0–100')
+    if isinstance(new_limit, bool) or not isinstance(new_limit, int) or not 0 <= new_limit <= 1_000_000:
+        raise ValueError('每日新题上限必须为 0–1,000,000')
     if review_target is not None and (
             isinstance(review_target, bool) or not isinstance(review_target, int)
             or not 0 <= review_target <= 200):

@@ -84,7 +84,7 @@ void main() {
     expect(store.dailyPracticeLimit, 200);
     expect(store.remainingPractice, 0);
     store.isVip = true;
-    expect(store.dailyPracticeLimit, 5000);
-    expect(store.remainingPractice, 4800);
+    expect(store.dailyPracticeLimit, isNull);
+    expect(store.remainingPractice, isNull);
   });
 }
