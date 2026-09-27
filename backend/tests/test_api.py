@@ -73,7 +73,9 @@ class ApiTests(unittest.TestCase):
 
     def test_question_download(self):
         status,bank=self.request('/v1/questions')
-        self.assertEqual(status,200);self.assertEqual(len(bank['questions']),16)
+        self.assertEqual(status,200)
+        self.assertEqual(bank, json.loads(server.BANK.read_text()))
+        self.assertGreater(len(bank['questions']),0)
         self.assertEqual(validate(bank),[])
         self.assertTrue(validate(bank,production=True))
 
@@ -91,6 +93,20 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.request('/v1/sync',{'events':[],'settings':invalid},token)[0],400)
         other=self.register('settings-other')
         self.assertIsNone(self.request('/v1/state',token=other)[1]['settings'])
+
+    def test_speed_modes_sync(self):
+        token=self.register('speed-modes')
+        events=[]
+        for index,mode in enumerate(('speed','speed-review')):
+            events.append(dict(
+                id=f'speed-event-{index:020d}',
+                at=f'2026-01-0{index + 1}T04:00:00Z',
+                questionId='demo-001',kind='review',
+                value={'answer':'A','grade':'wrong','mode':mode}))
+        status,data=self.request('/v1/sync',{'events':events},token)
+        self.assertEqual(status,200)
+        self.assertEqual([attempt['mode'] for attempt in data['attempts']],
+                         ['speed','speed-review'])
 
     def test_bad_bank(self):
         bank=json.loads(server.BANK.read_text())

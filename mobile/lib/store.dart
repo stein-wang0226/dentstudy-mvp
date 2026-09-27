@@ -16,6 +16,7 @@ class StudyStore extends ChangeNotifier {
   String mode = '考研', email = '', userId = 'guest', baseUrl = '', token = '';
   int dailyNewLimit = 10;
   int? dailyReviewTarget;
+  bool isVip = false;
   String settingsUpdatedAt = '1970-01-01T00:00:00.000000Z';
   bool syncing = false;
   String syncMessage = '离线学习 · 记录保存在本机';
@@ -46,6 +47,14 @@ class StudyStore extends ChangeNotifier {
       answeredToday.where((id) => !learnedBeforeToday.contains(id)).length;
   int get todayReviewCount =>
       answeredToday.where(learnedBeforeToday.contains).length;
+  int get dailyPracticeLimit => isVip ? 5000 : 200;
+  int get todayPracticeCount => events
+      .where((event) =>
+          event['kind'] == 'review' &&
+          dayOf(DateTime.parse(event['at'])) == today)
+      .length;
+  int get remainingPractice =>
+      (dailyPracticeLimit - todayPracticeCount).clamp(0, dailyPracticeLimit);
   int get remainingNew =>
       (dailyNewLimit - todayNewCount).clamp(0, dailyNewLimit);
   Future<void> init() async {
@@ -57,6 +66,7 @@ class StudyStore extends ChangeNotifier {
     email = prefs.getString('email') ?? '';
     userId = prefs.getString('userId') ?? 'guest';
     token = await secure.read(key: 'token') ?? '';
+    isVip = prefs.getBool('vipEntitled') ?? false;
     final raw = prefs.getString('bank') ??
         await rootBundle.loadString('assets/questions.json');
     questions = (jsonDecode(raw)['questions'] as List)
@@ -126,6 +136,13 @@ class StudyStore extends ChangeNotifier {
   }
 
   Future<void> addMany(List<Map<String, dynamic>> additions) async {
+    final reviewCount =
+        additions.where((addition) => addition['kind'] == 'review').length;
+    if (reviewCount > remainingPractice) {
+      throw Exception(isVip
+          ? '今日 VIP 刷题量已达到 5000 道'
+          : '今日免费刷题量已达到 200 道，升级 VIP 后可刷 5000 道');
+    }
     final random = Random.secure();
     for (final addition in additions) {
       final id = List.generate(
@@ -139,6 +156,13 @@ class StudyStore extends ChangeNotifier {
       pending.add(id);
     }
     await _save();
+  }
+
+  Future<void> activateVip(String purchaseId) async {
+    isVip = true;
+    await prefs.setBool('vipEntitled', true);
+    await secure.write(key: 'vipPurchaseId', value: purchaseId);
+    notifyListeners();
   }
 
   Future<Map<String, dynamic>> request(String path,

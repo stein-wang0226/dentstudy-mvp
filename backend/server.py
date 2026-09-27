@@ -79,7 +79,8 @@ def validate_event(event, bank):
             raise ValueError('请选择有效答案')
         if q['answer'] is None and (not isinstance(value.get('answer'), str) or not value['answer'].strip() or len(value['answer']) > 20000):
             raise ValueError('请输入主观题作答')
-        if value.get('mode', 'practice') not in ('practice', 'review', 'exam'):
+        if value.get('mode', 'practice') not in (
+                'practice', 'review', 'exam', 'speed', 'speed-review'):
             raise ValueError('无效答题模式')
         return
     raise ValueError('无效事件内容')

@@ -5,18 +5,22 @@ import 'models.dart';
 import 'store.dart';
 import 'reminders.dart';
 import 'batch_session.dart';
+import 'speed_session.dart';
+import 'purchases.dart';
 
 const ink = Color(0xFF173C3C),
     teal = Color(0xFF087F78),
     paper = Color(0xFFF5F7F3);
 final store = StudyStore();
 final reminders = Reminders();
+final purchases = VipPurchases();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await store.init();
     runApp(const DentStudy());
+    unawaited(purchases.init(store));
   } catch (e) {
     runApp(MaterialApp(
         home: Scaffold(
@@ -152,6 +156,15 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
       message(context, '当前条件下没有题目');
       return;
     }
+    if (store.remainingPractice == 0) {
+      message(context,
+          store.isVip ? '今天已完成 5000 道，明天再继续' : '今天已完成 200 道，升级 VIP 后可刷 5000 道');
+      return;
+    }
+    if (exam && selected.length > store.remainingPractice) {
+      message(context, '今日剩余刷题量不足以完成这套试卷（还可刷 ${store.remainingPractice} 道）');
+      return;
+    }
     final due = store.due;
     if (!review &&
         due.isNotEmpty &&
@@ -160,6 +173,11 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
       return;
     }
     var sessionQuestions = [...selected];
+    if (!exam && sessionQuestions.length > store.remainingPractice) {
+      sessionQuestions =
+          sessionQuestions.take(store.remainingPractice).toList();
+      message(context, '本次按今日剩余额度安排 ${sessionQuestions.length} 道');
+    }
     if (!exam) {
       var newSlots = store.remainingNew;
       sessionQuestions = sessionQuestions.where((q) {
@@ -173,7 +191,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         return;
       }
     }
-    var batch = false;
+    var practiceMode = 'deep';
     if (!exam && !fixedDeep) {
       final choice = await showModalBottomSheet<String>(
           context: context,
@@ -202,16 +220,33 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                             title: const Text('批量刷题模式'),
                             subtitle: const Text('连续作答，整批完成后统一看解析和评级'),
                             onTap: () => Navigator.pop(c, 'batch')),
+                        ListTile(
+                            leading: const Icon(Icons.bolt_outlined),
+                            title: const Text('速刷模式'),
+                            subtitle: const Text('答对自动下一题；答错立即看解析并进入复习'),
+                            onTap: () => Navigator.pop(c, 'speed')),
                       ]))));
       if (choice == null) return;
-      batch = choice == 'batch';
+      practiceMode = choice;
+      if (practiceMode == 'speed') {
+        sessionQuestions = sessionQuestions
+            .where((question) => question.answer != null)
+            .toList();
+        if (sessionQuestions.isEmpty) {
+          message(context, '速刷模式仅支持有标准选项答案的客观题');
+          return;
+        }
+      }
     }
     await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => batch
+        builder: (_) => practiceMode == 'batch'
             ? BatchStudySession(
                 questions: sessionQuestions, store: store, review: review)
-            : StudySession(
-                questions: sessionQuestions, exam: exam, review: review)));
+            : practiceMode == 'speed'
+                ? SpeedStudySession(
+                    questions: sessionQuestions, store: store, review: review)
+                : StudySession(
+                    questions: sessionQuestions, exam: exam, review: review)));
     if (mounted) {
       changed();
       if (store.token.isNotEmpty) await safely(context, store.sync);
@@ -787,6 +822,31 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                   child: const Text('退出登录'))
           ])
         ])),
+        heading('VIP 会员'),
+        box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(store.isVip ? Icons.workspace_premium : Icons.star_outline,
+                color: store.isVip ? const Color(0xFFD09A2D) : teal, size: 32),
+            const SizedBox(width: 12),
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text(store.isVip ? 'VIP 已开通' : '普通用户',
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(
+                      '今日 ${store.todayPracticeCount} / ${store.dailyPracticeLimit} 道',
+                      style:
+                          const TextStyle(fontSize: 12, color: Colors.blueGrey))
+                ])),
+            if (!store.isVip)
+              FilledButton(
+                  onPressed: vipDialog, child: Text('${purchases.price} 开通'))
+          ]),
+          const SizedBox(height: 12),
+          Text(store.isVip ? '每日刷题上限 5000 道' : '普通用户每日 200 道；VIP 每日 5000 道'),
+        ])),
         heading('学习设置'),
         box(Column(children: [
           ListTile(
@@ -831,6 +891,68 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
             '当前内置的是演示习题，不代表院校真题或权威答案。正式题库需完成授权、解析审核与教材版本/章节/页码核对。\n\n研究生科室考核、复试笔试可在考研模式下按标签筛选；执医模式可筛选助理医师。\n\n当前提供本地提醒；跨设备服务端推送需接入 APNs / FCM 等服务。',
             style: TextStyle(fontSize: 13, height: 1.8)))
       ];
+
+  Future<void> vipDialog() async {
+    purchases.addListener(changed);
+    try {
+      await showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          builder: (c) {
+            return AnimatedBuilder(
+                animation: purchases,
+                builder: (c, _) {
+                  return SafeArea(
+                      child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child:
+                              Column(mainAxisSize: MainAxisSize.min, children: [
+                            const Icon(Icons.workspace_premium,
+                                size: 56, color: Color(0xFFD09A2D)),
+                            const SizedBox(height: 12),
+                            const Text('齿间 VIP',
+                                style: TextStyle(
+                                    fontSize: 26, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 8),
+                            Text('${purchases.price} · 一次购买'),
+                            const SizedBox(height: 18),
+                            const ListTile(
+                                leading: Icon(Icons.bolt, color: teal),
+                                title: Text('每日最多刷 5000 道'),
+                                subtitle: Text('普通用户每日最多 200 道')),
+                            Text(purchases.message,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.blueGrey)),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                                width: double.infinity,
+                                child: FilledButton(
+                                    onPressed: purchases.loading ||
+                                            !purchases.available ||
+                                            purchases.product == null
+                                        ? null
+                                        : () => safely(c, purchases.buy),
+                                    child: Text(purchases.loading
+                                        ? '处理中…'
+                                        : '${purchases.price} 开通 VIP'))),
+                            TextButton(
+                                onPressed:
+                                    purchases.loading || !purchases.available
+                                        ? null
+                                        : () => safely(c, purchases.restore),
+                                child: const Text('恢复购买')),
+                            const Text('付款由 Apple App Store 或 Google Play 完成。',
+                                style: TextStyle(
+                                    fontSize: 11, color: Colors.blueGrey))
+                          ])));
+                });
+          });
+    } finally {
+      purchases.removeListener(changed);
+    }
+  }
+
   Future<void> goalsDialog() async {
     final newField = TextEditingController(text: '${store.dailyNewLimit}');
     final reviewField =
