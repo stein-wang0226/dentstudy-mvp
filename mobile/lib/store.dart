@@ -173,10 +173,16 @@ class StudyStore extends ChangeNotifier {
 
   Future<Map<String, dynamic>> request(String path,
       [Map<String, dynamic>? data]) async {
-    final uri = Uri.parse('${baseUrl.replaceAll(RegExp(r'/+$'), '')}$path');
+    final configuredBase = baseUrl.trim();
+    final relativeBase = configuredBase.startsWith('/');
+    final uri = relativeBase
+        ? Uri.base.resolve(
+            '${configuredBase.replaceAll(RegExp(r'/+$'), '')}$path')
+        : Uri.parse(
+            '${configuredBase.replaceAll(RegExp(r'/+$'), '')}$path');
     if (!['http', 'https'].contains(uri.scheme) || uri.host.isEmpty)
       throw Exception('请输入有效的 API 地址');
-    if (kReleaseMode && uri.scheme != 'https')
+    if (kReleaseMode && uri.scheme != 'https' && !relativeBase)
       throw Exception('发行版本必须使用 HTTPS 服务');
     final headers = {
       'Content-Type': 'application/json',

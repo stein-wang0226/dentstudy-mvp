@@ -1,0 +1,25 @@
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/backend.Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: "8787"
+      DENTSTUDY_DB: /var/data/dentstudy.sqlite3
+      DENTSTUDY_BANK: /app/mobile/assets/all_questions.json
+      ALLOWED_ORIGINS: "*"
+    volumes:
+      - ../data:/var/data
+    expose:
+      - "8787"
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web.aliyun.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
