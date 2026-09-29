@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: dentstudy-api
+    runtime: docker
+    dockerfilePath: ./deploy/backend.Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    disk:
+      name: dentstudy-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: DENTSTUDY_DB
+        value: /var/data/dentstudy.sqlite3
+      - key: DENTSTUDY_BANK
+        value: /app/mobile/assets/all_questions.json
+      - key: ALLOWED_ORIGINS
+        sync: false
+
+  - type: web
+    name: dentstudy-web
+    runtime: docker
+    dockerfilePath: ./deploy/web.Dockerfile
+    dockerContext: .
+    healthCheckPath: /

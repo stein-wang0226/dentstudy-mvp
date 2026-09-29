@@ -70,8 +70,11 @@ class StudyStore extends ChangeNotifier {
     userId = prefs.getString('userId') ?? 'guest';
     token = await secure.read(key: 'token') ?? '';
     isVip = prefs.getBool('vipEntitled') ?? false;
-    final raw = prefs.getString('bank') ??
-        await rootBundle.loadString('assets/questions.json');
+    const bankAsset = String.fromEnvironment('QUESTION_BANK_ASSET',
+        defaultValue: 'assets/all_questions.json');
+    final raw = bankAsset == 'assets/questions.json'
+        ? (prefs.getString('bank') ?? await rootBundle.loadString(bankAsset))
+        : await rootBundle.loadString(bankAsset);
     questions = (jsonDecode(raw)['questions'] as List)
         .map((q) => Question(Map<String, dynamic>.from(q)))
         .toList();

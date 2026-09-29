@@ -17,6 +17,10 @@ from core import reduce_events, plan
 ROOT = Path(__file__).resolve().parents[1]
 DB = Path(os.environ.get('DENTSTUDY_DB', str(ROOT / 'backend' / 'dentstudy.sqlite3')))
 BANK = Path(os.environ.get('DENTSTUDY_BANK', str(ROOT / 'mobile' / 'assets' / 'questions.json')))
+ALLOWED_ORIGINS = {
+    origin.strip() for origin in os.environ.get('ALLOWED_ORIGINS', '*').split(',')
+    if origin.strip()
+}
 
 
 def connect():
@@ -113,9 +117,17 @@ def validate_settings(value):
 class Handler(BaseHTTPRequestHandler):
     server_version = 'DentStudy/0.1'
 
+    def cors_origin(self):
+        request_origin = self.headers.get('Origin', '')
+        if '*' in ALLOWED_ORIGINS:
+            return '*'
+        return request_origin if request_origin in ALLOWED_ORIGINS else None
+
     def do_OPTIONS(self):
         self.send_response(204)
-        self.send_header('Access-Control-Allow-Origin', '*')
+        origin = self.cors_origin()
+        if origin:
+            self.send_header('Access-Control-Allow-Origin', origin)
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Authorization, Content-Type')
         self.send_header('Access-Control-Max-Age', '86400')
@@ -124,7 +136,9 @@ class Handler(BaseHTTPRequestHandler):
     def respond(self, status, payload):
         data = json.dumps(payload, ensure_ascii=False).encode()
         self.send_response(status)
-        self.send_header('Access-Control-Allow-Origin', '*')
+        origin = self.cors_origin()
+        if origin:
+            self.send_header('Access-Control-Allow-Origin', origin)
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_header('Content-Length', str(len(data)))
         self.send_header('Cache-Control', 'no-store')

@@ -1,0 +1,7 @@
+.git
+.dart_tool
+mobile/build
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+backend/*.sqlite3
+**/.DS_Store

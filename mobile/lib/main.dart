@@ -602,16 +602,20 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
       ...filters(),
       Wrap(spacing: 8, runSpacing: 8, children: [
         FilledButton.icon(
-            onPressed: () => start(qs),
+            onPressed: () => preview(qs),
+            icon: const Icon(Icons.menu_book_outlined),
+            label: Text('查看题目解析 · ${qs.length}')),
+        OutlinedButton.icon(
+            onPressed: () => start(qs, fixedDeep: true),
             icon: const Icon(Icons.play_arrow),
-            label: Text('练习筛选结果 · ${qs.length}')),
+            label: const Text('开始练习')),
         OutlinedButton.icon(
             onPressed: choosePaper,
             icon: const Icon(Icons.timer_outlined),
             label: const Text('套卷模考'))
       ]),
       const SizedBox(height: 16),
-      ...questionList(qs)
+      ...questionList(qs, previewOnly: true)
     ];
   }
 
@@ -642,7 +646,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     ];
   }
 
-  List<Widget> questionList(List<Question> qs, {bool canRemove = false}) => qs.isEmpty
+  List<Widget> questionList(List<Question> qs, {bool canRemove = false, bool previewOnly = false}) => qs.isEmpty
       ? [box(const Text('暂时没有题目。调整筛选条件，或先完成一次练习。'))]
       : qs
           .map((q) => Padding(
@@ -665,11 +669,20 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                           ? IconButton(
                               tooltip: '移出错题本（保留复习排期）',
                               icon: const Icon(Icons.remove_circle_outline),
-                              onPressed: () => safely(
-                                  context, () => store.add(q.id, 'removeWrong', null)))
+                              onPressed: () =>
+                                  safely(context, () => store.add(q.id, 'removeWrong', null)))
                           : const Icon(Icons.chevron_right),
-                      onTap: () => start(q.groupId == null ? [q] : store.questions.where((x) => x.groupId == q.groupId).toList())))))
+                      onTap: () => previewOnly ? preview([q]) : start(q.groupId == null ? [q] : store.questions.where((x) => x.groupId == q.groupId).toList(), fixedDeep: true)))))
           .toList();
+  Future<void> preview(List<Question> selected) async {
+    if (selected.isEmpty) {
+      message(context, '当前条件下没有题目');
+      return;
+    }
+    await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => QuestionPreviewPage(questions: selected)));
+  }
+
   Future<void> choosePaper() async {
     final papers = store.bank.map((q) => q.data['paperId'] as String).toSet();
     final selected = await showModalBottomSheet<String>(
@@ -1131,6 +1144,125 @@ class StudySession extends StatefulWidget {
       this.review = false});
   @override
   State<StudySession> createState() => _StudySessionState();
+}
+
+class QuestionPreviewPage extends StatefulWidget {
+  final List<Question> questions;
+  const QuestionPreviewPage({super.key, required this.questions});
+
+  @override
+  State<QuestionPreviewPage> createState() => _QuestionPreviewPageState();
+}
+
+class _QuestionPreviewPageState extends State<QuestionPreviewPage> {
+  int index = 0;
+
+  Question get question => widget.questions[index];
+
+  @override
+  Widget build(BuildContext context) {
+    final q = question;
+    final citation = q.data['citation'] is Map
+        ? Map<String, dynamic>.from(q.data['citation'] as Map)
+        : <String, dynamic>{};
+    return Scaffold(
+        appBar: AppBar(title: const Text('题目解析')),
+        body: SafeArea(
+            child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 800),
+                    child:
+                        ListView(padding: const EdgeInsets.all(20), children: [
+                      Row(children: [
+                        Text('${index + 1} / ${widget.questions.length}',
+                            style: const TextStyle(
+                                color: teal, fontWeight: FontWeight.bold)),
+                        const Spacer(),
+                        Text('${q.subject} · ${q.chapter}',
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.blueGrey))
+                      ]),
+                      const SizedBox(height: 18),
+                      Wrap(spacing: 6, runSpacing: 6, children: [
+                        pill(q.type),
+                        ...q.tags.map(pill),
+                      ]),
+                      const SizedBox(height: 22),
+                      Text(q.stem,
+                          style: const TextStyle(
+                              fontSize: 21,
+                              height: 1.7,
+                              fontWeight: FontWeight.w600,
+                              color: ink)),
+                      const SizedBox(height: 22),
+                      ...q.options.entries.map((option) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                  color: option.key == q.answer
+                                      ? const Color(0xFFE0F0E7)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                      color: option.key == q.answer
+                                          ? teal
+                                          : const Color(0xFFDDE5DF))),
+                              child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(option.key,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: teal)),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                        child: Text(option.value,
+                                            style: const TextStyle(
+                                                fontSize: 16, height: 1.5)))
+                                  ])))),
+                      const SizedBox(height: 10),
+                      box(Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('参考答案：${q.answer ?? q.data['rubric']}',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, color: teal)),
+                            const SizedBox(height: 12),
+                            Text(q.explanation,
+                                style: const TextStyle(height: 1.8)),
+                            const Divider(height: 28),
+                            Text('易错提示：${q.warning}',
+                                style: const TextStyle(
+                                    fontSize: 13, color: Color(0xFFA16736))),
+                            const SizedBox(height: 12),
+                            Text('出处：${q.reference}',
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.blueGrey)),
+                            if (citation['excerpt'] is String) ...[
+                              const SizedBox(height: 8),
+                              Text('原文摘录：${citation['excerpt']}',
+                                  style: const TextStyle(
+                                      fontSize: 12, color: Colors.blueGrey))
+                            ]
+                          ])),
+                      const SizedBox(height: 20),
+                      Row(children: [
+                        OutlinedButton(
+                            onPressed: index == 0
+                                ? null
+                                : () => setState(() => index--),
+                            child: const Text('上一题')),
+                        const Spacer(),
+                        FilledButton(
+                            onPressed: index + 1 == widget.questions.length
+                                ? null
+                                : () => setState(() => index++),
+                            child: const Text('下一题'))
+                      ])
+                    ])))));
+  }
 }
 
 class _StudySessionState extends State<StudySession>
