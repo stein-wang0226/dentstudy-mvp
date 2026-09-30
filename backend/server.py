@@ -16,7 +16,7 @@ from core import reduce_events, plan
 
 ROOT = Path(__file__).resolve().parents[1]
 DB = Path(os.environ.get('DENTSTUDY_DB', str(ROOT / 'backend' / 'dentstudy.sqlite3')))
-BANK = Path(os.environ.get('DENTSTUDY_BANK', str(ROOT / 'mobile' / 'assets' / 'questions.json')))
+BANK = Path(os.environ.get('DENTSTUDY_BANK', str(ROOT / 'mobile' / 'assets' / 'all_questions.json')))
 ALLOWED_ORIGINS = {
     origin.strip() for origin in os.environ.get('ALLOWED_ORIGINS', '*').split(',')
     if origin.strip()
