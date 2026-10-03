@@ -1,5 +1,6 @@
 __pycache__/
 .tools/
+tools/
 .DS_Store
 *.pyc
 *.sqlite3*

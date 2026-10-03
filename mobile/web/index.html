@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,7 +18,8 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="齿间 DentStudy：每天学一点，记牢一点。">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -29,10 +30,40 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>dentstudy</title>
+  <title>齿间 · DentStudy</title>
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <style>
+    :root { --brand: #087f78; --paper: #f4f9f9; }
+    html, body { margin: 0; background: var(--paper); }
+    #arrival { position: fixed; inset: 0; display: grid; place-content: center;
+      text-align: center; background: var(--paper); color: var(--brand);
+      font-family: "PingFang SC", sans-serif; pointer-events: none; }
+    .arrival-mark { font-size: 38px; font-weight: 700; letter-spacing: 6px;
+      animation: arrive .65s ease-out both; }
+    .arrival-name { margin-top: 10px; font-size: 11px; letter-spacing: 4px;
+      animation: arrive .65s .12s ease-out both; }
+    .arrival-caption { margin-top: 28px; font-size: 13px; opacity: .65; }
+    @keyframes arrive { from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); } }
+    @media (prefers-reduced-motion: reduce) { .arrival-mark, .arrival-name { animation: none; } }
+  </style>
+  <div id="arrival" role="status" aria-label="齿间正在加载">
+    <div class="arrival-mark">齿间</div><div class="arrival-name">DENTSTUDY</div>
+    <div class="arrival-caption">每天学一点，记牢一点。</div>
+  </div>
+  <script>
+    try {
+      const palette = {teal:'#087f78', blue:'#2764a8', purple:'#7652a8', orange:'#b46824', rose:'#b54e6e'};
+      const selected = JSON.parse(localStorage.getItem('flutter.themeColorKey') || '"teal"');
+      const color = palette[selected] || palette.teal;
+      document.documentElement.style.setProperty('--brand', color);
+      const rgb = [1,3,5].map(i => Math.round(255 * .955 + parseInt(color.slice(i,i+2),16) * .045));
+      document.documentElement.style.setProperty('--paper', `rgb(${rgb.join(',')})`);
+    } catch (_) { /* Default brand colour when storage is unavailable. */ }
+    window.addEventListener('flutter-first-frame', () => document.getElementById('arrival')?.remove(), {once:true});
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

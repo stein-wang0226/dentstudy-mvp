@@ -18,6 +18,13 @@ class VipPurchases extends ChangeNotifier {
 
   Future<void> init(StudyStore study) async {
     _study = study;
+    // Web has no StoreKit / Play Billing channel. Do not start a native
+    // purchase stream there; it only produces a misleading platform error.
+    if (kIsWeb) {
+      message = '网页端暂不支持购买，请在 Android 或 iPhone App 内购买';
+      notifyListeners();
+      return;
+    }
     _subscription =
         _store.purchaseStream.listen(_handlePurchases, onError: (Object error) {
       loading = false;
@@ -27,7 +34,7 @@ class VipPurchases extends ChangeNotifier {
     try {
       available = await _store.isAvailable();
       if (!available) {
-        message = kIsWeb ? '请在 Android 或 iPhone App 内购买' : '当前设备无法连接应用商店';
+        message = '当前设备无法连接应用商店';
         notifyListeners();
         return;
       }

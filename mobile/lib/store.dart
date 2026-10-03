@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
+import 'features/library/catalog.dart';
 
 class StudyStore extends ChangeNotifier {
   late SharedPreferences prefs;
@@ -13,14 +14,37 @@ class StudyStore extends ChangeNotifier {
   List<Question> questions = [];
   List<Map<String, dynamic>> events = [];
   List<String> pending = [];
+  Map<String, dynamic>? continuation;
+  Map<String, Map<String, dynamic>> drafts = {};
+  List<Map<String, dynamic>> sessions = [];
+  Map<String, dynamic>? dailyPlan;
+  String? activeSessionId;
+  Future<void> _writeQueue = Future.value();
+  QuestionCatalog get catalog => QuestionCatalog(questions, mode);
   String mode = '考研', email = '', userId = 'guest', baseUrl = '', token = '';
+  String themeColorKey = 'teal';
   int dailyNewLimit = 10;
   int? dailyReviewTarget;
   bool isVip = false;
   String settingsUpdatedAt = '1970-01-01T00:00:00.000000Z';
   bool syncing = false;
   String syncMessage = '离线学习 · 记录保存在本机';
-  LearningState get learning => LearningState(events, questions);
+  LearningState? _learningCache;
+  List<Map<String, dynamic>>? _cachedEvents;
+  List<Question>? _cachedQuestions;
+  int _cachedCount = -1;
+  LearningState get learning {
+    if (!identical(_cachedEvents, events) ||
+        !identical(_cachedQuestions, questions) ||
+        _cachedCount != events.length) {
+      _learningCache = LearningState(events, questions);
+      _cachedEvents = events;
+      _cachedQuestions = questions;
+      _cachedCount = events.length;
+    }
+    return _learningCache!;
+  }
+
   List<Question> get bank =>
       questions.where((q) => q.modes.contains(mode)).toList();
   // Review-first is account-wide, including questions from other exam tracks.
@@ -70,14 +94,24 @@ class StudyStore extends ChangeNotifier {
     userId = prefs.getString('userId') ?? 'guest';
     token = await secure.read(key: 'token') ?? '';
     isVip = prefs.getBool('vipEntitled') ?? false;
+    themeColorKey = prefs.getString('themeColorKey') ?? 'teal';
     const bankAsset = String.fromEnvironment('QUESTION_BANK_ASSET',
         defaultValue: 'assets/all_questions.json');
-    final raw = bankAsset == 'assets/questions.json'
-        ? (prefs.getString('bank') ?? await rootBundle.loadString(bankAsset))
-        : await rootBundle.loadString(bankAsset);
+    final raw = await rootBundle.loadString(bankAsset);
     questions = (jsonDecode(raw)['questions'] as List)
         .map((q) => Question(Map<String, dynamic>.from(q)))
         .toList();
+    final cached = prefs.getString('bank');
+    if (cached != null) {
+      try {
+        final updates = (jsonDecode(cached)['questions'] as List)
+            .map((q) => Question(Map<String, dynamic>.from(q)));
+        questions = {
+          for (final q in questions) q.id: q,
+          for (final q in updates) q.id: q
+        }.values.toList();
+      } catch (_) {/* Keep the bundled bank if an old cache is invalid. */}
+    }
     _loadAccount();
   }
 
@@ -88,6 +122,31 @@ class StudyStore extends ChangeNotifier {
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
     pending = List<String>.from(data['pending']);
+    final savedContinuation = data['continuation'];
+    continuation = savedContinuation is Map
+        ? Map<String, dynamic>.from(savedContinuation)
+        : null;
+    drafts = (data['drafts'] as Map? ?? {})
+        .map((k, v) => MapEntry(k.toString(), Map<String, dynamic>.from(v)));
+    sessions = (data['sessions'] as List? ?? [])
+        .map((v) => Map<String, dynamic>.from(v))
+        .toList();
+    dailyPlan = data['dailyPlan'] is Map
+        ? Map<String, dynamic>.from(data['dailyPlan'])
+        : null;
+    // Older builds saved only the remaining IDs. Preserve those IDs without
+    // inventing the answers or elapsed time they never recorded.
+    if (continuation != null && !drafts.containsKey('legacy')) {
+      drafts['legacy'] = {
+        ...continuation!,
+        'id': 'legacy',
+        'legacy': true,
+        'answers': <String, String>{},
+        'saved': <String>[],
+        'index': 0
+      };
+      continuation = null;
+    }
     final settings = Map<String, dynamic>.from(data['settings'] ?? {});
     dailyNewLimit = settings['dailyNewLimit'] as int? ?? 10;
     dailyReviewTarget = settings['dailyReviewTarget'] as int?;
@@ -97,14 +156,44 @@ class StudyStore extends ChangeNotifier {
 
   Future<void> _save() async {
     // One atomic preferences value keeps the event log and upload queue together.
-    await prefs.setString(
-        'account:$userId',
-        jsonEncode({
-          'events': events,
-          'pending': pending,
-          'settings': settingsPayload,
-        }));
+    final key = 'account:$userId';
+    final payload = jsonEncode({
+      'events': events,
+      'pending': pending,
+      if (continuation != null) 'continuation': continuation,
+      'settings': settingsPayload,
+      'drafts': drafts,
+      'sessions': sessions,
+      'dailyPlan': dailyPlan,
+    });
+    final write = _writeQueue.then((_) async {
+      if (!await prefs.setString(key, payload)) throw Exception('本机存储失败');
+    });
+    _writeQueue = write.catchError((_) {});
+    await write;
     notifyListeners();
+  }
+
+  List<Question> resolveQuestions(Iterable<dynamic> ids) {
+    final byId = {for (final q in questions) q.id: q};
+    return ids.map((id) => byId[id]).whereType<Question>().toList();
+  }
+
+  Future<void> saveDraft(Map<String, dynamic> value) async {
+    drafts[value['id'] as String] = value;
+    await _save();
+  }
+
+  Future<void> finishSession(String id, Map<String, dynamic> summary) async {
+    drafts.remove(id);
+    sessions.removeWhere((s) => s['id'] == id);
+    sessions.add(summary);
+    await _save();
+  }
+
+  Future<void> savePlan(Map<String, dynamic> plan) async {
+    dailyPlan = plan;
+    await _save();
   }
 
   Map<String, dynamic> get settingsPayload => {
@@ -112,6 +201,39 @@ class StudyStore extends ChangeNotifier {
         'dailyReviewTarget': dailyReviewTarget,
         'updatedAt': settingsUpdatedAt,
       };
+
+  List<Question> get continuationQuestions {
+    final ids = continuation?['questionIds'];
+    if (ids is! List) return [];
+    final byId = {for (final question in questions) question.id: question};
+    return ids
+        .whereType<String>()
+        .map((id) => byId[id])
+        .whereType<Question>()
+        .toList();
+  }
+
+  Future<void> saveContinuation({
+    required List<Question> questions,
+    required String practiceMode,
+    required String kind,
+  }) async {
+    if (questions.isEmpty) return;
+    continuation = {
+      'questionIds': questions.map((question) => question.id).toList(),
+      'practiceMode': practiceMode,
+      'kind': kind,
+      'savedAt': DateTime.now().toUtc().toIso8601String(),
+    };
+    await _save();
+  }
+
+  Future<void> clearContinuation() async {
+    if (continuation == null) return;
+    continuation = null;
+    await _save();
+  }
+
   Future<void> setGoals(int newLimit, int? reviewTarget) async {
     if (newLimit < 0 ||
         newLimit > 1000000 ||
@@ -135,6 +257,12 @@ class StudyStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setThemeColor(String value) async {
+    themeColorKey = value;
+    await prefs.setString('themeColorKey', value);
+    notifyListeners();
+  }
+
   Future<void> add(String questionId, String kind, dynamic value) async {
     await addMany([
       {'questionId': questionId, 'kind': kind, 'value': value}
@@ -142,6 +270,18 @@ class StudyStore extends ChangeNotifier {
   }
 
   Future<void> addMany(List<Map<String, dynamic>> additions) async {
+    if (activeSessionId != null) {
+      final freshIds = additions
+          .where((a) =>
+              a['kind'] == 'review' &&
+              a['value']?['mode'] != 'exam' &&
+              learning.states[a['questionId']]?.lastDay == null)
+          .map((a) => a['questionId'])
+          .toSet();
+      if (freshIds.isNotEmpty && due.isNotEmpty)
+        throw Exception('有到期复习题，请返回今日先完成复习；当前作答已保留。');
+      if (freshIds.length > remainingNew) throw Exception('今日新题目标已完成，当前作答已保留。');
+    }
     final reviewCount =
         additions.where((addition) => addition['kind'] == 'review').length;
     final remaining = remainingPractice;
@@ -160,6 +300,20 @@ class StudyStore extends ChangeNotifier {
         ...addition,
       });
       pending.add(id);
+      final localSession = drafts[activeSessionId] ??
+          sessions.where((s) => s['id'] == activeSessionId).firstOrNull;
+      if (addition['kind'] == 'review' && localSession != null) {
+        final draft = localSession;
+        draft['saved'] = <String>{
+          ...List<String>.from(draft['saved'] ?? []),
+          addition['questionId'] as String
+        }.toList();
+        draft['eventIds'] = [...List<String>.from(draft['eventIds'] ?? []), id];
+        draft['answers'] = {
+          ...Map<String, dynamic>.from(draft['answers'] ?? {}),
+          addition['questionId']: addition['value']['answer']
+        };
+      }
     }
     await _save();
   }
@@ -176,10 +330,9 @@ class StudyStore extends ChangeNotifier {
     final configuredBase = baseUrl.trim();
     final relativeBase = configuredBase.startsWith('/');
     final uri = relativeBase
-        ? Uri.base.resolve(
-            '${configuredBase.replaceAll(RegExp(r'/+$'), '')}$path')
-        : Uri.parse(
-            '${configuredBase.replaceAll(RegExp(r'/+$'), '')}$path');
+        ? Uri.base
+            .resolve('${configuredBase.replaceAll(RegExp(r'/+$'), '')}$path')
+        : Uri.parse('${configuredBase.replaceAll(RegExp(r'/+$'), '')}$path');
     if (!['http', 'https'].contains(uri.scheme) || uri.host.isEmpty)
       throw Exception('请输入有效的 API 地址');
     if (kReleaseMode && uri.scheme != 'https' && !relativeBase)
