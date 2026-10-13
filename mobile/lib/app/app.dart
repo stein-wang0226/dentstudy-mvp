@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'shared.dart';
 import '../features/today/today_page.dart';
@@ -29,7 +30,14 @@ class DentStudy extends StatelessWidget {
             themeAnimationDuration: const Duration(milliseconds: 250),
             theme: ThemeData(
                 useMaterial3: true,
-                fontFamily: 'PingFang SC',
+                fontFamily: 'DentStudySans',
+                fontFamilyFallback: const [
+                  'DentStudySymbols',
+                  'DentStudyMath',
+                  'PingFang SC',
+                  'Microsoft YaHei',
+                  'sans-serif'
+                ],
                 colorScheme: scheme,
                 scaffoldBackgroundColor: paper,
                 appBarTheme: AppBarTheme(
@@ -66,7 +74,7 @@ class DentStudy extends StatelessWidget {
       });
 }
 
-/// Plays once per application launch. Reduced-motion users see content directly.
+/// Native entrance; the web launch animation is provided by web/index.html.
 class Entrance extends StatefulWidget {
   final Widget child;
   const Entrance({super.key, required this.child});
@@ -99,13 +107,15 @@ class _EntranceState extends State<Entrance>
   }
 
   @override
-  Widget build(BuildContext context) => FadeTransition(
-      opacity: CurvedAnimation(parent: controller, curve: Curves.easeOut),
-      child: SlideTransition(
-          position: Tween(begin: const Offset(0, .015), end: Offset.zero)
-              .animate(CurvedAnimation(
-                  parent: controller, curve: Curves.easeOutCubic)),
-          child: widget.child));
+  Widget build(BuildContext context) => kIsWeb
+      ? widget.child
+      : FadeTransition(
+          opacity: CurvedAnimation(parent: controller, curve: Curves.easeOut),
+          child: SlideTransition(
+              position: Tween(begin: const Offset(0, .015), end: Offset.zero)
+                  .animate(CurvedAnimation(
+                      parent: controller, curve: Curves.easeOutCubic)),
+              child: widget.child));
 }
 
 class Home extends StatefulWidget {

@@ -5,9 +5,9 @@
 实际服务器使用宿主机 Nginx + `dentstudy.service`，不是下面的 Docker 方案。
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
-- 应用版本：`5b00b84`；综合题库 3520 道，原有 2320 个 ID 全部保留。
+- 客户端版本：`0.2.0`（章节连续浏览、关键词搜索、本地字库）；后端仍为 `5b00b84`，综合题库 3520 道，原有 ID 全部保留。
 - 后端：`/opt/dentstudy-current` 指向 `/opt/dentstudy-releases/5b00b84`。
-- 前端：`/var/www/dentstudy-current` 指向本次发布目录。
+- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261013-library-v020`。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
 - 旧代码 `/opt/dentstudy`、旧网页 `/var/www/dentstudy` 均保留。
 - 更新前的数据库与配置备份：`/opt/backups/dentstudy-20261013`，数据库已验证完整性。
@@ -18,6 +18,17 @@
 `deploy/dentstudy-certbot.service` 和 `deploy/dentstudy-certbot.timer`。
 构建 Web 时使用 `--no-web-resources-cdn --dart-define=API_URL=/api`
 及 `--dart-define=QUESTION_BANK_ASSET=assets/all_questions.json`。
+发布时同时传入 `--dart-define=APP_VERSION=0.2.0` 和
+`--dart-define=BUILD_TIME=实际北京时间`，在“我的”显示版本与更新时间。
+当前 GitHub workflow 只做检查，不会自动部署；代码推送后仍需单独构建和上传。
+
+0.2.0 的验收路径：题库 → 搜索题目关键词（试“咬合力”或“𬌗力”）；
+题库 → 学科 → 章节 → 任意题 → 下一题 → 章末下一章；
+解析右上“题目目录”跳题；返回后章节显示“继续解析”；我的底部核对版本。
+阅读进度键为 `reading:账号ID:考试方向:学科:章节`，仅保存在本机，
+不影响作答记录、不进入事件同步。搜索支持题干、共用题干、选项、解析、
+考点、标签和题目编号；多关键词为同时匹配，结果优先显示题干匹配。
+字体精简生成方法见 `mobile/assets/fonts/README.md`。
 
 更新时先备份 SQLite（使用 SQLite backup API，避免直接复制正在写入的数据库），
 在新目录上传程序和 Web 产物，检查题目 ID 兼容性并运行测试，再切换 current 链接。

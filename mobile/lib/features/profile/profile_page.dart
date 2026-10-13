@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../app/shared.dart';
+import '../../app/build_info.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -142,7 +143,12 @@ class _ProfilePageState extends State<ProfilePage> {
         ])),
         heading('关于题库'),
         box(Text(
-            '${store.catalog.countLabel}。\n资料整理题与演示题分别标注审核状态；题量不代表学科覆盖完整。'))
+            '${store.catalog.countLabel}。\n资料整理题与演示题分别标注审核状态；题量不代表学科覆盖完整。')),
+        const SizedBox(height: 20),
+        const Text(
+            '齿间 DentStudy · ${BuildInfo.version}\n更新于 ${BuildInfo.builtAt}',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
       ];
 
   Future<void> vipDialog() async {

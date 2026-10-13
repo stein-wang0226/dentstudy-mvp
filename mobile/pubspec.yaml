@@ -1,7 +1,7 @@
 name: dentstudy
 description: 口腔医学间隔复习与题库学习应用
 publish_to: none
-version: 0.1.0+1
+version: 0.2.0+2
 environment:
   sdk: '>=3.6.0 <4.0.0'
 dependencies:
@@ -18,6 +18,19 @@ dev_dependencies:
     sdk: flutter
 flutter:
   uses-material-design: true
+  fonts:
+    - family: DentStudySans
+      fonts:
+        - asset: assets/fonts/DentStudySans-Regular.otf
+          weight: 400
+        - asset: assets/fonts/DentStudySans-Bold.otf
+          weight: 700
+    - family: DentStudySymbols
+      fonts:
+        - asset: assets/fonts/DentStudySymbols-Regular.ttf
+    - family: DentStudyMath
+      fonts:
+        - asset: assets/fonts/DentStudyMath-Regular.ttf
   assets:
     - assets/questions.json
     - assets/periodontology_questions.json

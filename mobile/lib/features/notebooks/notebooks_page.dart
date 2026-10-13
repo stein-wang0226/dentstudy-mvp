@@ -3,6 +3,7 @@ import '../../app/shared.dart';
 import '../../models.dart';
 import '../practice/practice_request.dart';
 import '../library/question_preview.dart';
+import '../library/question_search.dart';
 
 class NotebooksPage extends StatefulWidget {
   final StartPractice onStart;
@@ -38,6 +39,9 @@ class _NotebooksPageState extends State<NotebooksPage> {
           .toList(),
     };
     final source = groups[kind]!;
+    final matches = keyword.isEmpty
+        ? null
+        : QuestionSearchIndex(source).search(keyword).map((q) => q.id).toSet();
     final qs = source
         .where((q) =>
             (subject == '全部' || q.subject == subject) &&
@@ -46,8 +50,7 @@ class _NotebooksPageState extends State<NotebooksPage> {
             (tag == '全部' || q.tags.contains(tag)) &&
             (school == '全部' || q.data['school'] == school) &&
             (year == '全部' || q.data['year'].toString() == year) &&
-            (keyword.isEmpty ||
-                '${q.stem} ${q.chapter} ${q.data['topics']}'.contains(keyword)))
+            (matches == null || matches.contains(q.id)))
         .toList();
     var newSlots = store.due.isEmpty ? store.remainingNew : 0;
     final learnable = store.catalog.learnable.map((q) => q.id).toSet();
@@ -82,7 +85,7 @@ class _NotebooksPageState extends State<NotebooksPage> {
       if (filtering) ...[
         TextField(
             controller: search,
-            decoration: const InputDecoration(labelText: '搜索题干或考点'),
+            decoration: const InputDecoration(labelText: '搜索题干、选项、解析或考点'),
             onChanged: (v) => setState(() {
                   keyword = v.trim();
                   shown = 20;
@@ -152,8 +155,10 @@ class _NotebooksPageState extends State<NotebooksPage> {
                   onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) =>
-                              QuestionPreviewPage(questions: [q]))))),
+                          builder: (_) => QuestionPreviewPage(
+                              questions: qs,
+                              initialQuestionId: q.id,
+                              title: '$kind解析'))))),
       if (qs.length > shown)
         TextButton(
             onPressed: () => setState(() => shown += 20),

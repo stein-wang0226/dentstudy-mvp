@@ -18,9 +18,17 @@ class SourceDetails extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(question.reference,
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.blueGrey))))
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SelectableText('题目编号：${question.id}',
+                              style: const TextStyle(
+                                  fontSize: 12, color: Colors.blueGrey)),
+                          const SizedBox(height: 6),
+                          Text(question.reference,
+                              style: const TextStyle(
+                                  fontSize: 12, color: Colors.blueGrey))
+                        ])))
           ]);
 }
 

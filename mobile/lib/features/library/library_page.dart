@@ -5,6 +5,7 @@ import '../statistics/learning_metrics.dart';
 import '../practice/practice_request.dart';
 import 'question_preview.dart';
 import 'catalog.dart';
+import 'question_search_page.dart';
 
 class LibraryPage extends StatefulWidget {
   final StartPractice onStart;
@@ -30,83 +31,95 @@ class _LibraryPageState extends State<LibraryPage> {
       final available = catalog.subjects.where(catalog.available).toList();
       final building =
           catalog.subjects.where((s) => !catalog.available(s)).toList();
-      return PageBody(children: [
-        heading('题库', sub: catalog.countLabel),
-        for (final name in available) ...[
-          Card(
-              child: ListTile(
-                  contentPadding: const EdgeInsets.all(18),
-                  title: Text(name,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(
-                      '${catalog.material(name).length} 题 · ${catalog.material(name).map((q) => q.chapter).toSet().length} 章\n'
-                      '已学 ${metrics.learned(catalog.material(name))} · 正确率 ${LearningMetrics.percent(metrics.accuracy(catalog.material(name)))} · 待复习 ${metrics.due(catalog.material(name))}\n${QuestionCatalog.statusSummary(catalog.material(name))}'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => setState(() => subject = name))),
-          const SizedBox(height: 8)
-        ],
-        if (building.isNotEmpty)
-          heading('题库建设中', sub: '当前方向资料题不足 50 道，暂未开放常规练习'),
-        for (final name in building)
-          ListTile(
-              enabled: false,
-              leading: const Icon(Icons.hourglass_empty),
-              title: Text(name),
-              subtitle: Text('${catalog.material(name).length} 道资料题 · 题库建设中')),
-        const SizedBox(height: 16),
-        OutlinedButton.icon(
-            onPressed: _papers,
-            icon: const Icon(Icons.timer_outlined),
-            label: const Text('套卷练习'))
-      ]);
+      return PageBody(
+          key: PageStorageKey('library:${store.mode}:subjects'),
+          children: [
+            heading('题库', sub: catalog.countLabel),
+            _searchEntry(),
+            const SizedBox(height: 12),
+            for (final name in available) ...[
+              Card(
+                  child: ListTile(
+                      contentPadding: const EdgeInsets.all(18),
+                      title: Text(name,
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text(
+                          '${catalog.material(name).length} 题 · ${catalog.material(name).map((q) => q.chapter).toSet().length} 章\n'
+                          '已学 ${metrics.learned(catalog.material(name))} · 正确率 ${LearningMetrics.percent(metrics.accuracy(catalog.material(name)))} · 待复习 ${metrics.due(catalog.material(name))}\n${QuestionCatalog.statusSummary(catalog.material(name))}'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => setState(() => subject = name))),
+              const SizedBox(height: 8)
+            ],
+            if (building.isNotEmpty)
+              heading('题库建设中', sub: '当前方向资料题不足 50 道，暂未开放常规练习'),
+            for (final name in building)
+              ListTile(
+                  enabled: false,
+                  leading: const Icon(Icons.hourglass_empty),
+                  title: Text(name),
+                  subtitle:
+                      Text('${catalog.material(name).length} 道资料题 · 题库建设中')),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+                onPressed: _papers,
+                icon: const Icon(Icons.timer_outlined),
+                label: const Text('套卷练习'))
+          ]);
     }
     final qs = catalog.material(subject!);
     final chapters = qs.map((q) => q.chapter).toSet();
-    return PageBody(children: [
-      Row(children: [
-        TextButton.icon(
-            onPressed: () => setState(() {
-                  if (chapter != null) {
-                    chapter = null;
-                  } else {
-                    subject = null;
-                  }
-                  shown = 20;
-                }),
-            icon: const Icon(Icons.arrow_back),
-            label: Text(chapter == null ? '全部学科' : '章节目录')),
-        const Spacer(),
-        TextButton.icon(
-            onPressed: () => _chooseMode(chapter == null
-                ? qs
-                : qs.where((q) => q.chapter == chapter).toList()),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('开始练习'))
-      ]),
-      heading(chapter ?? subject!,
-          sub: chapter == null
-              ? '${qs.length} 题 · ${QuestionCatalog.statusSummary(qs)}'
-              : subject),
-      if (chapter == null)
-        for (final name in chapters)
-          _chapter(name, qs.where((q) => q.chapter == name).toList(), metrics)
-      else ...[
-        _actions(qs.where((q) => q.chapter == chapter).toList()),
-        const SizedBox(height: 14),
-        for (final q in qs.where((q) => q.chapter == chapter).take(shown))
-          Card(
-              child: ListTile(
-                  title: Text(q.stem,
-                      maxLines: 2, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(q.type),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _preview([q]))),
-        if (qs.where((q) => q.chapter == chapter).length > shown)
-          TextButton(
-              onPressed: () => setState(() => shown += 20),
-              child: const Text('再显示 20 题')),
-      ]
-    ]);
+    return PageBody(
+        key: PageStorageKey('library:${store.mode}:$subject:$chapter'),
+        children: [
+          Row(children: [
+            TextButton.icon(
+                onPressed: () => setState(() {
+                      if (chapter != null) {
+                        chapter = null;
+                      } else {
+                        subject = null;
+                      }
+                      shown = 20;
+                    }),
+                icon: const Icon(Icons.arrow_back),
+                label: Text(chapter == null ? '全部学科' : '章节目录')),
+            const Spacer(),
+            TextButton.icon(
+                onPressed: () => _chooseMode(chapter == null
+                    ? qs
+                    : qs.where((q) => q.chapter == chapter).toList()),
+                icon: const Icon(Icons.play_arrow),
+                label: const Text('开始练习'))
+          ]),
+          heading(chapter ?? subject!,
+              sub: chapter == null
+                  ? '${qs.length} 题 · ${QuestionCatalog.statusSummary(qs)}'
+                  : subject),
+          _searchEntry(),
+          const SizedBox(height: 12),
+          if (chapter == null)
+            for (final name in chapters)
+              _chapter(
+                  name, qs.where((q) => q.chapter == name).toList(), metrics)
+          else ...[
+            _actions(qs.where((q) => q.chapter == chapter).toList()),
+            const SizedBox(height: 14),
+            for (final q in qs.where((q) => q.chapter == chapter).take(shown))
+              Card(
+                  child: ListTile(
+                      title: Text(q.stem,
+                          maxLines: 2, overflow: TextOverflow.ellipsis),
+                      subtitle: Text(q.type),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _preview(
+                          qs.where((item) => item.chapter == chapter).toList(),
+                          initialQuestionId: q.id))),
+            if (qs.where((q) => q.chapter == chapter).length > shown)
+              TextButton(
+                  onPressed: () => setState(() => shown += 20),
+                  child: const Text('再显示 20 题')),
+          ]
+        ]);
   }
 
   Future<void> _chooseMode(List<Question> qs) async {
@@ -156,6 +169,9 @@ class _LibraryPageState extends State<LibraryPage> {
                   ])));
   Widget _actions(List<Question> qs) {
     final due = store.learning.due(qs, DateTime.now());
+    final saved = store.prefs.getString(
+        'reading:${store.userId}:${store.mode}:${qs.first.subject}:${qs.first.chapter}');
+    final readingIndex = qs.indexWhere((q) => q.id == saved);
     return Wrap(spacing: 8, children: [
       TextButton(
           onPressed: () => widget.onStart(
@@ -167,12 +183,41 @@ class _LibraryPageState extends State<LibraryPage> {
               : () => widget.onStart(PracticeRequest(due,
                   review: true, label: '${subject!} · 章节复习')),
           child: Text('章节复习 ${due.length}')),
-      TextButton(onPressed: () => _preview(qs), child: const Text('查看解析'))
+      TextButton(
+          onPressed: () => _preview(qs),
+          child: Text(
+              readingIndex > 0 ? '继续解析 · 第 ${readingIndex + 1} 题' : '查看解析'))
     ]);
   }
 
-  void _preview(List<Question> qs) => Navigator.push(context,
-      MaterialPageRoute(builder: (_) => QuestionPreviewPage(questions: qs)));
+  Widget _searchEntry() => OutlinedButton.icon(
+      onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => QuestionSearchPage(
+                  questions: store.catalog.learnable,
+                  subject: subject,
+                  chapter: chapter))),
+      icon: const Icon(Icons.search),
+      label: Text(chapter != null
+          ? '搜索本章题目'
+          : subject != null
+              ? '搜索本学科题目'
+              : '搜索题目关键词'));
+
+  Future<void> _preview(List<Question> qs, {String? initialQuestionId}) async {
+    if (qs.isEmpty) return;
+    await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => QuestionPreviewPage(
+                questions: store.catalog.material(qs.first.subject),
+                initialQuestionId: initialQuestionId,
+                initialChapter: qs.first.chapter,
+                chapterNavigation: true)));
+    if (mounted) setState(() {});
+  }
+
   Future<void> _papers() async {
     final groups = <String, List<Question>>{};
     for (final q in store.catalog.learnable) {
