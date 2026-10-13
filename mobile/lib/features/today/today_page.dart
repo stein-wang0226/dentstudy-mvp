@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../app/shared.dart';
 import '../../models.dart';
+import '../compliance/filing_footer.dart';
 import '../practice/practice_request.dart';
 import '../statistics/learning_metrics.dart';
 import 'today_plan.dart';
@@ -120,6 +121,7 @@ class TodayPage extends StatelessWidget {
         const Text('完成一些练习后，这里会出现章节建议。')
       else
         for (final qs in metrics.weakChapters.take(2)) _suggestion(qs, metrics),
+      const FilingFooter(),
     ]);
   }
 

@@ -21,7 +21,7 @@ class VipPurchases extends ChangeNotifier {
     // Web has no StoreKit / Play Billing channel. Do not start a native
     // purchase stream there; it only produces a misleading platform error.
     if (kIsWeb) {
-      message = '网页端暂不支持购买，请在 Android 或 iPhone App 内购买';
+      message = '付费功能尚未开放，当前可使用免费学习功能';
       notifyListeners();
       return;
     }
