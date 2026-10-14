@@ -141,4 +141,41 @@ class LearningMetrics {
         .toList()
       ..sort((a, b) => accuracy(a)!.compareTo(accuracy(b)!));
   }
+
+  List<List<Question>> get priorityChapters {
+    final groups = <String, List<Question>>{};
+    for (final question in questions) {
+      groups
+          .putIfAbsent('${question.subject}\u0000${question.chapter}', () => [])
+          .add(question);
+    }
+    final result = groups.values
+        .where((scope) =>
+            learned(scope) > 0 &&
+            (unresolvedWrong(scope) > 0 ||
+                due(scope) > 0 ||
+                (accuracy(scope) ?? 1) < .8))
+        .toList();
+    result.sort((a, b) => priorityScore(b).compareTo(priorityScore(a)));
+    return result;
+  }
+
+  double priorityScore(List<Question> scope) {
+    final accuracyGap = 1 - (accuracy(scope) ?? 1);
+    return unresolvedWrong(scope) * 4 + due(scope) * .75 + accuracyGap * 2;
+  }
+
+  String recommendation(List<Question> scope) {
+    final repeated = activeMistakes(scope).where(isRepeatedMistake).length;
+    if (repeated > 0) {
+      return '${scope.first.subject}${scope.first.chapter}有 $repeated 道反复错题，建议先做错题巩固。';
+    }
+    if (unresolvedWrong(scope) > 0) {
+      return '${scope.first.subject}${scope.first.chapter}有 ${unresolvedWrong(scope)} 道待巩固错题，建议先订正。';
+    }
+    if (due(scope) > 0) {
+      return '${scope.first.subject}${scope.first.chapter}有 ${due(scope)} 道到期题，建议今天完成复习。';
+    }
+    return '${scope.first.subject}${scope.first.chapter}正确率 ${percent(accuracy(scope))}，建议复习已学题目巩固。';
+  }
 }

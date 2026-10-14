@@ -39,6 +39,9 @@ class _NotebooksPageState extends State<NotebooksPage> {
       '疑问题': store.questions
           .where((q) => state.states[q.id]?.grade == 'guessed')
           .toList(),
+      '笔记': store.questions
+          .where((q) => (state.states[q.id]?.note.trim().isNotEmpty ?? false))
+          .toList(),
     };
     final activeMistakes = metrics.activeMistakes(groups['错题']!);
     final recovered = groups['错题']!.where(metrics.isRecoveredMistake).toList()
@@ -102,6 +105,7 @@ class _NotebooksPageState extends State<NotebooksPage> {
                   '列表已按“今日刚错 → 反复错 → 其他 → 已掌握待归档”排序。移出错题本只改变你的题本标记，不会删除作答记录或复习排期。',
                   style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
             ]))),
+      if (kind == '笔记') _noteTopics(groups['笔记']!),
       Align(
           alignment: Alignment.centerRight,
           child: TextButton.icon(
@@ -170,8 +174,7 @@ class _NotebooksPageState extends State<NotebooksPage> {
               child: ListTile(
                   title: Text(q.stem,
                       maxLines: 2, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(
-                      '${q.subject} · ${q.chapter}${kind == '错题' ? ' · ${_mistakeLabel(q, metrics)}' : ''}'),
+                  subtitle: Text(_subtitle(q, metrics)),
                   trailing: kind == '错题'
                       ? IconButton(
                           tooltip: '移出错题本，保留复习排期',
@@ -223,5 +226,50 @@ class _NotebooksPageState extends State<NotebooksPage> {
     if (metrics.isWrongToday(question)) return '今日刚错，优先订正';
     final times = metrics.wrongAttempts(question);
     return times >= 2 ? '已错 $times 次，重点巩固' : '待巩固';
+  }
+
+  String _subtitle(Question question, LearningMetrics metrics) {
+    if (kind == '错题') {
+      return '${question.subject} · ${question.chapter} · ${_mistakeLabel(question, metrics)}';
+    }
+    if (kind == '笔记') {
+      final note = store.learning.states[question.id]?.note.trim() ?? '';
+      return '${question.subject} · ${question.chapter}\n笔记：$note';
+    }
+    return '${question.subject} · ${question.chapter}';
+  }
+
+  Widget _noteTopics(List<Question> notes) {
+    final counts = <String, int>{};
+    for (final question in notes) {
+      for (final topic in question.tags) {
+        counts[topic] = (counts[topic] ?? 0) + 1;
+      }
+    }
+    final topics = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return Padding(
+        padding: const EdgeInsets.only(top: 14),
+        child:
+            box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('知识点笔记', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 7),
+          Text('共 ${notes.length} 道题留下笔记；下方按题目自带考点聚合，便于考前回看。'),
+          if (topics.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: topics
+                    .take(8)
+                    .map((entry) =>
+                        Chip(label: Text('${entry.key} ${entry.value}')))
+                    .toList())
+          ] else ...[
+            const SizedBox(height: 7),
+            const Text('这些题暂未配置考点标签，仍可逐题回看笔记。',
+                style: TextStyle(fontSize: 12, color: Colors.blueGrey))
+          ]
+        ])));
   }
 }

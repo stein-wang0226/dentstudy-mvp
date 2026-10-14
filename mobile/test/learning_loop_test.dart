@@ -17,13 +17,15 @@ import 'package:dentstudy/app/app.dart';
 import 'package:dentstudy/features/profile/profile_page.dart';
 import 'package:dentstudy/app/shared.dart' as app;
 
-Question q(int n, {bool demo = false, String subject = '主学科'}) => Question({
+Question q(int n,
+        {bool demo = false, String subject = '主学科', String chapter = '第一章'}) =>
+    Question({
       'id': 'q$n',
       'stem': '测试题 $n',
       'answer': 'A',
       'options': {'A': '正确', 'B': '错误', 'C': '其他', 'D': '另外'},
       'subject': subject,
-      'chapter': '第一章',
+      'chapter': chapter,
       'type': 'A1',
       'modes': ['考研'],
       'isDemo': demo,
@@ -170,6 +172,28 @@ void main() {
     expect(metrics.activeMistakes(store.questions).first.id, 'q0');
     expect(metrics.isRecoveredMistake(store.questions[2]), isTrue);
     expect(metrics.masteryLabel(store.questions.take(2).toList()), '需巩固');
+  });
+  test('review recommendation ranks unresolved mistakes above stable chapters',
+      () async {
+    final store = await freshStore();
+    store.questions = [
+      q(0, chapter: '高频错题章'),
+      q(1, chapter: '高频错题章'),
+      q(2, chapter: '相对稳定章'),
+      q(3, chapter: '相对稳定章'),
+    ];
+    await store.add(
+        'q0', 'review', {'answer': 'B', 'grade': 'wrong', 'mode': 'practice'});
+    await store.add(
+        'q0', 'review', {'answer': 'B', 'grade': 'wrong', 'mode': 'review'});
+    await store.add('q2', 'review',
+        {'answer': 'A', 'grade': 'mastered', 'mode': 'practice'});
+    await store.add('q3', 'review',
+        {'answer': 'A', 'grade': 'mastered', 'mode': 'practice'});
+    final metrics = LearningMetrics(store.learning, store.questions);
+    expect(metrics.priorityChapters.first.first.chapter, '高频错题章');
+    expect(metrics.recommendation(metrics.priorityChapters.first),
+        contains('反复错题'));
   });
   test(
       'answer event and saved IDs persist together; finishing keeps other drafts',

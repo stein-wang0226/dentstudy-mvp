@@ -5,7 +5,7 @@
 实际服务器使用宿主机 Nginx + `dentstudy.service`，不是下面的 Docker 方案。
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
-- 客户端版本：`0.2.1`（章节连续浏览、关键词搜索、本地字库、错题分层与学习巩固）；后端仍为 `5b00b84`，综合题库 3520 道，原有 ID 全部保留。
+- 客户端版本：`0.2.2`（章节连续浏览、关键词搜索、本地字库、错题分层、学习巩固与知识点笔记）；后端仍为 `5b00b84`，综合题库 3520 道，原有 ID 全部保留。
 - 后端：`/opt/dentstudy-current` 指向 `/opt/dentstudy-releases/5b00b84`。
 - 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261014-learning-v021`。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
@@ -18,12 +18,13 @@
 `deploy/dentstudy-certbot.service` 和 `deploy/dentstudy-certbot.timer`。
 构建 Web 时使用 `--no-web-resources-cdn --dart-define=API_URL=/api`
 及 `--dart-define=QUESTION_BANK_ASSET=assets/all_questions.json`。
-发布时同时传入 `--dart-define=APP_VERSION=0.2.1` 和
+发布时同时传入 `--dart-define=APP_VERSION=0.2.2` 和
 `--dart-define=BUILD_TIME=实际北京时间`，在“我的”显示版本与更新时间。
 当前 GitHub workflow 只做检查，不会自动部署；代码推送后仍需单独构建和上传。
 
-0.2.1 的验收路径：今日 → 优先订正（有错题时）；题本 → 错题优先级；
-题库 → 查看章节掌握状态；任一练习解析 → 学习巩固 → 同考点题解析。
+0.2.2 的验收路径：今日 → 优先订正（有错题时）；题本 → 错题优先级或笔记；
+题库 → 查看章节掌握状态；任一练习解析 → 学习巩固 → 同考点题解析；
+学情 → 下一步复盘。
 仍保留 0.2.0 的验收路径：题库 → 搜索题目关键词（试“咬合力”或“𬌗力”）；
 题库 → 学科 → 章节 → 任意题 → 下一题 → 章末下一章；
 解析右上“题目目录”跳题；返回后章节显示“继续解析”；我的底部核对版本。

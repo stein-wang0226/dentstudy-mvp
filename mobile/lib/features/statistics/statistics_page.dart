@@ -90,6 +90,17 @@ class StatisticsPage extends StatelessWidget {
                           style: const TextStyle(fontSize: 10))
                     ]))
             ]))),
+      heading('下一步复盘', sub: '根据错题、到期复习和正确率排序；从最需要补的章节开始'),
+      if (metrics.priorityChapters.isEmpty)
+        const Text('还没有需要优先复盘的章节。完成练习后会按你的真实作答生成建议。')
+      else
+        for (final qs in metrics.priorityChapters.take(3))
+          Card(
+              child: ListTile(
+                  title: Text('${qs.first.subject} · ${qs.first.chapter}'),
+                  subtitle: Text(metrics.recommendation(qs)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _chapter(context, qs, metrics))),
       heading('薄弱章节', sub: '已作答客观题正确率低于 80% · 小样本仅供参考'),
       if (metrics.weakChapters.isEmpty)
         const Text('暂无薄弱章节，完成练习后会生成建议。')
@@ -100,7 +111,7 @@ class StatisticsPage extends StatelessWidget {
                   title: Text('${qs.first.subject} · ${qs.first.chapter}'),
                   subtitle: Text(
                       '正确率 ${LearningMetrics.percent(metrics.accuracy(qs))} · ${metrics.attemptsFor(qs).length} 次作答\n'
-                      '${metrics.wrong(qs) > 0 ? '建议先完成 ${metrics.wrong(qs)} 道错题巩固' : '建议复习本章已学题目'}'),
+                      '${metrics.unresolvedWrong(qs) > 0 ? '建议先完成 ${metrics.unresolvedWrong(qs)} 道错题巩固' : '建议复习本章已学题目'}'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _chapter(context, qs, metrics))),
     ]);
@@ -116,8 +127,7 @@ class StatisticsPage extends StatelessWidget {
       ]));
   void _chapter(
       BuildContext context, List<Question> qs, LearningMetrics metrics) {
-    final wrong =
-        qs.where((q) => store.learning.states[q.id]?.wrong == true).toList();
+    final wrong = metrics.activeMistakes(qs);
     final learned =
         qs.where((q) => store.learning.states[q.id]?.lastDay != null).toList();
     showModalBottomSheet(

@@ -118,6 +118,7 @@ class _QuestionPreviewPageState extends State<QuestionPreviewPage> {
           body: const Center(child: Text('当前范围没有可查看的题目')));
     }
     final q = question;
+    final note = store.learning.states[q.id]?.note.trim() ?? '';
     final last = index + 1 == sequence.questions.length;
     final nextChapter = widget.chapterNavigation && sequence.endsChapter(index);
     final progress = widget.chapterNavigation
@@ -180,6 +181,23 @@ class _QuestionPreviewPageState extends State<QuestionPreviewPage> {
                                   key: ValueKey(q.id),
                                   question: q,
                                   store: store),
+                              if (note.isNotEmpty) ...[
+                                const SizedBox(height: 10),
+                                box(
+                                    Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text('我的笔记',
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.bold)),
+                                          const SizedBox(height: 8),
+                                          SelectableText(note,
+                                              style:
+                                                  const TextStyle(height: 1.65))
+                                        ]),
+                                    color: teal.withAlpha(10)),
+                              ],
                               if (q.tags.isNotEmpty) ...[
                                 Wrap(
                                     spacing: 6,
