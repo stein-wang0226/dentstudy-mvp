@@ -5,9 +5,9 @@
 实际服务器使用宿主机 Nginx + `dentstudy.service`，不是下面的 Docker 方案。
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
-- 客户端版本：`0.2.3`（章节连续浏览、关键词搜索、本地字库、错题分层、学习巩固、知识点笔记与短欢迎动画）；后端仍为 `5b00b84`，综合题库 3520 道，原有 ID 全部保留。
+- 客户端版本：`0.2.4`（章节连续浏览、关键词搜索、本地字库、错题分层、学习巩固、知识点笔记与静态渐变欢迎页）；后端仍为 `5b00b84`，综合题库 3520 道，原有 ID 全部保留。
 - 后端：`/opt/dentstudy-current` 指向 `/opt/dentstudy-releases/5b00b84`。
-- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261014-learning-v023`。
+- 前端：`/var/www/dentstudy-current` 当前指向上一版发布目录；每次发布后按下文命令更新至新目录。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
 - 旧代码 `/opt/dentstudy`、旧网页 `/var/www/dentstudy` 均保留。
 - 更新前的数据库与配置备份：`/opt/backups/dentstudy-20261013`，数据库已验证完整性。
@@ -18,11 +18,11 @@
 `deploy/dentstudy-certbot.service` 和 `deploy/dentstudy-certbot.timer`。
 构建 Web 时使用 `--no-web-resources-cdn --dart-define=API_URL=/api`
 及 `--dart-define=QUESTION_BANK_ASSET=assets/all_questions.json`。
-发布时同时传入 `--dart-define=APP_VERSION=0.2.3` 和
+发布时同时传入 `--dart-define=APP_VERSION=0.2.4` 和
 `--dart-define=BUILD_TIME=实际北京时间`，在“我的”显示版本与更新时间。
 当前 GitHub workflow 只做检查，不会自动部署；代码推送后仍需单独构建和上传。
 
-0.2.3 的验收路径：进入网站 → 拼合标志 → 开始学习或登录／注册；
+0.2.4 的验收路径：进入网站 → 静态渐变 Logo → 开始学习或登录／注册；
 题本 → 错题优先级或笔记；
 题库 → 查看章节掌握状态；任一练习解析 → 学习巩固 → 同考点题解析；
 学情 → 下一步复盘。
