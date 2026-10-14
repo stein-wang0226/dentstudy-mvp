@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'shared.dart';
+import 'entrance.dart';
 import '../features/today/today_page.dart';
 import '../features/today/today_plan.dart';
 import '../features/library/library_page.dart';
@@ -70,62 +70,25 @@ class DentStudy extends StatelessWidget {
                             horizontal: 20, vertical: 16),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14))))),
-            home: const Entrance(child: Home()));
+            home: Entrance(
+                child: const Home(),
+                onLogin: (entranceContext) {
+                  Navigator.of(entranceContext).pushReplacement(
+                      MaterialPageRoute(
+                          builder: (_) => const Home(initialTab: 4)));
+                }));
       });
 }
 
-/// Native entrance; the web launch animation is provided by web/index.html.
-class Entrance extends StatefulWidget {
-  final Widget child;
-  const Entrance({super.key, required this.child});
-  @override
-  State<Entrance> createState() => _EntranceState();
-}
-
-class _EntranceState extends State<Entrance>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController controller = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 550));
-  bool started = false;
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context) ||
-        MediaQuery.accessibleNavigationOf(context)) {
-      controller.value = 1;
-      started = true;
-    } else if (!started) {
-      started = true;
-      controller.forward();
-    }
-  }
-
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => kIsWeb
-      ? widget.child
-      : FadeTransition(
-          opacity: CurvedAnimation(parent: controller, curve: Curves.easeOut),
-          child: SlideTransition(
-              position: Tween(begin: const Offset(0, .015), end: Offset.zero)
-                  .animate(CurvedAnimation(
-                      parent: controller, curve: Curves.easeOutCubic)),
-              child: widget.child));
-}
-
 class Home extends StatefulWidget {
-  const Home({super.key});
+  final int initialTab;
+  const Home({super.key, this.initialTab = 0});
   @override
   State<Home> createState() => _HomeState();
 }
 
 class _HomeState extends State<Home> with WidgetsBindingObserver {
-  int tab = 0;
+  late int tab;
   bool opening = false, preparing = false;
   late final TodayPlan plan = TodayPlan(store);
   Timer? dayTimer;
@@ -136,6 +99,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    tab = widget.initialTab;
     store.addListener(_storeChanged);
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
