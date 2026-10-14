@@ -7,7 +7,7 @@
 
 - 客户端版本：`0.2.4`（章节连续浏览、关键词搜索、本地字库、错题分层、学习巩固、知识点笔记与静态渐变欢迎页）；后端仍为 `5b00b84`，综合题库 3520 道，原有 ID 全部保留。
 - 后端：`/opt/dentstudy-current` 指向 `/opt/dentstudy-releases/5b00b84`。
-- 前端：`/var/www/dentstudy-current` 当前指向上一版发布目录；每次发布后按下文命令更新至新目录。
+- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261014-learning-v024`。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
 - 旧代码 `/opt/dentstudy`、旧网页 `/var/www/dentstudy` 均保留。
 - 更新前的数据库与配置备份：`/opt/backups/dentstudy-20261013`，数据库已验证完整性。
