@@ -355,6 +355,7 @@ class _SpeedStudySessionState extends State<SpeedStudySession> {
           SizedBox(height: 12),
           SourceDetails(question: question),
           Text(question.explanation, style: TextStyle(height: 1.75)),
+          QuestionLearningSupport(question: question, store: widget.store),
         ],
       ));
 

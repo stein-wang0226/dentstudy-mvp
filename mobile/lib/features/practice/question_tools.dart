@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../models.dart';
 import '../../store.dart';
-import '../../app/shared.dart' show safely;
+import '../../app/shared.dart' show safely, pill;
 import '../library/catalog.dart';
+import '../library/question_preview.dart';
+import '../statistics/learning_metrics.dart';
 
 class SourceDetails extends StatelessWidget {
   final Question question;
@@ -89,5 +91,70 @@ class QuestionTools extends StatelessWidget {
       await safely(context, () => store.add(question.id, 'note', result));
     // Dispose after the dialog's exit animation has detached its text field.
     Future.delayed(const Duration(milliseconds: 400), field.dispose);
+  }
+}
+
+/// Shown with an explanation.  It uses the existing bank as a small,
+/// transparent follow-up rather than claiming that a new recommendation model
+/// knows medical facts that are not present in the question data.
+class QuestionLearningSupport extends StatelessWidget {
+  final Question question;
+  final StudyStore store;
+  const QuestionLearningSupport(
+      {super.key, required this.question, required this.store});
+
+  List<Question> get _related {
+    final tags = question.tags.toSet();
+    final peers = store.catalog.material(question.subject).where((candidate) {
+      if (candidate.id == question.id) return false;
+      return candidate.chapter == question.chapter ||
+          candidate.tags.any(tags.contains);
+    }).toList();
+    peers.sort((a, b) {
+      final aTag = a.tags.any(tags.contains) ? 0 : 1;
+      final bTag = b.tags.any(tags.contains) ? 0 : 1;
+      return aTag.compareTo(bTag);
+    });
+    return peers.take(5).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final metrics = LearningMetrics(store.learning, store.questions);
+    final related = _related;
+    final mistakes = metrics.wrongAttempts(question);
+    return Padding(
+        padding: const EdgeInsets.only(top: 16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('学习巩固',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+          if (question.tags.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Text('本题考点',
+                style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
+            const SizedBox(height: 5),
+            Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: question.tags.map(pill).toList()),
+          ],
+          const SizedBox(height: 10),
+          Text(
+              mistakes >= 2
+                  ? '这道题已错 $mistakes 次，建议比较相似题的选项排除依据，再安排一次复习。'
+                  : '易混点通常在相近选项的排除依据；看完解析后可用同考点题再确认一次。',
+              style: const TextStyle(
+                  fontSize: 13, height: 1.55, color: Colors.blueGrey)),
+          if (related.isNotEmpty)
+            TextButton.icon(
+                onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => QuestionPreviewPage(
+                            questions: related,
+                            title: '同考点解析 · ${question.chapter}'))),
+                icon: const Icon(Icons.auto_stories_outlined),
+                label: Text('查看 ${related.length} 道同考点题解析')),
+        ]));
   }
 }

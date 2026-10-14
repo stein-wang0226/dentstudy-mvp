@@ -45,7 +45,7 @@ class _LibraryPageState extends State<LibraryPage> {
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: Text(
                           '${catalog.material(name).length} 题 · ${catalog.material(name).map((q) => q.chapter).toSet().length} 章\n'
-                          '已学 ${metrics.learned(catalog.material(name))} · 正确率 ${LearningMetrics.percent(metrics.accuracy(catalog.material(name)))} · 待复习 ${metrics.due(catalog.material(name))}\n${QuestionCatalog.statusSummary(catalog.material(name))}'),
+                          '${metrics.masteryLabel(catalog.material(name))} · 已学 ${metrics.learned(catalog.material(name))} · 正确率 ${LearningMetrics.percent(metrics.accuracy(catalog.material(name)))} · 待复习 ${metrics.due(catalog.material(name))}\n${QuestionCatalog.statusSummary(catalog.material(name))}'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => setState(() => subject = name))),
               const SizedBox(height: 8)
@@ -93,7 +93,7 @@ class _LibraryPageState extends State<LibraryPage> {
           ]),
           heading(chapter ?? subject!,
               sub: chapter == null
-                  ? '${qs.length} 题 · ${QuestionCatalog.statusSummary(qs)}'
+                  ? '${metrics.masteryDetail(qs)} · ${QuestionCatalog.statusSummary(qs)}'
                   : subject),
           _searchEntry(),
           const SizedBox(height: 12),
@@ -152,7 +152,7 @@ class _LibraryPageState extends State<LibraryPage> {
                         contentPadding: EdgeInsets.zero,
                         title: Text(name),
                         subtitle: Text(
-                            '已学 ${metrics.learned(qs)} / ${qs.length} · 错题 ${metrics.wrong(qs)}\n最近学习：${metrics.lastDay(qs)}'),
+                            '${metrics.masteryLabel(qs)} · 已学 ${metrics.learned(qs)} / ${qs.length} · 错题 ${metrics.wrong(qs)} · 待复习 ${metrics.due(qs)}\n正确率 ${LearningMetrics.percent(metrics.accuracy(qs))} · 最近学习：${metrics.lastDay(qs)}'),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => setState(() {
                               chapter = name;

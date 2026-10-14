@@ -4,6 +4,7 @@ import '../../models.dart';
 import '../practice/practice_request.dart';
 import '../library/question_preview.dart';
 import '../library/question_search.dart';
+import '../statistics/learning_metrics.dart';
 
 class NotebooksPage extends StatefulWidget {
   final StartPractice onStart;
@@ -27,6 +28,7 @@ class _NotebooksPageState extends State<NotebooksPage> {
   @override
   Widget build(BuildContext context) {
     final state = store.learning;
+    final metrics = LearningMetrics(state, store.questions);
     final groups = <String, List<Question>>{
       '错题': store.questions
           .where((q) => state.states[q.id]?.wrong == true)
@@ -38,7 +40,16 @@ class _NotebooksPageState extends State<NotebooksPage> {
           .where((q) => state.states[q.id]?.grade == 'guessed')
           .toList(),
     };
-    final source = groups[kind]!;
+    final activeMistakes = metrics.activeMistakes(groups['错题']!);
+    final recovered = groups['错题']!.where(metrics.isRecoveredMistake).toList()
+      ..sort((a, b) => (state.states[b.id]?.lastDay ?? '')
+          .compareTo(state.states[a.id]?.lastDay ?? ''));
+    final source =
+        kind == '错题' ? [...activeMistakes, ...recovered] : groups[kind]!;
+    final justWrong = activeMistakes.where(metrics.isWrongToday).toList();
+    final repeated = activeMistakes
+        .where((q) => !metrics.isWrongToday(q) && metrics.isRepeatedMistake(q))
+        .toList();
     final matches = keyword.isEmpty
         ? null
         : QuestionSearchIndex(source).search(keyword).map((q) => q.id).toSet();
@@ -76,6 +87,21 @@ class _NotebooksPageState extends State<NotebooksPage> {
                     shown = 20;
                   }))
       ]),
+      if (kind == '错题')
+        Padding(
+            padding: const EdgeInsets.only(top: 14),
+            child: box(
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('错题优先级',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 7),
+              Text(
+                  '今日订正 ${justWrong.length} 题 · 反复错 ${repeated.length} 题 · 其他错题 ${activeMistakes.length - justWrong.length - repeated.length} 题 · 已掌握待归档 ${recovered.length} 题'),
+              const SizedBox(height: 5),
+              const Text(
+                  '列表已按“今日刚错 → 反复错 → 其他 → 已掌握待归档”排序。移出错题本只改变你的题本标记，不会删除作答记录或复习排期。',
+                  style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
+            ]))),
       Align(
           alignment: Alignment.centerRight,
           child: TextButton.icon(
@@ -144,7 +170,8 @@ class _NotebooksPageState extends State<NotebooksPage> {
               child: ListTile(
                   title: Text(q.stem,
                       maxLines: 2, overflow: TextOverflow.ellipsis),
-                  subtitle: Text('${q.subject} · ${q.chapter}'),
+                  subtitle: Text(
+                      '${q.subject} · ${q.chapter}${kind == '错题' ? ' · ${_mistakeLabel(q, metrics)}' : ''}'),
                   trailing: kind == '错题'
                       ? IconButton(
                           tooltip: '移出错题本，保留复习排期',
@@ -190,4 +217,11 @@ class _NotebooksPageState extends State<NotebooksPage> {
         search.clear();
         shown = 20;
       });
+
+  String _mistakeLabel(Question question, LearningMetrics metrics) {
+    if (metrics.isRecoveredMistake(question)) return '已掌握，可归档';
+    if (metrics.isWrongToday(question)) return '今日刚错，优先订正';
+    final times = metrics.wrongAttempts(question);
+    return times >= 2 ? '已错 $times 次，重点巩固' : '待巩固';
+  }
 }

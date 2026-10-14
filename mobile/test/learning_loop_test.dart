@@ -7,6 +7,7 @@ import 'package:dentstudy/store.dart';
 import 'package:dentstudy/models.dart';
 import 'package:dentstudy/features/library/catalog.dart';
 import 'package:dentstudy/features/today/today_plan.dart';
+import 'package:dentstudy/features/statistics/learning_metrics.dart';
 import 'package:dentstudy/features/practice/practice_request.dart';
 import 'package:dentstudy/features/practice/session_journal.dart';
 import 'package:dentstudy/features/practice/batch_session.dart';
@@ -147,6 +148,28 @@ void main() {
     await plan.ensure(next: true);
     expect(plan.reviews.length, 20);
     expect(plan.fresh, isEmpty);
+  });
+  test(
+      'learning insights prioritize today and repeated mistakes conservatively',
+      () async {
+    final store = await freshStore();
+    await store.add(
+        'q0', 'review', {'answer': 'B', 'grade': 'wrong', 'mode': 'practice'});
+    await store.add(
+        'q0', 'review', {'answer': 'B', 'grade': 'wrong', 'mode': 'review'});
+    await store.add('q1', 'review',
+        {'answer': 'A', 'grade': 'mastered', 'mode': 'practice'});
+    await store.add(
+        'q2', 'review', {'answer': 'B', 'grade': 'wrong', 'mode': 'practice'});
+    await store.add(
+        'q2', 'review', {'answer': 'A', 'grade': 'mastered', 'mode': 'review'});
+    final metrics = LearningMetrics(store.learning, store.questions);
+    expect(metrics.wrongAttempts(store.questions[0]), 2);
+    expect(metrics.isWrongToday(store.questions[0]), isTrue);
+    expect(metrics.isRepeatedMistake(store.questions[0]), isTrue);
+    expect(metrics.activeMistakes(store.questions).first.id, 'q0');
+    expect(metrics.isRecoveredMistake(store.questions[2]), isTrue);
+    expect(metrics.masteryLabel(store.questions.take(2).toList()), '需巩固');
   });
   test(
       'answer event and saved IDs persist together; finishing keeps other drafts',

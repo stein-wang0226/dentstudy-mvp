@@ -282,6 +282,7 @@ class _BatchStudySessionState extends State<BatchStudySession> {
         SizedBox(height: 12),
         SourceDetails(question: question),
         Text(question.explanation, style: TextStyle(height: 1.75, color: _ink)),
+        QuestionLearningSupport(question: question, store: widget.store),
       ])),
       SizedBox(height: 18),
       if (wrong)

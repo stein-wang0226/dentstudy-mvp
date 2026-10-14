@@ -21,11 +21,14 @@ class TodayPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final metrics = LearningMetrics(store.learning, store.questions);
-    final recentWrong = store.questions
-        .where((q) => store.learning.states[q.id]?.wrong == true)
-        .toList()
-      ..sort((a, b) => (store.learning.states[b.id]?.lastDay ?? '')
-          .compareTo(store.learning.states[a.id]?.lastDay ?? ''));
+    final activeMistakes = metrics.activeMistakes(store.questions);
+    final recentWrong = [...activeMistakes]..sort((a, b) =>
+        (store.learning.states[b.id]?.lastDay ?? '')
+            .compareTo(store.learning.states[a.id]?.lastDay ?? ''));
+    final justWrong = activeMistakes.where(metrics.isWrongToday).toList();
+    final repeated = activeMistakes
+        .where((q) => !metrics.isWrongToday(q) && metrics.isRepeatedMistake(q))
+        .toList();
     final drafts = store.drafts.values.toList()
       ..sort((a, b) => (b['savedAt'] as String? ?? '')
           .compareTo(a['savedAt'] as String? ?? ''));
@@ -83,6 +86,26 @@ class TodayPage extends StatelessWidget {
           onPressed: onCustom,
           icon: const Icon(Icons.tune),
           label: const Text('自定义练习')),
+      if (justWrong.isNotEmpty || repeated.isNotEmpty) ...[
+        heading('优先订正', sub: '先把刚错和反复错的知识点补牢，再扩展新题'),
+        box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(
+              '${justWrong.isNotEmpty ? '今日刚错 ${justWrong.length} 题' : ''}${justWrong.isNotEmpty && repeated.isNotEmpty ? ' · ' : ''}${repeated.isNotEmpty ? '反复错 ${repeated.length} 题' : ''}',
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 7),
+          const Text('反复错题会优先出现在错题本和今日建议中；完成订正后仍按原有间隔复习安排。',
+              style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
+          const SizedBox(height: 10),
+          TextButton.icon(
+              onPressed: () => onStart(PracticeRequest(
+                  [...justWrong, ...repeated].take(10).toList(),
+                  review: true,
+                  label: '优先订正 · 错题巩固')),
+              icon: const Icon(Icons.replay_circle_filled_outlined),
+              label: Text(
+                  '开始订正 ${[...justWrong, ...repeated].take(10).length} 题')),
+        ])),
+      ],
       for (final draft in drafts) ...[
         const SizedBox(height: 12),
         box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -112,7 +135,8 @@ class TodayPage extends StatelessWidget {
           ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(q.stem, maxLines: 2, overflow: TextOverflow.ellipsis),
-              subtitle: Text('${q.subject} · ${q.chapter}'),
+              subtitle: Text(
+                  '${q.subject} · ${q.chapter} · ${_mistakeLabel(q, metrics)}'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () =>
                   onStart(PracticeRequest([q], review: true, label: '错题巩固'))),
@@ -138,7 +162,7 @@ class TodayPage extends StatelessWidget {
         contentPadding: EdgeInsets.zero,
         title: Text('${qs.first.subject} · ${qs.first.chapter}'),
         subtitle: Text(
-            '正确率 ${LearningMetrics.percent(m.accuracy(qs))}，建议${wrong.isEmpty ? '复习已学题目' : '先完成 ${wrong.length} 道错题巩固'}。'),
+            '${qs.first.subject}${qs.first.chapter}正确率 ${LearningMetrics.percent(m.accuracy(qs))}，${wrong.isEmpty ? '建议复习已学题目，巩固当前掌握度。' : '建议先完成 ${wrong.length} 道错题巩固。'}'),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => onStart(PracticeRequest(
             wrong.isEmpty
@@ -148,5 +172,11 @@ class TodayPage extends StatelessWidget {
                 : wrong,
             review: true,
             label: '${qs.first.chapter} · 巩固')));
+  }
+
+  String _mistakeLabel(Question question, LearningMetrics metrics) {
+    if (metrics.isWrongToday(question)) return '今日刚错，优先订正';
+    final count = metrics.wrongAttempts(question);
+    return count >= 2 ? '已错 $count 次，重点巩固' : '待巩固';
   }
 }

@@ -378,11 +378,7 @@ class _StudySessionState extends State<StudySession>
           SizedBox(height: 12),
           SourceDetails(question: question),
           Text(question.explanation, style: TextStyle(height: 1.8)),
-          SizedBox(height: 8),
-          Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: question.tags.map(pill).toList())
+          QuestionLearningSupport(question: question, store: store),
         ]))
       ];
   Future<void> editNote() async {
