@@ -70,7 +70,7 @@ void main() {
     expect(state.states['q1']!.stage, 1);
     expect(state.states['q1']!.due, '2026-01-04');
   });
-  test('ordinary and VIP accounts receive different daily quotas', () {
+  test('all users receive the same daily practice quota', () {
     final store = StudyStore();
     store.events = List.generate(
         200,
@@ -83,8 +83,5 @@ void main() {
             });
     expect(store.dailyPracticeLimit, 200);
     expect(store.remainingPractice, 0);
-    store.isVip = true;
-    expect(store.dailyPracticeLimit, isNull);
-    expect(store.remainingPractice, isNull);
   });
 }

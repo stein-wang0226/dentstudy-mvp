@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import '../store.dart';
 import '../reminders.dart';
-import '../purchases.dart';
 
 final store = StudyStore();
 final reminders = Reminders();
-final purchases = VipPurchases();
 const themeColors = <String, Color>{
   'teal': Color(0xFF087F78),
   'blue': Color(0xFF2764A8),

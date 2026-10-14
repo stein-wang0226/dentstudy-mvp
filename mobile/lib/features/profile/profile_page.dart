@@ -78,30 +78,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                 : null)));
               }).toList())
         ])),
-        heading('VIP 会员'),
-        box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Icon(store.isVip ? Icons.workspace_premium : Icons.star_outline,
-                color: store.isVip ? Color(0xFFD09A2D) : teal, size: 32),
-            SizedBox(width: 12),
-            Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  Text(store.isVip ? 'VIP 已开通' : '普通用户',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  Text(
-                      '今日 ${store.todayPracticeCount} / ${store.dailyPracticeLimit ?? '不限量'} 道',
-                      style: TextStyle(fontSize: 12, color: Colors.blueGrey))
-                ])),
-            if (!store.isVip)
-              FilledButton(
-                  onPressed: vipDialog, child: Text('${purchases.price} 开通'))
-          ]),
-          SizedBox(height: 12),
-          Text(store.isVip ? 'VIP 每日刷题不限量' : '普通用户每日 200 道；VIP 不限量'),
-        ])),
         heading('学习设置'),
         box(Column(children: [
           ListTile(
@@ -150,67 +126,6 @@ class _ProfilePageState extends State<ProfilePage> {
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
       ];
-
-  Future<void> vipDialog() async {
-    purchases.addListener(changed);
-    try {
-      await showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          builder: (c) {
-            return AnimatedBuilder(
-                animation: purchases,
-                builder: (c, _) {
-                  return SafeArea(
-                      child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child:
-                              Column(mainAxisSize: MainAxisSize.min, children: [
-                            Icon(Icons.workspace_premium,
-                                size: 56, color: Color(0xFFD09A2D)),
-                            SizedBox(height: 12),
-                            Text('齿间 VIP',
-                                style: TextStyle(
-                                    fontSize: 26, fontWeight: FontWeight.bold)),
-                            SizedBox(height: 8),
-                            Text('${purchases.price} · 一次购买'),
-                            SizedBox(height: 18),
-                            ListTile(
-                                leading: Icon(Icons.bolt, color: teal),
-                                title: Text('每日刷题不限量'),
-                                subtitle: Text('普通用户每日最多 200 道')),
-                            Text(purchases.message,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    fontSize: 12, color: Colors.blueGrey)),
-                            SizedBox(height: 16),
-                            SizedBox(
-                                width: double.infinity,
-                                child: FilledButton(
-                                    onPressed: purchases.loading ||
-                                            !purchases.available ||
-                                            purchases.product == null
-                                        ? null
-                                        : () => safely(c, purchases.buy),
-                                    child: Text(purchases.loading
-                                        ? '处理中…'
-                                        : '${purchases.price} 开通 VIP'))),
-                            TextButton(
-                                onPressed:
-                                    purchases.loading || !purchases.available
-                                        ? null
-                                        : () => safely(c, purchases.restore),
-                                child: Text('恢复购买')),
-                            Text('付款由 Apple App Store 或 Google Play 完成。',
-                                style: TextStyle(
-                                    fontSize: 11, color: Colors.blueGrey))
-                          ])));
-                });
-          });
-    } finally {
-      purchases.removeListener(changed);
-    }
-  }
 
   Future<void> goalsDialog() async {
     final newField = TextEditingController(text: '${store.dailyNewLimit}');

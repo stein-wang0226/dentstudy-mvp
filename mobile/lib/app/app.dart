@@ -235,14 +235,12 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
         return;
       }
       if (request.exam &&
-          remaining != null &&
           qs.where((q) => !saved.contains(q.id)).length > remaining) {
         message(context, '今日剩余额度不足以完成这套卷。');
         return;
       }
       if (request.draft != null &&
           request.mode == 'batch' &&
-          remaining != null &&
           qs.where((q) => !saved.contains(q.id)).length > remaining) {
         message(context, '今日剩余额度不足以提交整批练习，已保留原作答。');
         return;
@@ -256,7 +254,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
               slots--;
               return true;
             })
-            .take(remaining ?? qs.length)
+            .take(remaining)
             .toList();
       }
       if (request.mode == 'speed')

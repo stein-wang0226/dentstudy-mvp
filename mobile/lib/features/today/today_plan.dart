@@ -13,7 +13,7 @@ class TodayPlan {
         current?['bankSize'] == store.questions.length &&
         current?['settingsAt'] == store.settingsUpdatedAt) return;
     final state = store.learning;
-    final quota = store.remainingPractice ?? 200;
+    final quota = store.remainingPractice;
     final due = store.due;
     final reviewLimit =
         store.dailyReviewTarget == null || store.dailyReviewTarget == 0

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'app/app.dart';
 import 'app/shared.dart';
@@ -9,7 +8,6 @@ void main() async {
   try {
     await store.init();
     runApp(const DentStudy());
-    unawaited(purchases.init(store));
   } catch (e) {
     runApp(MaterialApp(
         home: Scaffold(

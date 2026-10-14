@@ -25,7 +25,6 @@ class StudyStore extends ChangeNotifier {
   String themeColorKey = 'teal';
   int dailyNewLimit = 10;
   int? dailyReviewTarget;
-  bool isVip = false;
   String settingsUpdatedAt = '1970-01-01T00:00:00.000000Z';
   bool syncing = false;
   String syncMessage = '离线学习 · 记录保存在本机';
@@ -71,15 +70,15 @@ class StudyStore extends ChangeNotifier {
       answeredToday.where((id) => !learnedBeforeToday.contains(id)).length;
   int get todayReviewCount =>
       answeredToday.where(learnedBeforeToday.contains).length;
-  int? get dailyPracticeLimit => isVip ? null : 200;
+  int get dailyPracticeLimit => 200;
   int get todayPracticeCount => events
       .where((event) =>
           event['kind'] == 'review' &&
           dayOf(DateTime.parse(event['at'])) == today)
       .length;
-  int? get remainingPractice {
+  int get remainingPractice {
     final limit = dailyPracticeLimit;
-    return limit == null ? null : (limit - todayPracticeCount).clamp(0, limit);
+    return (limit - todayPracticeCount).clamp(0, limit);
   }
 
   int get remainingNew =>
@@ -93,7 +92,10 @@ class StudyStore extends ChangeNotifier {
     email = prefs.getString('email') ?? '';
     userId = prefs.getString('userId') ?? 'guest';
     token = await secure.read(key: 'token') ?? '';
-    isVip = prefs.getBool('vipEntitled') ?? false;
+    // Membership and in-app purchases have been retired. Remove only their
+    // obsolete local keys; learning records and account data stay untouched.
+    await prefs.remove('vipEntitled');
+    await secure.delete(key: 'vipPurchaseId');
     themeColorKey = prefs.getString('themeColorKey') ?? 'teal';
     const bankAsset = String.fromEnvironment('QUESTION_BANK_ASSET',
         defaultValue: 'assets/all_questions.json');
@@ -285,9 +287,8 @@ class StudyStore extends ChangeNotifier {
     final reviewCount =
         additions.where((addition) => addition['kind'] == 'review').length;
     final remaining = remainingPractice;
-    if (remaining != null && reviewCount > remaining) {
-      throw Exception(
-          isVip ? 'VIP 不设每日刷题上限' : '今日免费刷题量已达到 200 道，升级 VIP 后可不限量刷题');
+    if (reviewCount > remaining) {
+      throw Exception('今日刷题量已达到 200 道，请明天再继续练习。');
     }
     final random = Random.secure();
     for (final addition in additions) {
@@ -316,13 +317,6 @@ class StudyStore extends ChangeNotifier {
       }
     }
     await _save();
-  }
-
-  Future<void> activateVip(String purchaseId) async {
-    isVip = true;
-    await prefs.setBool('vipEntitled', true);
-    await secure.write(key: 'vipPurchaseId', value: purchaseId);
-    notifyListeners();
   }
 
   Future<Map<String, dynamic>> request(String path,

@@ -75,7 +75,7 @@ class _NotebooksPageState extends State<NotebooksPage> {
           newSlots--;
           return true;
         })
-        .take(store.remainingPractice ?? qs.length)
+        .take(store.remainingPractice)
         .toList();
     final count = practice.length;
     return PageBody(children: [

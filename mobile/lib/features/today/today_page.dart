@@ -41,6 +41,21 @@ class TodayPage extends StatelessWidget {
         plan.remainingNew.length;
     return PageBody(children: [
       heading('今天，学一点，记牢一点。', sub: store.catalog.countLabel),
+      Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+              color: teal.withAlpha(12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: teal.withAlpha(24))),
+          child: Row(children: [
+            Icon(Icons.verified_user_outlined, size: 17, color: teal),
+            const SizedBox(width: 8),
+            const Expanded(
+                child: Text('本网站无任何商业用途，请放心使用。',
+                    style: TextStyle(fontSize: 13, color: Colors.blueGrey)))
+          ])),
+      const SizedBox(height: 12),
       box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           const Text('今日计划',

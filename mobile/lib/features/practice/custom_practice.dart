@@ -36,7 +36,7 @@ class _CustomPracticeState extends State<CustomPractice> {
       newSlots--;
       return true;
     }).length;
-    final actual = min(count, min(eligible, store.remainingPractice ?? count));
+    final actual = min(count, min(eligible, store.remainingPractice));
     return SafeArea(
         child: SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(
