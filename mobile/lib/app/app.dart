@@ -410,7 +410,7 @@ void _showContactAuthor(BuildContext context) => showModalBottomSheet<void>(
                       contentPadding: EdgeInsets.zero,
                       leading: Icon(Icons.email_outlined),
                       title: Text('邮箱'),
-                      subtitle: SelectableText('m17280801126@163.com')),
+                      subtitle: SelectableText('dentstudy1126@aka.yeah.net')),
                   const SizedBox(height: 10),
                   const Text('微信',
                       style: TextStyle(fontWeight: FontWeight.bold)),

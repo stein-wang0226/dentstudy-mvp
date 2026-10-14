@@ -59,7 +59,7 @@ class TodayPage extends StatelessWidget {
       box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           const Text('今日计划',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
           const Spacer(),
           Text('连续学习 ${metrics.streak} 天', style: const TextStyle(fontSize: 12))
         ]),
