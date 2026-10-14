@@ -10,6 +10,7 @@ class TodayPage extends StatelessWidget {
   final TodayPlan plan;
   final VoidCallback onPlan, onCustom;
   final void Function(Map<String, dynamic>) onResume;
+  final Future<void> Function(String mode) onModeChanged;
   final StartPractice onStart;
   const TodayPage(
       {super.key,
@@ -17,6 +18,7 @@ class TodayPage extends StatelessWidget {
       required this.onPlan,
       required this.onCustom,
       required this.onResume,
+      required this.onModeChanged,
       required this.onStart});
   @override
   Widget build(BuildContext context) {
@@ -45,6 +47,22 @@ class TodayPage extends StatelessWidget {
           const Spacer(),
           Text('连续学习 ${metrics.streak} 天', style: const TextStyle(fontSize: 12))
         ]),
+        Align(
+            alignment: Alignment.centerRight,
+            child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                    value: store.mode,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                    items: ['考研', '本科期末', '执医']
+                        .map((mode) => DropdownMenuItem(
+                            value: mode,
+                            child: Text(mode,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600))))
+                        .toList(),
+                    onChanged: (mode) {
+                      if (mode != null) onModeChanged(mode);
+                    }))),
         const SizedBox(height: 22),
         Text(
             '待复习 ${plan.remainingReviews.length} 题 · 新题 ${plan.remainingNew.length} 题',

@@ -345,20 +345,11 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                       style: TextStyle(fontSize: 10, letterSpacing: 2)))
             ]),
             actions: [
-              DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                      value: store.mode,
-                      items: ['考研', '本科期末', '执医']
-                          .map(
-                              (m) => DropdownMenuItem(value: m, child: Text(m)))
-                          .toList(),
-                      onChanged: (m) async {
-                        if (m != null) {
-                          await store.setMode(m);
-                          await _ensurePlan();
-                        }
-                      })),
-              const SizedBox(width: 16)
+              TextButton.icon(
+                  onPressed: () => _showContactAuthor(context),
+                  icon: const Icon(Icons.mail_outline, size: 19),
+                  label: const Text('联系作者')),
+              const SizedBox(width: 8)
             ]),
         body: ListenableBuilder(
             listenable: store,
@@ -368,6 +359,10 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                       onPlan: _today,
                       onCustom: _custom,
                       onResume: _resume,
+                      onModeChanged: (mode) async {
+                        await store.setMode(mode);
+                        await _ensurePlan();
+                      },
                       onStart: _start),
                   1 => LibraryPage(onStart: _start),
                   2 => NotebooksPage(onStart: _start),
@@ -394,3 +389,42 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
             ]),
       );
 }
+
+void _showContactAuthor(BuildContext context) => showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (sheetContext) => SafeArea(
+        child: ConstrainedBox(
+            constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(sheetContext).height * .88),
+            child: ListView(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
+                children: [
+                  const Text('联系作者',
+                      style:
+                          TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 8),
+                  const Text('有问题、建议或合作想法都可以联系我；一般会在 24 小时内回复。',
+                      style: TextStyle(color: Colors.blueGrey)),
+                  const SizedBox(height: 18),
+                  const ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.email_outlined),
+                      title: Text('邮箱'),
+                      subtitle: SelectableText('m17280801126@163.com')),
+                  const SizedBox(height: 10),
+                  const Text('微信',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  const Text('扫描二维码添加好友；请在好友申请中注明来意，例如“DentStudy 用户反馈”。',
+                      style: TextStyle(fontSize: 13, color: Colors.blueGrey)),
+                  const SizedBox(height: 14),
+                  Center(
+                      child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.asset('assets/contact_wechat.jpg',
+                              width: 280,
+                              fit: BoxFit.contain,
+                              semanticLabel: '作者微信二维码')))
+                ]))));
