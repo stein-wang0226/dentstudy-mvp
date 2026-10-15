@@ -3,6 +3,7 @@ import '../../models.dart';
 import '../../store.dart';
 import '../../app/shared.dart' show pill, safely;
 import '../library/catalog.dart';
+import '../library/exam_year_catalog.dart';
 import '../library/question_preview.dart';
 import '../statistics/learning_metrics.dart';
 import 'question_comments.dart';
@@ -47,6 +48,9 @@ class QuestionTools extends StatelessWidget {
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('${question.subject} · ${question.chapter}',
                 style: const TextStyle(fontSize: 13, color: Colors.blueGrey)),
+            if (ExamYearCatalog.yearLabel(question) case final String label)
+              Padding(
+                  padding: const EdgeInsets.only(top: 6), child: pill(label)),
             Row(children: [
               Chip(label: Text(question.type)),
               const Spacer(),

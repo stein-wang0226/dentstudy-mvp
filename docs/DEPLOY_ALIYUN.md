@@ -5,9 +5,9 @@
 实际服务器使用宿主机 Nginx + `dentstudy.service`，不是下面的 Docker 方案。
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
-- 客户端版本：`0.2.16`（真实磨砂玻璃卡片、独立背景配色、仅新注册账号弹出资料完善）；综合题库 3520 道，原有 ID 全部保留。
+- 客户端版本：`0.2.17`（考研、本科期末、执医三类题库入口，执医历年试题按年份浏览）；综合题库 3520 道，本次新增真题 0 道，等待可用来源资料。
 - 后端：`/opt/dentstudy-current` 指向 `/opt/dentstudy-releases/20261015-avatar-fix-v0213`。
-- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261015-glass-fix-v0216`。
+- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261015-library-tracks-v0217`。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
 - 用户投稿：`/var/lib/dentstudy/question-bank-submissions/`，仅服务端进程可读写，不能映射到 Nginx 静态目录；备份时须与 SQLite 一起保留。
 - 旧代码 `/opt/dentstudy`、旧网页 `/var/www/dentstudy` 均保留。
@@ -19,7 +19,7 @@
 `deploy/dentstudy-certbot.service` 和 `deploy/dentstudy-certbot.timer`。
 构建 Web 时使用 `--no-web-resources-cdn --dart-define=API_URL=/api`
 及 `--dart-define=QUESTION_BANK_ASSET=assets/all_questions.json`。
-发布时同时传入 `--dart-define=APP_VERSION=0.2.16` 和
+发布时同时传入 `--dart-define=APP_VERSION=0.2.17` 和
 `--dart-define=BUILD_TIME=实际北京时间`，在“我的”显示版本与更新时间。
 当前 GitHub workflow 只做检查，不会自动部署；代码推送后仍需单独构建和上传。
 
@@ -27,7 +27,13 @@
 Flutter Web 构建时随根目录静态资源发布。HTTP 和 HTTPS 的同名路径均需直接返回 200 和原始 TXT 内容；
 HTTP 仅此验证文件与证书验证路径不跳转，其余页面仍强制 HTTPS。不要误删验证文件。
 
-0.2.16 验收：已有账号退出后重新登录，不自动打开资料完善；新账号注册成功后打开资料完善，可跳过，之后仍可在“我的”手动编辑。
+0.2.17 验收：题库 → 考研 / 本科期末 / 执医三类卡片，分别显示当前可练题数；切换分类后进入对应学科列表，返回今日继续使用所选方向。
+执医 → 历年试题 → 目前显示整理中，无占位年份。导入具备核验年份的数据后，按年份 → 试卷 → 题目浏览，解析带年份标注，支持原有三种练习模式。
+年份按考试年份字段和核验记录分组；真题、回忆题、来源待核验分别展示，五选项完整保留。
+本版未复制互联网真题，题量、题目 ID 与历史作答均未变。资料来源限制和 JSON 拆分工具见 `docs/ORAL_PRACTITIONER_SOURCES.md`。
+验证：静态检查、31 项客户端测试、26 项后端及导出测试通过；Chrome 通过 2 项分类、年份隔离、答案浏览和练习跳转测试。
+
+0.2.16 历史验收：已有账号退出后重新登录，不自动打开资料完善；新账号注册成功后打开资料完善，可跳过，之后仍可在“我的”手动编辑。
 我的 → 主题与外观 → 自定义，主色选择青绿、背景选择玫瑰；开启玻璃质感，检查页面左右、卡片背后均为玫瑰背景，切换主色不应改变背景。
 今日、题库、章节、题本、学情和逐题回顾的卡片使用局部裁剪的真实背景模糊、透明渐变和玻璃高光；关闭后恢复实色卡片。
 配色与玻璃设置仍仅保存在本机；无新增依赖、后端修改、数据库迁移或同步协议变化。

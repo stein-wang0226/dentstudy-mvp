@@ -46,7 +46,8 @@ class _SearchEntry {
       QuestionSearchIndex.normalize('${question.sharedStem} ${question.stem}');
   late final String context = QuestionSearchIndex.normalize(
       '${question.subject} ${question.chapter} ${question.tags.join(' ')} '
-      '${question.data['topics'] ?? ''} ${question.id}');
+      '${question.data['topics'] ?? ''} ${question.id} '
+      '${question.data['year'] ?? ''} ${question.data['paperName'] ?? ''}');
   late final String text =
       '$stem $context ${QuestionSearchIndex.normalize('${question.options.values.join(' ')} ${question.explanation}')}';
   _SearchEntry(this.question);

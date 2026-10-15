@@ -1,4 +1,5 @@
 import '../../models.dart';
+import 'exam_year_catalog.dart';
 
 /// A catalogue is a view of the loaded bank, never another copy of its content.
 class QuestionCatalog {
@@ -33,7 +34,8 @@ class QuestionCatalog {
   static String sourceLabel(Question q) {
     if (q.data['isDemo'] == true) return '演示题';
     if (q.data['sourceType'] == 'past_paper')
-      return q.data['citation']?['verified'] == true ? '真题' : '真题来源待核验';
+      return ExamYearCatalog.verifiedPaper(q) ? '真题' : '真题来源待核验';
+    if (q.data['sourceType'] == 'recalled_paper') return '考生回忆题';
     if (q.data['sourceType'] == 'user_material') return '资料整理题';
     return '来源待核验';
   }

@@ -6,6 +6,8 @@ import '../practice/practice_request.dart';
 import 'question_preview.dart';
 import 'catalog.dart';
 import 'question_search_page.dart';
+import 'exam_year_catalog.dart';
+import 'exam_year_page.dart';
 
 class LibraryPage extends StatefulWidget {
   final StartPractice onStart;
@@ -18,6 +20,7 @@ class _LibraryPageState extends State<LibraryPage> {
   String? subject, chapter;
   int shown = 20;
   String previousMode = '';
+  bool choosingTrack = true;
   @override
   Widget build(BuildContext context) {
     if (previousMode != store.mode) {
@@ -27,6 +30,12 @@ class _LibraryPageState extends State<LibraryPage> {
     }
     final catalog = store.catalog;
     final metrics = LearningMetrics(store.learning, store.questions);
+    if (choosingTrack) {
+      return PageBody(children: [
+        heading('题库', sub: '选择学习方向'),
+        for (final mode in ['考研', '本科期末', '执医']) _trackCard(mode),
+      ]);
+    }
     if (subject == null) {
       final available = catalog.subjects.where(catalog.available).toList();
       final building =
@@ -34,9 +43,19 @@ class _LibraryPageState extends State<LibraryPage> {
       return PageBody(
           key: PageStorageKey('library:${store.mode}:subjects'),
           children: [
-            heading('题库', sub: catalog.countLabel),
+            Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                    onPressed: () => setState(() => choosingTrack = true),
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('全部分类'))),
+            heading('${store.mode}题库', sub: catalog.countLabel),
             _searchEntry(),
             const SizedBox(height: 12),
+            if (store.mode == '执医') ...[
+              _yearsEntry(),
+              heading('按学科练习'),
+            ],
             for (final name in available) ...[
               studyCard(
                   child: ListTile(
@@ -120,6 +139,57 @@ class _LibraryPageState extends State<LibraryPage> {
                   child: const Text('再显示 20 题')),
           ]
         ]);
+  }
+
+  Widget _trackCard(String mode) {
+    final catalog = QuestionCatalog(store.questions, mode);
+    final count = catalog.learnable.length;
+    final subjects = catalog.subjects.where(catalog.available).length;
+    return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: studyCard(
+            child: ListTile(
+                key: ValueKey('library-track-$mode'),
+                contentPadding: const EdgeInsets.all(20),
+                leading: Icon(
+                    switch (mode) {
+                      '考研' => Icons.school_outlined,
+                      '本科期末' => Icons.menu_book_outlined,
+                      _ => Icons.medical_services_outlined,
+                    },
+                    color: teal),
+                title: Text(mode,
+                    style: const TextStyle(
+                        fontSize: 22, fontWeight: FontWeight.bold)),
+                subtitle:
+                    Text(count == 0 ? '题库建设中' : '$count 道可练 · $subjects 个学科'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => safely(context, () async {
+                      await store.setMode(mode);
+                      if (mounted)
+                        setState(() {
+                          subject = chapter = null;
+                          shown = 20;
+                          choosingTrack = false;
+                        });
+                    }))));
+  }
+
+  Widget _yearsEntry() {
+    final archive = ExamYearCatalog(store.questions, store.mode);
+    return studyCard(
+        child: ListTile(
+            leading: const Icon(Icons.calendar_month_outlined),
+            title: const Text('历年试题'),
+            subtitle: Text(archive.years.isEmpty
+                ? '整理中 · 按年份浏览'
+                : '${archive.years.length} 个年份 · 按年份浏览'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => ExamYearPage(
+                        mode: store.mode, onStart: widget.onStart)))));
   }
 
   Future<void> _chooseMode(List<Question> qs) async {
