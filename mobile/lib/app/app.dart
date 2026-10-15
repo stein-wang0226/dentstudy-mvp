@@ -70,13 +70,7 @@ class DentStudy extends StatelessWidget {
                             horizontal: 20, vertical: 16),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14))))),
-            home: Entrance(
-                child: const Home(),
-                onLogin: (entranceContext) {
-                  Navigator.of(entranceContext).pushReplacement(
-                      MaterialPageRoute(
-                          builder: (_) => const Home(initialTab: 4)));
-                }));
+            home: const Entrance(child: Home()));
       });
 }
 

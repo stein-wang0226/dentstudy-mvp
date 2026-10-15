@@ -1,13 +1,13 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'shared.dart';
+import '../features/profile/profile_page.dart' show showAccountDialog;
 
 /// A static web welcome screen. The application is already built underneath,
 /// so either action opens immediately without a second loading step.
 class Entrance extends StatefulWidget {
   final Widget child;
-  final void Function(BuildContext context) onLogin;
-  const Entrance({super.key, required this.child, required this.onLogin});
+  const Entrance({super.key, required this.child});
 
   @override
   State<Entrance> createState() => _EntranceState();
@@ -20,7 +20,9 @@ class _EntranceState extends State<Entrance> {
 
   void _login() {
     setState(() => opened = true);
-    widget.onLogin(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) showAccountDialog(context);
+    });
   }
 
   @override
@@ -97,7 +99,7 @@ class _WelcomeLayer extends StatelessWidget {
                                 child: FilledButton.icon(
                                     onPressed: onStart,
                                     icon: const Icon(Icons.play_arrow_rounded),
-                                    label: const Text('开始学习'))),
+                                    label: const Text('访客模式'))),
                             const SizedBox(height: 10),
                             SizedBox(
                                 width: double.infinity,

@@ -346,10 +346,8 @@ class StudyStore extends ChangeNotifier {
     return body;
   }
 
-  Future<void> login(
-      String address, String account, String password, bool register) async {
+  Future<void> login(String account, String password, bool register) async {
     if (syncing) throw Exception('请等待当前同步完成');
-    baseUrl = address.trim();
     final result = await request('/v1/auth/${register ? 'register' : 'login'}',
         {'email': account, 'password': password});
     token = result['token'];

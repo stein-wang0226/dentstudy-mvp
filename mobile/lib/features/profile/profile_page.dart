@@ -69,7 +69,7 @@ class _ProfilePageState extends State<ProfilePage> {
       final content = utf8.decode(file.bytes!, allowMalformed: false);
       final imported = await store.importQuestionBank(content);
       if (store.token.isEmpty) {
-        if (mounted) message(context, '已导入 $imported 道题到本机；登录后可同步原文件给作者。');
+        if (mounted) message(context, '已导入 $imported 道题到本机。');
         return;
       }
       try {
@@ -113,7 +113,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 onPressed: store.syncing
                     ? null
                     : () => store.token.isEmpty
-                        ? accountDialog()
+                        ? showAccountDialog(context)
                         : safely(context, store.sync),
                 child: Text(store.syncing
                     ? '同步中…'
@@ -180,11 +180,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   : store.token.isEmpty
                       ? '选择 JSON 并本地导入'
                       : '选择 JSON 并投稿')),
-          if (store.token.isEmpty) ...[
-            const SizedBox(height: 8),
-            const Text('登录后才会将原文件发给作者；未登录时文件只保留在本机。',
-                style: TextStyle(fontSize: 12, color: Colors.blueGrey))
-          ]
         ])),
         if (isSubmissionAdmin) ...[
           heading('题库投稿箱', sub: '仅作者账号可见 · 文件保存在服务器私有目录'),
@@ -242,12 +237,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     await store.download();
                     if (mounted) message(context, '离线题库已更新');
                   })),
-          ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.dns_outlined),
-              title: Text('配置后端地址'),
-              subtitle: Text(store.baseUrl),
-              onTap: apiDialog)
         ])),
         heading('关于题库'),
         box(Text(
@@ -320,110 +309,86 @@ class _ProfilePageState extends State<ProfilePage> {
       });
   }
 
-  Future<void> apiDialog() async {
-    final field = TextEditingController(text: store.baseUrl);
-    final value = await showDialog<String>(
-        context: context,
-        builder: (c) => AlertDialog(
-                title: Text('后端地址'),
-                content: TextField(
-                    controller: field,
-                    decoration:
-                        InputDecoration(hintText: 'https://api.example.com')),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(c), child: Text('取消')),
-                  FilledButton(
-                      onPressed: () => Navigator.pop(c, field.text),
-                      child: Text('保存'))
-                ]));
-    if (value != null) {
-      final uri = Uri.tryParse(value.trim());
-      if (uri == null ||
-          !['https', 'http'].contains(uri.scheme) ||
-          uri.host.isEmpty) {
-        if (mounted) message(context, '请输入有效地址');
-        return;
-      }
-      if (store.token.isNotEmpty && value.trim() != store.baseUrl) {
-        if (mounted) message(context, '切换服务器前请先退出登录');
-        return;
-      }
-      store.baseUrl = value.trim();
-      await store.prefs.setString('baseUrl', store.baseUrl);
-      changed();
-    }
-  }
-
-  Future<void> accountDialog() async {
-    final address = TextEditingController(text: store.baseUrl),
-        email = TextEditingController(),
-        password = TextEditingController();
-    bool register = false, busy = false;
-    String? error;
-    await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (c) => StatefulBuilder(
-            builder: (c, set) => AlertDialog(
-                    title: Text(register ? '创建学习账号' : '同步学习进度'),
-                    content: SingleChildScrollView(
-                        child:
-                            Column(mainAxisSize: MainAxisSize.min, children: [
-                      TextField(
-                          controller: address,
-                          decoration: InputDecoration(labelText: 'API 地址')),
-                      SizedBox(height: 10),
-                      TextField(
-                          controller: email,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: InputDecoration(labelText: '邮箱')),
-                      SizedBox(height: 10),
-                      TextField(
-                          controller: password,
-                          obscureText: true,
-                          decoration: InputDecoration(labelText: '密码（至少10位）')),
-                      SizedBox(height: 10),
-                      Text('登录后访客记录独立保留，可在“我的”中手动导入。',
-                          style: TextStyle(fontSize: 12)),
-                      if (error != null)
-                        Text(error!, style: TextStyle(color: Colors.red)),
-                      TextButton(
-                          onPressed: busy
-                              ? null
-                              : () => set(() => register = !register),
-                          child: Text(register ? '已有账号？登录' : '没有账号？注册'))
-                    ])),
-                    actions: [
-                      TextButton(
-                          onPressed: busy ? null : () => Navigator.pop(c),
-                          child: Text('取消')),
-                      FilledButton(
-                          onPressed: busy
-                              ? null
-                              : () async {
-                                  set(() => busy = true);
-                                  try {
-                                    await store.login(address.text, email.text,
-                                        password.text, register);
-                                    if (c.mounted) Navigator.pop(c);
-                                    await refreshSubmissionInbox();
-                                  } catch (e) {
-                                    if (c.mounted)
-                                      set(() {
-                                        error = e.toString();
-                                        busy = false;
-                                      });
-                                  }
-                                },
-                          child: Text(busy ? '连接中…' : '继续'))
-                    ])));
-  }
-
   String _formatSubmissionTime(String value) =>
       value.replaceFirst('T', ' ').replaceFirst('Z', '');
 
   String _formatBytes(int value) => value < 1024 * 1024
       ? '${(value / 1024).toStringAsFixed(0)} KB'
       : '${(value / 1024 / 1024).toStringAsFixed(1)} MB';
+}
+
+Future<void> showAccountDialog(BuildContext context) async {
+  final email = TextEditingController(),
+      password = TextEditingController(),
+      confirmPassword = TextEditingController();
+  bool register = false, busy = false;
+  String? error;
+  await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (c) => StatefulBuilder(
+          builder: (c, set) => AlertDialog(
+                  title: Text(register ? '创建学习账号' : '同步学习进度'),
+                  content: SingleChildScrollView(
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    TextField(
+                        controller: email,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: InputDecoration(labelText: '邮箱')),
+                    SizedBox(height: 10),
+                    TextField(
+                        controller: password,
+                        obscureText: true,
+                        decoration: InputDecoration(labelText: '密码（至少10位）')),
+                    if (register) ...[
+                      SizedBox(height: 10),
+                      TextField(
+                          controller: confirmPassword,
+                          obscureText: true,
+                          decoration: InputDecoration(labelText: '确认密码')),
+                      SizedBox(height: 10),
+                      const Text('务必记住密码，目前忘记密码无法找回！！！',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.deepOrange))
+                    ],
+                    SizedBox(height: 10),
+                    Text('登录后访客记录独立保留，可在“我的”中手动导入。',
+                        style: TextStyle(fontSize: 12)),
+                    if (error != null)
+                      Text(error!, style: TextStyle(color: Colors.red)),
+                    TextButton(
+                        onPressed:
+                            busy ? null : () => set(() => register = !register),
+                        child: Text(register ? '已有账号？登录' : '没有账号？注册'))
+                  ])),
+                  actions: [
+                    TextButton(
+                        onPressed: busy ? null : () => Navigator.pop(c),
+                        child: Text('取消')),
+                    FilledButton(
+                        onPressed: busy
+                            ? null
+                            : () async {
+                                if (register &&
+                                    password.text != confirmPassword.text) {
+                                  set(() => error = '两次输入的密码不一致');
+                                  return;
+                                }
+                                set(() => busy = true);
+                                try {
+                                  await store.login(
+                                      email.text, password.text, register);
+                                  if (c.mounted) Navigator.pop(c);
+                                } catch (e) {
+                                  if (c.mounted)
+                                    set(() {
+                                      error = e.toString();
+                                      busy = false;
+                                    });
+                                }
+                              },
+                        child: Text(busy ? '连接中…' : '继续'))
+                  ])));
 }

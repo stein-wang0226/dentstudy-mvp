@@ -10,13 +10,19 @@ const themeColors = <String, Color>{
   'purple': Color(0xFF7652A8),
   'orange': Color(0xFFB46824),
   'rose': Color(0xFFB54E6E),
+  'indigo': Color(0xFF4856A8),
+  'crimson': Color(0xFFAD4148),
+  'cocoa': Color(0xFF7B5A45),
 };
 const themeNames = {
   'teal': '青绿',
   'blue': '湖蓝',
   'purple': '紫藤',
   'orange': '暖橙',
-  'rose': '玫瑰'
+  'rose': '玫瑰',
+  'indigo': '靛蓝',
+  'crimson': '绛红',
+  'cocoa': '可可'
 };
 Color get teal => themeColors[store.themeColorKey] ?? themeColors['teal']!;
 Color get activeThemeColor => teal;
