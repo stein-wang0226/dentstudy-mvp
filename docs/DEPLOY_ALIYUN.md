@@ -6,8 +6,8 @@
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
 - 客户端版本：`0.2.9`（章节连续浏览、关键词搜索、本地字库、错题分层、学习巩固、知识点笔记、静态渐变欢迎页、联系作者入口、非商业用途提示与 JSON 题库投稿）；综合题库 3520 道，原有 ID 全部保留。
-- 后端：`/opt/dentstudy-current` 指向当前后端发布目录。
-- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261014-learning-v028`。
+- 后端：`/opt/dentstudy-current` 指向 `/opt/dentstudy-releases/20261015-submissions-v029`。
+- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261015-submissions-v029`。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
 - 用户投稿：`/var/lib/dentstudy/question-bank-submissions/`，仅服务端进程可读写，不能映射到 Nginx 静态目录；备份时须与 SQLite 一起保留。
 - 旧代码 `/opt/dentstudy`、旧网页 `/var/www/dentstudy` 均保留。
