@@ -113,7 +113,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 onPressed: store.syncing
                     ? null
                     : () => store.token.isEmpty
-                        ? showAccountDialog(context)
+                        ? showAccountDialog(context,
+                            onSuccess: refreshSubmissionInbox)
                         : safely(context, store.sync),
                 child: Text(store.syncing
                     ? '同步中…'
@@ -317,7 +318,8 @@ class _ProfilePageState extends State<ProfilePage> {
       : '${(value / 1024 / 1024).toStringAsFixed(1)} MB';
 }
 
-Future<void> showAccountDialog(BuildContext context) async {
+Future<void> showAccountDialog(BuildContext context,
+    {Future<void> Function()? onSuccess}) async {
   final email = TextEditingController(),
       password = TextEditingController(),
       confirmPassword = TextEditingController();
@@ -381,6 +383,7 @@ Future<void> showAccountDialog(BuildContext context) async {
                                   await store.login(
                                       email.text, password.text, register);
                                   if (c.mounted) Navigator.pop(c);
+                                  await onSuccess?.call();
                                 } catch (e) {
                                   if (c.mounted)
                                     set(() {
