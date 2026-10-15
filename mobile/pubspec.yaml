@@ -1,7 +1,7 @@
 name: dentstudy
 description: 口腔医学间隔复习与题库学习应用
 publish_to: none
-version: 0.2.8+10
+version: 0.2.9+11
 environment:
   sdk: '>=3.6.0 <4.0.0'
 dependencies:
@@ -11,6 +11,7 @@ dependencies:
   shared_preferences: ^2.3.3
   flutter_secure_storage: ^9.2.4
   flutter_local_notifications: ^19.0.0
+  file_picker: ^10.3.10
   timezone: ^0.10.0
 dev_dependencies:
   flutter_test:

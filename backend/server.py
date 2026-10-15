@@ -13,10 +13,16 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 from core import reduce_events, plan
+from bank import validate as validate_bank
 
 ROOT = Path(__file__).resolve().parents[1]
 DB = Path(os.environ.get('DENTSTUDY_DB', str(ROOT / 'backend' / 'dentstudy.sqlite3')))
 BANK = Path(os.environ.get('DENTSTUDY_BANK', str(ROOT / 'mobile' / 'assets' / 'all_questions.json')))
+SUBMISSIONS = Path(os.environ.get(
+    'DENTSTUDY_SUBMISSIONS', str(DB.parent / 'question-bank-submissions')))
+ADMIN_EMAIL = os.environ.get('DENTSTUDY_ADMIN_EMAIL', '').strip().lower()
+MAX_SUBMISSION_BYTES = 12 * 1024 * 1024
+MAX_SUBMISSION_REQUEST_BYTES = 16 * 1024 * 1024
 ALLOWED_ORIGINS = {
     origin.strip() for origin in os.environ.get('ALLOWED_ORIGINS', '*').split(',')
     if origin.strip()
@@ -32,6 +38,7 @@ def connect():
 
 def initialize():
     DB.parent.mkdir(parents=True, exist_ok=True)
+    SUBMISSIONS.mkdir(parents=True, exist_ok=True)
     with connect() as db:
         db.executescript('''
         PRAGMA journal_mode=WAL;
@@ -45,6 +52,15 @@ def initialize():
           daily_new_limit INTEGER NOT NULL DEFAULT 10,
           daily_review_target INTEGER,
           updated_at TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS question_bank_submissions(
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES users(id),
+          filename TEXT NOT NULL,
+          content_bytes INTEGER NOT NULL,
+          question_count INTEGER NOT NULL,
+          checksum TEXT NOT NULL,
+          submitted_at TEXT NOT NULL,
+          UNIQUE(user_id, checksum));
         ''')
 
 
@@ -146,10 +162,10 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
-    def body(self):
+    def body(self, max_size=2_000_000):
         size = int(self.headers.get('Content-Length', '0'))
-        if size < 1 or size > 2_000_000:
-            raise ValueError('请求为空或超过 2 MB')
+        if size < 1 or size > max_size:
+            raise ValueError(f'请求为空或超过 {max_size // 1024 // 1024} MB')
         result = json.loads(self.rfile.read(size))
         if not isinstance(result, dict):
             raise ValueError('请求必须为 JSON 对象')
@@ -164,6 +180,69 @@ class Handler(BaseHTTPRequestHandler):
             raise PermissionError('请先登录，或登录已过期')
         return row['user_id']
 
+    def is_admin(self, db, uid):
+        if not ADMIN_EMAIL:
+            return False
+        row = db.execute('SELECT email FROM users WHERE id=?', (uid,)).fetchone()
+        return row is not None and row['email'] == ADMIN_EMAIL
+
+    def submissions(self, db, uid):
+        admin = self.is_admin(db, uid)
+        if admin:
+            rows = db.execute('''SELECT s.id,s.filename,s.content_bytes,s.question_count,
+                    s.submitted_at,u.email FROM question_bank_submissions s
+                    JOIN users u ON u.id=s.user_id ORDER BY s.submitted_at DESC''')
+        else:
+            rows = db.execute('''SELECT id,filename,content_bytes,question_count,submitted_at
+                    FROM question_bank_submissions WHERE user_id=?
+                    ORDER BY submitted_at DESC''', (uid,))
+        return {'isAdmin': admin, 'submissions': [dict(row) for row in rows]}
+
+    def submit_question_bank(self, db, uid, payload):
+        filename, content = payload.get('filename'), payload.get('content')
+        if (not isinstance(filename, str) or not filename.lower().endswith('.json')
+                or len(filename) > 180):
+            raise ValueError('仅支持 .json 格式的题库文件')
+        if not isinstance(content, str):
+            raise ValueError('题库内容必须为 UTF-8 JSON')
+        raw = content.encode('utf-8')
+        if not raw or len(raw) > MAX_SUBMISSION_BYTES:
+            raise ValueError('题库文件不能为空且不能超过 12 MB')
+        try:
+            bank = json.loads(content)
+        except json.JSONDecodeError:
+            raise ValueError('题库文件不是有效 JSON')
+        errors = validate_bank(bank)
+        if errors:
+            raise ValueError(f'题库格式不符合模板：{errors[0]}')
+        checksum = hashlib.sha256(raw).hexdigest()
+        duplicate = db.execute('''SELECT id,question_count,submitted_at
+                FROM question_bank_submissions WHERE user_id=? AND checksum=?''',
+                               (uid, checksum)).fetchone()
+        if duplicate:
+            return {'ok': True, 'duplicate': True, 'submission': dict(duplicate)}
+        submission_id = secrets.token_urlsafe(18)
+        path = SUBMISSIONS / f'{submission_id}.json'
+        temporary = SUBMISSIONS / f'.{submission_id}.tmp'
+        try:
+            temporary.write_bytes(raw)
+            os.replace(temporary, path)
+            submitted_at = datetime.now(timezone.utc).isoformat(
+                timespec='seconds').replace('+00:00', 'Z')
+            db.execute('''INSERT INTO question_bank_submissions
+                    (id,user_id,filename,content_bytes,question_count,checksum,submitted_at)
+                    VALUES(?,?,?,?,?,?,?)''',
+                       (submission_id, uid, filename, len(raw),
+                        len(bank['questions']), checksum, submitted_at))
+            db.commit()
+        except Exception:
+            temporary.unlink(missing_ok=True)
+            path.unlink(missing_ok=True)
+            raise
+        return {'ok': True, 'duplicate': False, 'submission': {
+            'id': submission_id, 'filename': filename, 'content_bytes': len(raw),
+            'question_count': len(bank['questions']), 'submitted_at': submitted_at}}
+
     def do_GET(self):
         try:
             path = urlparse(self.path).path
@@ -175,6 +254,10 @@ class Handler(BaseHTTPRequestHandler):
                 with connect() as db:
                     uid = self.user(db)
                     return self.respond(200, self.snapshot(db, uid))
+            if path == '/v1/question-bank-submissions':
+                with connect() as db:
+                    uid = self.user(db)
+                    return self.respond(200, self.submissions(db, uid))
             self.respond(404, {'error': '接口不存在'})
         except PermissionError as e:
             self.respond(401, {'error': str(e)})
@@ -192,8 +275,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            data = self.body()
             path = urlparse(self.path).path
+            data = self.body(
+                MAX_SUBMISSION_REQUEST_BYTES if path == '/v1/question-bank-submissions'
+                else 2_000_000)
             with connect() as db:
                 if path in ('/v1/auth/register', '/v1/auth/login'):
                     email, password = data.get('email', ''), data.get('password', '')
@@ -253,6 +338,8 @@ class Handler(BaseHTTPRequestHandler):
                                incoming_settings['updatedAt']))
                     db.commit()
                     return self.respond(200, self.snapshot(db, uid))
+                if path == '/v1/question-bank-submissions':
+                    return self.respond(200, self.submit_question_bank(db, uid, data))
                 self.respond(404, {'error': '接口不存在'})
         except PermissionError as e:
             self.respond(401, {'error': str(e)})

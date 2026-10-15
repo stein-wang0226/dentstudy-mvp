@@ -15,6 +15,8 @@ class ApiTests(unittest.TestCase):
     def setUpClass(cls):
         cls.temp=tempfile.TemporaryDirectory()
         server.DB=Path(cls.temp.name)/'test.sqlite'
+        server.SUBMISSIONS=Path(cls.temp.name)/'question-bank-submissions'
+        server.ADMIN_EMAIL='author@test.local'
         server.initialize()
         cls.http=ThreadingHTTPServer(('127.0.0.1',0),server.Handler)
         cls.thread=threading.Thread(target=cls.http.serve_forever,daemon=True)
@@ -119,5 +121,29 @@ class ApiTests(unittest.TestCase):
         bank=json.loads(server.BANK.read_text())
         bank['questions'].append(copy.deepcopy(bank['questions'][0]))
         self.assertTrue(validate(bank))
+
+    def test_question_bank_submission_is_private_and_author_visible(self):
+        contributor=self.register('contributor')
+        bank=json.loads(server.BANK.read_text())
+        bank['questions']=[bank['questions'][0]]
+        payload={'filename':'牙周整理.json','content':json.dumps(bank,ensure_ascii=False)}
+        status,result=self.request('/v1/question-bank-submissions',payload,contributor)
+        self.assertEqual(status,200)
+        self.assertFalse(result['duplicate'])
+        submission=result['submission']
+        self.assertTrue((server.SUBMISSIONS/(submission['id']+'.json')).is_file())
+        status,own=self.request('/v1/question-bank-submissions',token=contributor)
+        self.assertEqual(status,200)
+        self.assertFalse(own['isAdmin'])
+        self.assertNotIn('email',own['submissions'][0])
+        duplicate=self.request('/v1/question-bank-submissions',payload,contributor)[1]
+        self.assertTrue(duplicate['duplicate'])
+        author=self.register('author')
+        status,inbox=self.request('/v1/question-bank-submissions',token=author)
+        self.assertEqual(status,200)
+        self.assertTrue(inbox['isAdmin'])
+        self.assertEqual(inbox['submissions'][0]['email'],'contributor@test.local')
+        self.assertEqual(self.request('/v1/question-bank-submissions',
+                                      {'filename':'bad.json','content':'{}'},contributor)[0],400)
 
 if __name__=='__main__':unittest.main()

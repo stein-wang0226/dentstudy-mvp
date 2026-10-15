@@ -9,6 +9,7 @@ import 'models.dart';
 import 'features/library/catalog.dart';
 
 class StudyStore extends ChangeNotifier {
+  static const maxQuestionBankBytes = 12 * 1024 * 1024;
   late SharedPreferences prefs;
   final secure = const FlutterSecureStorage();
   List<Question> questions = [];
@@ -320,7 +321,8 @@ class StudyStore extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> request(String path,
-      [Map<String, dynamic>? data]) async {
+      [Map<String, dynamic>? data,
+      Duration timeout = const Duration(seconds: 15)]) async {
     final configuredBase = baseUrl.trim();
     final relativeBase = configuredBase.startsWith('/');
     final uri = relativeBase
@@ -338,7 +340,7 @@ class StudyStore extends ChangeNotifier {
     final response = await (data == null
             ? http.get(uri, headers: headers)
             : http.post(uri, headers: headers, body: jsonEncode(data)))
-        .timeout(const Duration(seconds: 15));
+        .timeout(timeout);
     final body = Map<String, dynamic>.from(jsonDecode(response.body));
     if (response.statusCode >= 400) throw Exception(body['error'] ?? '服务暂不可用');
     return body;
@@ -452,4 +454,146 @@ class StudyStore extends ChangeNotifier {
         jsonEncode({'questions': questions.map((q) => q.data).toList()}));
     notifyListeners();
   }
+
+  Future<int> importQuestionBank(String content) async {
+    if (content.trim().isEmpty) throw Exception('题库文件为空');
+    final bytes = utf8.encode(content).length;
+    if (bytes > maxQuestionBankBytes) throw Exception('题库文件不能超过 12 MB');
+    final imported = _readImportedQuestions(content);
+    final existing = questions.map((question) => question.id).toSet();
+    final conflict = imported
+        .map((question) => question.id)
+        .where(existing.contains)
+        .firstOrNull;
+    if (conflict != null) {
+      throw Exception('题目 ID “$conflict” 已存在；为保护既有学习记录，请更换题目 ID 后再导入。');
+    }
+    final before = questions;
+    questions = [...questions, ...imported];
+    try {
+      if (!await prefs.setString('bank',
+          jsonEncode({'questions': questions.map((q) => q.data).toList()}))) {
+        throw Exception('本机存储空间不足，未能保存导入题库');
+      }
+    } catch (_) {
+      questions = before;
+      rethrow;
+    }
+    dailyPlan = null;
+    await _save();
+    return imported.length;
+  }
+
+  Future<Map<String, dynamic>> submitQuestionBank({
+    required String filename,
+    required String content,
+  }) async {
+    if (token.isEmpty) throw Exception('登录后才能将题库投稿给作者');
+    return request(
+        '/v1/question-bank-submissions',
+        {'filename': filename, 'content': content},
+        const Duration(seconds: 60));
+  }
+
+  Future<Map<String, dynamic>> questionBankSubmissions() async {
+    if (token.isEmpty) throw Exception('请先登录');
+    return request('/v1/question-bank-submissions');
+  }
+}
+
+List<Question> _readImportedQuestions(String content) {
+  dynamic decoded;
+  try {
+    decoded = jsonDecode(content.replaceFirst('\uFEFF', ''));
+  } on FormatException {
+    throw Exception('文件不是有效 JSON');
+  }
+  if (decoded is! Map || decoded['questions'] is! List) {
+    throw Exception('题库顶层必须是包含 questions 数组的 JSON 对象');
+  }
+  final rawQuestions = decoded['questions'] as List;
+  if (rawQuestions.isEmpty) throw Exception('题库至少需要 1 道题');
+  final ids = <String>{};
+  final result = <Question>[];
+  for (var index = 0; index < rawQuestions.length; index++) {
+    final raw = rawQuestions[index];
+    if (raw is! Map) throw Exception('第 ${index + 1} 题必须是对象');
+    final question = Map<String, dynamic>.from(raw);
+    const required = [
+      'id',
+      'subject',
+      'chapter',
+      'type',
+      'stem',
+      'options',
+      'answer',
+      'explanation',
+      'warning',
+      'reference',
+      'citation',
+      'tags',
+      'topics',
+      'modes',
+      'paperId',
+      'paperName',
+      'durationMinutes',
+      'order',
+      'points',
+      'isDemo',
+      'reviewStatus',
+      'sourceType',
+      'license'
+    ];
+    final missing = required.where((field) => !question.containsKey(field));
+    if (missing.isNotEmpty) {
+      throw Exception('第 ${index + 1} 题缺少 ${missing.first} 字段，请使用题库模板');
+    }
+    final id = question['id'];
+    if (id is! String || id.trim().isEmpty || !ids.add(id)) {
+      throw Exception('第 ${index + 1} 题的 id 为空或重复');
+    }
+    for (final field in [
+      'subject',
+      'chapter',
+      'type',
+      'stem',
+      'explanation',
+      'warning',
+      'reference',
+      'paperId',
+      'paperName',
+      'license'
+    ]) {
+      if (question[field] is! String ||
+          (question[field] as String).trim().isEmpty) {
+        throw Exception('第 ${index + 1} 题的 $field 必须是非空文字');
+      }
+    }
+    if (question['options'] is! Map ||
+        !(question['options'] as Map)
+            .entries
+            .every((entry) => entry.key is String && entry.value is String)) {
+      throw Exception('第 ${index + 1} 题的 options 必须是选项文字映射');
+    }
+    final options = Map<String, String>.from(question['options'] as Map);
+    final subjective = question['type'] == '简答题' || question['type'] == '案例分析';
+    if (!subjective &&
+        (options.length < 2 || !options.containsKey(question['answer']))) {
+      throw Exception('第 ${index + 1} 题至少需要两个选项，且答案必须属于选项');
+    }
+    if (subjective && question['answer'] != null) {
+      throw Exception('第 ${index + 1} 题为主观题时 answer 必须为 null');
+    }
+    for (final field in ['tags', 'topics', 'modes']) {
+      if (question[field] is! List ||
+          !(question[field] as List).every((value) => value is String)) {
+        throw Exception('第 ${index + 1} 题的 $field 必须是文字数组');
+      }
+    }
+    if ((question['modes'] as List).isEmpty) {
+      throw Exception('第 ${index + 1} 题至少要指定一个学习方向');
+    }
+    result.add(Question(question));
+  }
+  return result;
 }

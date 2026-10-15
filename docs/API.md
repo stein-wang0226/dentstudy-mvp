@@ -11,6 +11,8 @@ API 默认 `http://127.0.0.1:8787`，JSON UTF-8。私有接口使用 `Authorizat
 | POST | `/v1/auth/logout` | `{}`，撤销当前 token |
 | POST | `/v1/sync` | `{events:[...]}`，最多 500 条；返回完整快照 |
 | GET | `/v1/state` | 返回当前账号快照 |
+| POST | `/v1/question-bank-submissions` | 登录后提交 `{filename,content}`；仅 `.json`，原文件最大 12 MB |
+| GET | `/v1/question-bank-submissions` | 登录后查看自己的投稿；配置的作者账号可查看全部投稿元数据 |
 
 快照：`events` 原始日志，`states` 每题排期/题本状态，`attempts` 用于统计的作答记录，`plan` 含今日 due、新题与 newLocked，`settings` 为账号级学习目标。
 
@@ -43,7 +45,9 @@ API 默认 `http://127.0.0.1:8787`，JSON UTF-8。私有接口使用 `Authorizat
 
 `kind` 还可为 `favorite`（value 为 bool）、`note`（字符串最多 10000 字）、`removeWrong`（null）。grade 为 wrong/guessed/mastered；mode 为 practice/review/exam。主观题 answer 为用户书写的文本。事件时间必须带时区，不得超过服务器当前时间 5 分钟。超时请求可按原事件 ID 原样重试。
 
-请求体限制 2 MB。无认证返回 401，校验失败 400。同步批次原子提交，一条无效则整个批次回滚。不同账号的事件使用复合主键隔离。
+常规请求体限制 2 MB；题库投稿允许原文件最大 12 MB（为容纳 JSON 传输封装，请求上限 16 MB）。无认证返回 401，校验失败 400。同步批次原子提交，一条无效则整个批次回滚。不同账号的事件使用复合主键隔离。
+
+题库投稿先在客户端本地校验、合并至该设备的离线题库；登录后才会把原始 JSON 副本提交至服务端。服务端再次执行 `backend/bank.py validate` 校验，保存到 `DENTSTUDY_SUBMISSIONS` 指向的私有目录，不经 Nginx 对外提供。投稿文件只用于人工审核，用户须确保拥有分享权限，不得上传个人隐私、受限或来源不明的内容。`DENTSTUDY_ADMIN_EMAIL` 对应的账号可在客户端投稿箱查看文件名、题数、大小、时间及投稿邮箱。
 
 题目 JSON 模板见 `mobile/assets/questions.json`。主要字段：
 
@@ -56,4 +60,4 @@ API 默认 `http://127.0.0.1:8787`，JSON UTF-8。私有接口使用 `Authorizat
 - `citation`：publisher/title/edition/chapter/page/verified；正式发布需核实。
 - `reviewStatus/reviewer/reviewedAt`：正式导入必须为 approved 并有审核记录。
 
-数据库当前只有用户、会话、事件三张表；题库为经校验的版本化 JSON。已有 Web 后端可保持此 API 契约，用数据库题库表替换 JSON，并以 PostgreSQL 持久化事件。
+数据库当前含用户、会话、事件、学习设置和题库投稿元数据；运行题库仍为经校验的版本化 JSON。已有 Web 后端可保持此 API 契约，用数据库题库表替换 JSON，并以 PostgreSQL 持久化事件。

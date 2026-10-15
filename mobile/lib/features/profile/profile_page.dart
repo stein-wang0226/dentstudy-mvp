@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../app/shared.dart';
 import '../../app/build_info.dart';
 
@@ -9,8 +11,90 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  bool importingBank = false;
+  bool loadingSubmissions = false;
+  bool isSubmissionAdmin = false;
+  List<Map<String, dynamic>> submissionInbox = [];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => refreshSubmissionInbox());
+  }
+
   void changed() {
     if (mounted) setState(() {});
+  }
+
+  Future<void> refreshSubmissionInbox() async {
+    if (store.token.isEmpty) {
+      if (mounted)
+        setState(() {
+          isSubmissionAdmin = false;
+          submissionInbox = [];
+        });
+      return;
+    }
+    setState(() => loadingSubmissions = true);
+    try {
+      final result = await store.questionBankSubmissions();
+      if (!mounted) return;
+      setState(() {
+        isSubmissionAdmin = result['isAdmin'] == true;
+        submissionInbox = (result['submissions'] as List)
+            .map((item) => Map<String, dynamic>.from(item as Map))
+            .toList();
+      });
+    } catch (_) {
+      // The personal learning experience stays usable if the optional inbox
+      // endpoint is unavailable while an older server is being updated.
+    } finally {
+      if (mounted) setState(() => loadingSubmissions = false);
+    }
+  }
+
+  Future<void> pickQuestionBank() async {
+    setState(() => importingBank = true);
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: const ['json'],
+          withData: true);
+      if (picked == null) return;
+      final file = picked.files.single;
+      if (!file.name.toLowerCase().endsWith('.json') || file.bytes == null) {
+        throw Exception('请选择可以读取的 .json 题库文件');
+      }
+      final content = utf8.decode(file.bytes!, allowMalformed: false);
+      final imported = await store.importQuestionBank(content);
+      if (store.token.isEmpty) {
+        if (mounted) message(context, '已导入 $imported 道题到本机；登录后可同步原文件给作者。');
+        return;
+      }
+      try {
+        final submitted = await store.submitQuestionBank(
+            filename: file.name, content: content);
+        if (mounted) {
+          message(
+              context,
+              submitted['duplicate'] == true
+                  ? '本机已导入；这份文件此前已投稿。'
+                  : '已导入 $imported 道题，本文件已提交给作者审核。');
+        }
+        await refreshSubmissionInbox();
+      } catch (error) {
+        if (mounted) {
+          message(context, '已导入 $imported 道题到本机；投稿上传未完成：$error');
+        }
+      }
+    } on FormatException {
+      if (mounted) message(context, '文件编码无法识别，请保存为 UTF-8 JSON 后重试。');
+    } catch (error) {
+      if (mounted) message(context, error.toString());
+    } finally {
+      if (mounted) setState(() => importingBank = false);
+    }
   }
 
   @override
@@ -44,7 +128,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: Text('导入本机访客记录')),
             if (store.token.isNotEmpty)
               TextButton(
-                  onPressed: () => safely(context, store.logout),
+                  onPressed: () async {
+                    await safely(context, store.logout);
+                    await refreshSubmissionInbox();
+                  },
                   child: Text('退出登录'))
           ])
         ])),
@@ -78,6 +165,51 @@ class _ProfilePageState extends State<ProfilePage> {
                                 : null)));
               }).toList())
         ])),
+        heading('导入题库 / 投稿'),
+        box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('仅支持 JSON 题库文件。会先导入当前设备供你本地练习；登录后，原文件会提交至作者的私有投稿箱供人工查看。'),
+          const SizedBox(height: 8),
+          const Text('请仅上传你有权分享的资料；不要上传含个人隐私、受限或来源不明的内容。',
+              style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
+          const SizedBox(height: 14),
+          FilledButton.icon(
+              onPressed: importingBank ? null : pickQuestionBank,
+              icon: const Icon(Icons.upload_file_outlined),
+              label: Text(importingBank
+                  ? '正在导入…'
+                  : store.token.isEmpty
+                      ? '选择 JSON 并本地导入'
+                      : '选择 JSON 并投稿')),
+          if (store.token.isEmpty) ...[
+            const SizedBox(height: 8),
+            const Text('登录后才会将原文件发给作者；未登录时文件只保留在本机。',
+                style: TextStyle(fontSize: 12, color: Colors.blueGrey))
+          ]
+        ])),
+        if (isSubmissionAdmin) ...[
+          heading('题库投稿箱', sub: '仅作者账号可见 · 文件保存在服务器私有目录'),
+          box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                    onPressed:
+                        loadingSubmissions ? null : refreshSubmissionInbox,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('刷新'))),
+            if (submissionInbox.isEmpty)
+              const Text('暂时还没有投稿。', style: TextStyle(color: Colors.blueGrey))
+            else
+              ...submissionInbox.map((item) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.description_outlined),
+                  title: Text(item['filename'] as String),
+                  subtitle: Text(
+                      '${item['email'] ?? '本人投稿'} · ${item['question_count']} 题 · ${_formatSubmissionTime(item['submitted_at'] as String)}'),
+                  trailing: Text(_formatBytes(item['content_bytes'] as int),
+                      style: const TextStyle(
+                          fontSize: 12, color: Colors.blueGrey))))
+          ]))
+        ],
         heading('学习设置'),
         box(Column(children: [
           ListTile(
@@ -275,6 +407,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                     await store.login(address.text, email.text,
                                         password.text, register);
                                     if (c.mounted) Navigator.pop(c);
+                                    await refreshSubmissionInbox();
                                   } catch (e) {
                                     if (c.mounted)
                                       set(() {
@@ -286,4 +419,11 @@ class _ProfilePageState extends State<ProfilePage> {
                           child: Text(busy ? '连接中…' : '继续'))
                     ])));
   }
+
+  String _formatSubmissionTime(String value) =>
+      value.replaceFirst('T', ' ').replaceFirst('Z', '');
+
+  String _formatBytes(int value) => value < 1024 * 1024
+      ? '${(value / 1024).toStringAsFixed(0)} KB'
+      : '${(value / 1024 / 1024).toStringAsFixed(1)} MB';
 }
