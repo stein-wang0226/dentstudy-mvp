@@ -5,9 +5,10 @@ import 'package:file_picker/file_picker.dart';
 import '../../app/shared.dart';
 import '../../app/build_info.dart';
 import 'user_avatar.dart';
-import 'avatar_crop.dart';
+import 'profile_editor.dart';
 import 'author_comments_page.dart';
 import 'author_records_page.dart';
+import 'appearance_settings.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -180,75 +181,32 @@ class _ProfilePageState extends State<ProfilePage> {
           ]),
           if (store.email.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Text(store.email,
-                style: const TextStyle(fontSize: 12, color: Colors.blueGrey))
-          ]
-        ])),
-        const SizedBox(height: 12),
-        box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(store.syncMessage),
-          SizedBox(height: 10),
-          Text('待同步记录：${store.pending.length} 条',
-              style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
-          SizedBox(height: 16),
-          Wrap(spacing: 10, runSpacing: 10, children: [
-            FilledButton(
-                onPressed: store.syncing
-                    ? null
-                    : () => store.token.isEmpty
-                        ? showAccountDialog(context,
-                            onSuccess: refreshAccountData)
-                        : safely(context, store.sync),
-                child: Text(store.syncing
-                    ? '同步中…'
-                    : store.token.isEmpty
-                        ? '登录 / 注册'
-                        : '立即同步')),
-            if (store.token.isNotEmpty)
-              OutlinedButton(
+            Row(children: [
+              Expanded(
+                  child: Text(store.email,
+                      style: const TextStyle(
+                          fontSize: 12, color: Colors.blueGrey))),
+              TextButton(
                   onPressed: store.syncing
                       ? null
-                      : () => safely(context, store.importGuest),
-                  child: Text('导入本机访客记录')),
-            if (store.token.isNotEmpty)
-              TextButton(
-                  onPressed: () async {
-                    await safely(context, store.logout);
-                    await refreshAccountData();
-                  },
-                  child: Text('退出登录'))
-          ])
+                      : () async {
+                          await safely(context, store.logout);
+                          await refreshAccountData();
+                        },
+                  child: const Text('退出登录'))
+            ])
+          ],
+          if (store.token.isEmpty) ...[
+            const SizedBox(height: 16),
+            FilledButton.icon(
+                onPressed: () =>
+                    showAccountDialog(context, onSuccess: refreshAccountData),
+                icon: const Icon(Icons.person_outline),
+                label: const Text('登录 / 注册'))
+          ]
         ])),
-        heading('主题色'),
-        box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('选择你喜欢的界面主色，深浅层级会自动保持一致。'),
-          SizedBox(height: 14),
-          Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: themeColors.entries.map((entry) {
-                final selected = store.themeColorKey == entry.key;
-                return Tooltip(
-                    message: themeNames[entry.key]!,
-                    child: InkWell(
-                        onTap: () => safely(
-                            context, () => store.setThemeColor(entry.key)),
-                        borderRadius: BorderRadius.circular(24),
-                        child: Container(
-                            width: 42,
-                            height: 42,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                                color: entry.value,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: selected ? ink : Colors.transparent,
-                                    width: 3)),
-                            child: selected
-                                ? Icon(Icons.check, color: Colors.white)
-                                : null)));
-              }).toList())
-        ])),
+        heading('主题与外观'),
+        box(const AppearanceSettings()),
         heading('导入题库'),
         box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Text('仅支持 JSON 题库文件，会先导入当前设备供你本地练习；登录后可提交保存。'),
@@ -341,152 +299,9 @@ class _ProfilePageState extends State<ProfilePage> {
             style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
       ];
 
-  Widget _profileAvatar(String value) => UserAvatar(value: value);
-
-  Future<String?> pickAvatar(BuildContext dialogContext) async {
-    final picked = await FilePicker.platform
-        .pickFiles(type: FileType.image, withData: true);
-    if (picked == null) return null;
-    final bytes = picked.files.single.bytes;
-    if (bytes == null || bytes.length > 10 * 1024 * 1024) {
-      throw Exception('请选择不超过 10 MB 的图片');
-    }
-    final image = await decodeAvatarImage(bytes);
-    try {
-      if (!dialogContext.mounted) return null;
-      return await Navigator.of(dialogContext).push<String>(
-          MaterialPageRoute(builder: (_) => AvatarCropPage(image: image)));
-    } finally {
-      // The crop route can still paint during its exit transition.
-      Future.delayed(const Duration(milliseconds: 400), image.dispose);
-    }
-  }
-
   Future<void> editProfile() async {
-    final nickname = TextEditingController(
-        text: accountProfile['nickname'] as String? ?? '齿间同学');
-    final university = TextEditingController(
-        text: accountProfile['university'] as String? ?? '');
-    var avatar = accountProfile['avatar'] as String? ?? 'book';
-    var picking = false;
-    String? avatarError;
-    final result = await showDialog<Map<String, String>>(
-        context: context,
-        builder: (c) => StatefulBuilder(
-            builder: (c, set) => AlertDialog(
-                    title: const Text('编辑个人资料'),
-                    content: SingleChildScrollView(
-                        child:
-                            Column(mainAxisSize: MainAxisSize.min, children: [
-                      UserAvatar(value: avatar, radius: 40),
-                      TextButton.icon(
-                          onPressed: picking
-                              ? null
-                              : () async {
-                                  set(() {
-                                    picking = true;
-                                    avatarError = null;
-                                  });
-                                  try {
-                                    final selected = await pickAvatar(c);
-                                    if (c.mounted && selected != null)
-                                      set(() => avatar = selected);
-                                  } catch (_) {
-                                    if (c.mounted)
-                                      set(() => avatarError =
-                                          '图片无法读取，请选择 10 MB 以内的 JPG 或 PNG 图片');
-                                  } finally {
-                                    if (c.mounted) set(() => picking = false);
-                                  }
-                                },
-                          icon: const Icon(Icons.photo_library_outlined),
-                          label: Text(picking ? '正在处理…' : '从图库上传头像')),
-                      if (avatarError != null)
-                        Text(avatarError!,
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.deepOrange)),
-                      if (avatar.startsWith('data:image/'))
-                        const Text('已选择裁剪后的照片',
-                            style: TextStyle(
-                                fontSize: 12, color: Colors.blueGrey)),
-                      TextField(
-                          controller: nickname,
-                          maxLength: 24,
-                          decoration: const InputDecoration(labelText: '昵称')),
-                      const SizedBox(height: 8),
-                      TextField(
-                          controller: university,
-                          maxLength: 60,
-                          decoration:
-                              const InputDecoration(labelText: '就读院校（可自行填写）')),
-                      const SizedBox(height: 12),
-                      const Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text('或使用预设头像',
-                              style: TextStyle(fontWeight: FontWeight.w700))),
-                      const SizedBox(height: 8),
-                      Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: [
-                            'book',
-                            'tooth',
-                            'science',
-                            'leaf',
-                            'star',
-                            'smile'
-                          ]
-                              .map((item) => InkWell(
-                                  onTap: picking
-                                      ? null
-                                      : () => set(() {
-                                            avatar = item;
-                                            avatarError = null;
-                                          }),
-                                  borderRadius: BorderRadius.circular(24),
-                                  child: Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                              color: avatar == item
-                                                  ? teal
-                                                  : Colors.transparent,
-                                              width: 2)),
-                                      child: _profileAvatar(item))))
-                              .toList()),
-                      const SizedBox(height: 12),
-                      const Text('昵称、头像和院校会显示在题目讨论中；邮箱不会公开。',
-                          style:
-                              TextStyle(fontSize: 12, color: Colors.blueGrey))
-                    ])),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(c),
-                          child: const Text('取消')),
-                      FilledButton(
-                          onPressed: picking
-                              ? null
-                              : () => Navigator.pop(c, {
-                                    'nickname': nickname.text,
-                                    'university': university.text,
-                                    'avatar': avatar,
-                                  }),
-                          child: const Text('保存'))
-                    ])));
-    Future.delayed(const Duration(milliseconds: 400), () {
-      nickname.dispose();
-      university.dispose();
-    });
-    if (result == null || !mounted) return;
-    await safely(context, () async {
-      final updated = await store.updateProfile(
-          nickname: result['nickname']!,
-          avatar: result['avatar']!,
-          university: result['university']!);
-      if (mounted) setState(() => accountProfile = updated);
-      if (isSubmissionAdmin) await refreshAuthorUserDirectory();
-    });
+    await showProfileEditor(context, initialProfile: accountProfile);
+    if (mounted) await refreshAccountData();
   }
 
   Future<void> goalsDialog() async {
@@ -558,14 +373,14 @@ Future<void> showAccountDialog(BuildContext context,
           text: remember ? store.prefs.getString('rememberedEmail') ?? '' : ''),
       password = TextEditingController(),
       confirmPassword = TextEditingController();
-  bool register = false, busy = false;
+  bool register = false, busy = false, authenticated = false;
   String? error;
   await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (c) => StatefulBuilder(
           builder: (c, set) => AlertDialog(
-                  title: Text(register ? '创建学习账号' : '同步学习进度'),
+                  title: Text(register ? '创建学习账号' : '登录学习账号'),
                   content: AutofillGroup(
                       onDisposeAction: AutofillContextAction.cancel,
                       child: SingleChildScrollView(
@@ -625,7 +440,7 @@ Future<void> showAccountDialog(BuildContext context,
                                 ? null
                                 : (value) =>
                                     set(() => remember = value ?? false)),
-                        Text('登录后访客记录独立保留，可在“我的”中手动导入。',
+                        Text('账号学习进度会自动同步；访客记录保留在本机。',
                             style: TextStyle(fontSize: 12)),
                         if (error != null)
                           Text(error!, style: TextStyle(color: Colors.red)),
@@ -662,8 +477,8 @@ Future<void> showAccountDialog(BuildContext context,
                                   } else {
                                     await store.prefs.remove('rememberedEmail');
                                   }
+                                  authenticated = true;
                                   if (c.mounted) Navigator.pop(c);
-                                  await onSuccess?.call();
                                 } catch (e) {
                                   if (c.mounted)
                                     set(() {
@@ -679,4 +494,14 @@ Future<void> showAccountDialog(BuildContext context,
     password.dispose();
     confirmPassword.dispose();
   });
+  if (!authenticated || !context.mounted) return;
+  try {
+    final profile = await store.profile();
+    if (context.mounted)
+      await showProfileEditor(context,
+          initialProfile: profile, onboarding: true);
+  } catch (_) {
+    if (context.mounted) message(context, '个人资料暂时无法加载，可在“我的”中稍后完善');
+  }
+  if (context.mounted) await onSuccess?.call();
 }

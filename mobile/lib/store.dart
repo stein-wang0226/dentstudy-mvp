@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
 import 'features/library/catalog.dart';
+import 'app/theme_palette.dart';
 
 class StudyStore extends ChangeNotifier {
   static const maxQuestionBankBytes = 12 * 1024 * 1024;
@@ -24,6 +25,8 @@ class StudyStore extends ChangeNotifier {
   QuestionCatalog get catalog => QuestionCatalog(questions, mode);
   String mode = '考研', email = '', userId = 'guest', baseUrl = '', token = '';
   String themeColorKey = 'teal';
+  String customPrimaryKey = 'teal', customBackgroundKey = 'teal';
+  bool glassEnabled = false;
   int dailyNewLimit = 10;
   int? dailyReviewTarget;
   String settingsUpdatedAt = '1970-01-01T00:00:00.000000Z';
@@ -98,6 +101,14 @@ class StudyStore extends ChangeNotifier {
     await prefs.remove('vipEntitled');
     await secure.delete(key: 'vipPurchaseId');
     themeColorKey = prefs.getString('themeColorKey') ?? 'teal';
+    if (themeColorKey != 'custom' && !themeColors.containsKey(themeColorKey))
+      themeColorKey = 'teal';
+    customPrimaryKey = prefs.getString('customPrimaryKey') ?? 'teal';
+    customBackgroundKey = prefs.getString('customBackgroundKey') ?? 'teal';
+    if (!themeColors.containsKey(customPrimaryKey)) customPrimaryKey = 'teal';
+    if (!themeColors.containsKey(customBackgroundKey))
+      customBackgroundKey = 'teal';
+    glassEnabled = prefs.getBool('glassEnabled') ?? false;
     const bankAsset = String.fromEnvironment('QUESTION_BANK_ASSET',
         defaultValue: 'assets/all_questions.json');
     final raw = await rootBundle.loadString(bankAsset);
@@ -261,8 +272,29 @@ class StudyStore extends ChangeNotifier {
   }
 
   Future<void> setThemeColor(String value) async {
+    if (value != 'custom' && !themeColors.containsKey(value))
+      throw Exception('请选择已有主题色');
     themeColorKey = value;
     await prefs.setString('themeColorKey', value);
+    notifyListeners();
+  }
+
+  Future<void> setCustomTheme(
+      {required String primary, required String background}) async {
+    if (!themeColors.containsKey(primary) ||
+        !themeColors.containsKey(background)) {
+      throw Exception('请从已有颜色中选择');
+    }
+    customPrimaryKey = primary;
+    customBackgroundKey = background;
+    await prefs.setString('customPrimaryKey', primary);
+    await prefs.setString('customBackgroundKey', background);
+    await setThemeColor('custom');
+  }
+
+  Future<void> setGlassEnabled(bool value) async {
+    glassEnabled = value;
+    await prefs.setBool('glassEnabled', value);
     notifyListeners();
   }
 

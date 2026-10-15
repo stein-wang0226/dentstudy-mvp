@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'shared.dart';
 import 'entrance.dart';
+import 'theme_surfaces.dart';
 import '../features/today/today_page.dart';
 import '../features/today/today_plan.dart';
 import '../features/library/library_page.dart';
@@ -23,11 +24,18 @@ class DentStudy extends StatelessWidget {
       listenable: store,
       builder: (context, _) {
         final scheme =
-            ColorScheme.fromSeed(seedColor: teal, surface: Colors.white);
+            ColorScheme.fromSeed(seedColor: teal, surface: Colors.white)
+                .copyWith(primary: teal, onPrimary: Colors.white);
         return MaterialApp(
             title: '齿间 · 口腔学习',
             debugShowCheckedModeBanner: false,
             themeAnimationDuration: const Duration(milliseconds: 250),
+            builder: (context, child) => StudyBackdrop(
+                glass: store.glassEnabled,
+                background: paper,
+                tint: backgroundTint,
+                accent: teal,
+                child: child ?? const SizedBox.shrink()),
             theme: ThemeData(
                 useMaterial3: true,
                 fontFamily: 'DentStudySans',
@@ -39,21 +47,30 @@ class DentStudy extends StatelessWidget {
                   'sans-serif'
                 ],
                 colorScheme: scheme,
-                scaffoldBackgroundColor: paper,
+                scaffoldBackgroundColor:
+                    store.glassEnabled ? Colors.transparent : paper,
                 appBarTheme: AppBarTheme(
-                    backgroundColor: paper,
+                    backgroundColor:
+                        store.glassEnabled ? paper.withAlpha(190) : paper,
                     surfaceTintColor: Colors.transparent,
                     foregroundColor: ink,
                     elevation: 0),
                 navigationBarTheme: NavigationBarThemeData(
-                    backgroundColor: Color.lerp(Colors.white, teal, .07),
+                    backgroundColor: store.glassEnabled
+                        ? paper.withAlpha(175)
+                        : Color.lerp(Colors.white, backgroundTint, .07),
                     indicatorColor: teal.withAlpha(30)),
                 cardTheme: CardThemeData(
                     elevation: 0,
-                    color: Colors.white,
+                    color: store.glassEnabled
+                        ? Colors.white.withAlpha(175)
+                        : Colors.white,
                     margin: const EdgeInsets.symmetric(vertical: 5),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18))),
+                        borderRadius: BorderRadius.circular(18),
+                        side: store.glassEnabled
+                            ? BorderSide(color: Colors.white.withAlpha(220))
+                            : BorderSide.none)),
                 textTheme: TextTheme(
                     bodyLarge: TextStyle(fontSize: 16, height: 1.6, color: ink),
                     bodyMedium:
@@ -361,24 +378,26 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                   3 => StatisticsPage(onStart: _start),
                   _ => ProfilePage(),
                 }),
-        bottomNavigationBar: NavigationBar(
-            selectedIndex: tab,
-            onDestinationSelected: (i) async {
-              setState(() => tab = i);
-              if (i == 0) await _ensurePlan();
-            },
-            destinations: const [
-              NavigationDestination(
-                  icon: Icon(Icons.wb_sunny_outlined), label: '今日'),
-              NavigationDestination(
-                  icon: Icon(Icons.grid_view_outlined), label: '题库'),
-              NavigationDestination(
-                  icon: Icon(Icons.bookmarks_outlined), label: '题本'),
-              NavigationDestination(
-                  icon: Icon(Icons.bar_chart_outlined), label: '学情'),
-              NavigationDestination(
-                  icon: Icon(Icons.person_outline), label: '我的')
-            ]),
+        bottomNavigationBar: FrostedChrome(
+            enabled: store.glassEnabled,
+            child: NavigationBar(
+                selectedIndex: tab,
+                onDestinationSelected: (i) async {
+                  setState(() => tab = i);
+                  if (i == 0) await _ensurePlan();
+                },
+                destinations: const [
+                  NavigationDestination(
+                      icon: Icon(Icons.wb_sunny_outlined), label: '今日'),
+                  NavigationDestination(
+                      icon: Icon(Icons.grid_view_outlined), label: '题库'),
+                  NavigationDestination(
+                      icon: Icon(Icons.bookmarks_outlined), label: '题本'),
+                  NavigationDestination(
+                      icon: Icon(Icons.bar_chart_outlined), label: '学情'),
+                  NavigationDestination(
+                      icon: Icon(Icons.person_outline), label: '我的')
+                ])),
       );
 }
 

@@ -4,11 +4,10 @@ import 'question_tools.dart';
 import 'package:flutter/material.dart';
 import '../../models.dart';
 import '../../store.dart';
-import '../../app/shared.dart' show teal, ink, paper;
+import '../../app/shared.dart' show teal, ink, box;
 
 Color get _ink => ink;
 Color get _teal => teal;
-Color get _paper => paper;
 
 class BatchStudySession extends StatefulWidget {
   final List<Question> questions;
@@ -164,9 +163,7 @@ class _BatchStudySessionState extends State<BatchStudySession> {
           }
         },
         child: Scaffold(
-          backgroundColor: _paper,
           appBar: AppBar(
-            backgroundColor: _paper,
             title: Text(finished
                 ? '批量刷题完成'
                 : reviewing
@@ -350,14 +347,7 @@ class _BatchStudySessionState extends State<BatchStudySession> {
             color: _teal),
       ]);
 
-  Widget _card(Widget child) => Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _ink.withAlpha(12))),
-      child: Material(type: MaterialType.transparency, child: child));
+  Widget _card(Widget child) => box(child);
 
   Widget _pill(String text) => Container(
       padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),

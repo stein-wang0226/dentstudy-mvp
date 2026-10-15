@@ -1,34 +1,26 @@
 import 'package:flutter/material.dart';
 import '../store.dart';
 import '../reminders.dart';
+import 'theme_palette.dart';
+import 'theme_surfaces.dart';
+export 'theme_palette.dart';
 
 final store = StudyStore();
 final reminders = Reminders();
-const themeColors = <String, Color>{
-  'teal': Color(0xFF087F78),
-  'blue': Color(0xFF2764A8),
-  'purple': Color(0xFF7652A8),
-  'orange': Color(0xFFB46824),
-  'rose': Color(0xFFB54E6E),
-  'indigo': Color(0xFF4856A8),
-  'crimson': Color(0xFFAD4148),
-  'cocoa': Color(0xFF7B5A45),
-};
-const themeNames = {
-  'teal': '青绿',
-  'blue': '湖蓝',
-  'purple': '紫藤',
-  'orange': '暖橙',
-  'rose': '玫瑰',
-  'indigo': '靛蓝',
-  'crimson': '绛红',
-  'cocoa': '可可'
-};
-Color get teal => themeColors[store.themeColorKey] ?? themeColors['teal']!;
+Color get teal =>
+    themeColors[store.themeColorKey == 'custom'
+        ? store.customPrimaryKey
+        : store.themeColorKey] ??
+    themeColors['teal']!;
 Color get activeThemeColor => teal;
 Color get ink => Color.lerp(const Color(0xFF253238), teal, .18)!;
 // A constant tint ratio preserves the light/dark hierarchy across hues.
-Color get paper => Color.lerp(Colors.white, teal, .045)!;
+Color get backgroundTint =>
+    themeColors[store.themeColorKey == 'custom'
+        ? store.customBackgroundKey
+        : store.themeColorKey] ??
+    themeColors['teal']!;
+Color get paper => Color.lerp(Colors.white, backgroundTint, .045)!;
 void message(BuildContext c, String text) =>
     ScaffoldMessenger.of(c).showSnackBar(SnackBar(content: Text(text)));
 Future<void> safely(BuildContext c, Future<void> Function() action) async {
@@ -39,14 +31,12 @@ Future<void> safely(BuildContext c, Future<void> Function() action) async {
   }
 }
 
-Widget box(Widget child, {Color? color}) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-        color: color ?? Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: ink.withAlpha(12))),
-    child: Material(type: MaterialType.transparency, child: child));
+Widget box(Widget child, {Color? color}) => StudySurface(
+    glass: store.glassEnabled,
+    accent: teal,
+    borderColor: ink.withAlpha(12),
+    color: color ?? Colors.white,
+    child: child);
 Widget heading(String text, {String? sub}) => Padding(
     padding: const EdgeInsets.only(top: 24, bottom: 14),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

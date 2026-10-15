@@ -4,7 +4,7 @@ import 'question_tools.dart';
 import 'package:flutter/material.dart';
 import '../../models.dart';
 import '../../store.dart';
-import '../../app/shared.dart' show teal, ink;
+import '../../app/shared.dart' show teal, ink, box;
 
 Color get _ink => ink;
 Color get _teal => teal;
@@ -361,14 +361,7 @@ class _SpeedStudySessionState extends State<SpeedStudySession> {
 
   List<Widget> _finishedView() => [SessionSummary(journal: widget.journal)];
 
-  Widget _card(Widget child) => Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _ink.withAlpha(12))),
-      child: Material(type: MaterialType.transparency, child: child));
+  Widget _card(Widget child) => box(child);
 
   Widget _pill(String text) => Container(
       padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
