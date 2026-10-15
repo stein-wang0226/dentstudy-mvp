@@ -1,0 +1,668 @@
+{
+  "version": 1,
+  "name": "CMB · 牙周病学执医补充练习",
+  "isDemo": false,
+  "sourceNote": "开放数据练习题，非历年真题；AI 辅助补充解析待审核。",
+  "questions": [
+    {
+      "id": "cmb-train-031902-v1",
+      "subject": "牙周病学",
+      "chapter": "牙龈病与全身因素",
+      "type": "A1",
+      "stem": "能引起药物性牙龈增生的药物是",
+      "options": {
+        "A": "苯妥英钠",
+        "B": "苯妥英钠+硝苯地平",
+        "C": "苯妥英钠+环孢素",
+        "D": "硝苯地平+环孢素",
+        "E": "苯妥英钠+硝苯地平+环孢素"
+      },
+      "answer": "E",
+      "explanation": "苯妥英钠、部分钙通道阻滞剂如硝苯地平，以及环孢素，都可能与牙龈增生有关。临床应询问用药史并联合控制菌斑，不应自行停用治疗全身病的药物。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "牙龈病与全身因素"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-3-v1",
+      "paperName": "CMB · 牙周病学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 31903,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 31903 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 31902,
+        "originalRecordSha256": "35acd7ff49daf92dd7cf1340d294311bc78ea97042d918b8c1a801608b024ff8",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    },
+    {
+      "id": "cmb-train-033115-v1",
+      "subject": "牙周病学",
+      "chapter": "牙龈炎与牙周炎鉴别",
+      "type": "A1",
+      "stem": "龈缘炎诊断要点如下，错误的是",
+      "options": {
+        "A": "龈出血",
+        "B": "龈肿胀",
+        "C": "形成真性牙周袋",
+        "D": "牙不松动",
+        "E": "无牙槽骨吸收"
+      },
+      "answer": "C",
+      "explanation": "单纯龈炎可有红肿和出血，但不应有由附着丧失形成的真性牙周袋及牙槽骨吸收。牙龈肿胀可能造成假性袋，需要与真性牙周袋区别。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "牙龈炎与牙周炎鉴别"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-3-v1",
+      "paperName": "CMB · 牙周病学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 33116,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 33116 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 33115,
+        "originalRecordSha256": "ff2666d89e1a7afe9d4e9a84a840c21475fee665a1832e916b4ba6127b73ebb8",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    },
+    {
+      "id": "cmb-train-033192-v1",
+      "subject": "牙周病学",
+      "chapter": "牙周基础治疗",
+      "type": "A1",
+      "stem": "龈上洁治的最主要目的是",
+      "options": {
+        "A": "消除食物残渣",
+        "B": "漂白牙齿",
+        "C": "清除龈上牙石和菌斑",
+        "D": "牙齿美容",
+        "E": "使根面平整"
+      },
+      "answer": "C",
+      "explanation": "龈上洁治的主要目的在于去除龈上牙石及菌斑等局部刺激因素。它不是漂白或美容项目，也不等同于针对根面的龈下器械治疗。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "牙周基础治疗"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-3-v1",
+      "paperName": "CMB · 牙周病学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 33193,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 33193 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 33192,
+        "originalRecordSha256": "54aadcea7be02db59b27f555fbfe36ae35bd7838fba14991eabf50241e0e95ad",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    },
+    {
+      "id": "cmb-train-033279-v1",
+      "subject": "牙周病学",
+      "chapter": "牙周检查与评估",
+      "type": "A1",
+      "stem": "测量附着水平，正确距离是",
+      "options": {
+        "A": "龈缘至袋底",
+        "B": "牙颈部至袋底",
+        "C": "龈缘至釉牙骨质界",
+        "D": "釉牙骨质界至袋底",
+        "E": "以上全不是"
+      },
+      "answer": "D",
+      "explanation": "临床附着水平以釉牙骨质界为固定参考点，测量到袋底的距离。探诊深度则从当前龈缘量至袋底，两者在牙龈退缩或增生时并不相同。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "牙周检查与评估"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-3-v1",
+      "paperName": "CMB · 牙周病学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 33280,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 33280 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 33279,
+        "originalRecordSha256": "82066246014862bb2531b29887e23c53c065b2fd8d4ed12f3644b7f57af1ce1c",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    },
+    {
+      "id": "cmb-train-033464-v1",
+      "subject": "牙周病学",
+      "chapter": "牙周脓肿",
+      "type": "A2",
+      "stem": "男，60岁。右上牙床肿痛2天。检查：全口牙牙石（+)〜（++)，6┘颊侧牙龈局限性隆起，波动感，有深牙周袋，患牙未见龋坏。其他牙牙周袋探诊深度普遍4〜7mm。最可能的诊断是",
+      "options": {
+        "A": "急性龈乳头炎",
+        "B": "急性牙龈脓肿",
+        "C": "急性牙槽脓肿",
+        "D": "急性牙周脓肿",
+        "E": "根分叉病变"
+      },
+      "answer": "D",
+      "explanation": "已有深牙周袋和广泛牙周病变，又出现局限性隆起、波动感，支持急性牙周脓肿。题干未见龋坏，有助于与常见牙髓感染来源的根尖脓肿区分。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "牙周脓肿"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-3-v1",
+      "paperName": "CMB · 牙周病学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 33465,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 33465 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 33464,
+        "originalRecordSha256": "473ae4d9db35977d6a00764fe82c2c9172e265f0f042be69b10aa610ef33b871",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    },
+    {
+      "id": "cmb-train-033666-v1",
+      "subject": "牙周病学",
+      "chapter": "牙周病病因",
+      "type": "A1",
+      "stem": "引起牙周疾病的始动因子是",
+      "options": {
+        "A": "牙石",
+        "B": "咬合创伤",
+        "C": "解剖因素",
+        "D": "菌斑微生物",
+        "E": "食物嵌塞"
+      },
+      "answer": "D",
+      "explanation": "牙菌斑生物膜中的微生物是牙周炎症的始动因素。牙石、食物嵌塞等可促进菌斑滞留，咬合创伤影响受力，但不能取代菌斑作为始动因素。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "牙周病病因"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-3-v1",
+      "paperName": "CMB · 牙周病学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 33667,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 33667 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 33666,
+        "originalRecordSha256": "a6b3b6c2e05eb700681f772c4e754ebf4c2f2171c444a8011bea6a0fcda6375f",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    },
+    {
+      "id": "cmb-train-046993-v1",
+      "subject": "牙周病学",
+      "chapter": "牙周基础治疗",
+      "type": "A1",
+      "stem": "牙周基础治疗包括下列内容，除外",
+      "options": {
+        "A": "洁治术",
+        "B": "口腔卫生指导",
+        "C": "龈下刮治术",
+        "D": "牙龈切除术",
+        "E": "菌斑控制"
+      },
+      "answer": "D",
+      "explanation": "牙周基础治疗包括口腔卫生指导、菌斑控制及龈上龈下器械治疗等。牙龈切除术属于手术治疗，不属于基础治疗的常规组成。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "牙周基础治疗"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-3-v1",
+      "paperName": "CMB · 牙周病学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 46994,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 46994 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 46993,
+        "originalRecordSha256": "38ac5ba853fffa474efadbfc90b715b4f037099f6e3040e652aa1b701c69235e",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    },
+    {
+      "id": "cmb-train-047246-v1",
+      "subject": "牙周病学",
+      "chapter": "牙龈病与全身因素",
+      "type": "A2",
+      "stem": "患者，男性，38岁。体健，诊断为慢性牙周炎，有吸烟嗜好，经牙周系统及配合袋内局部药物治疗效果仍不理想，通过口腔卫生措施，自我菌斑控制良好，应最先考虑影响其疗效的因素是",
+      "options": {
+        "A": "吸烟",
+        "B": "营养因素",
+        "C": "选择局部药物不当",
+        "D": "工作紧张",
+        "E": "[牙合]关系"
+      },
+      "answer": "A",
+      "explanation": "吸烟是重要的牙周危险因素，也会影响组织愈合和治疗反应。在菌斑控制良好而治疗效果欠佳时，应重点评估吸烟及其他全身危险因素。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "牙龈病与全身因素"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-3-v1",
+      "paperName": "CMB · 牙周病学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 47247,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 47247 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 47246,
+        "originalRecordSha256": "7d34de7a13ad56e06e6631bc58224c0230c1148652e219d3c95b83ab924816b5",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    },
+    {
+      "id": "cmb-train-048069-v1",
+      "subject": "牙周病学",
+      "chapter": "牙龈病与全身因素",
+      "type": "A2",
+      "stem": "男，19岁。牙龈增生数年。有癫痫史，检查见全口牙牙龈增生，覆盖牙面1/3左右，牙龈质地坚韧，仅龈缘处略红。考虑该病最可能的诊断为",
+      "options": {
+        "A": "牙龈纤维瘤病",
+        "B": "药物性牙龈增生",
+        "C": "边缘性龈炎",
+        "D": "坏死性龈炎",
+        "E": "青少年牙周炎"
+      },
+      "answer": "B",
+      "explanation": "癫痫病史提示应询问是否长期服用苯妥英钠等药物，坚韧的广泛牙龈增生与药物性增生相符。病史只是线索，需确认具体用药，不能因患有癫痫就自动确诊。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "牙龈病与全身因素"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-3-v1",
+      "paperName": "CMB · 牙周病学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 48070,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 48070 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 48069,
+        "originalRecordSha256": "77533b4e590c530f3ae6d00bdf6ea734b00d906734c969064e05439616031ca3",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    },
+    {
+      "id": "cmb-train-049421-v1",
+      "subject": "牙周病学",
+      "chapter": "牙龈炎与牙周炎鉴别",
+      "type": "A2",
+      "stem": "男，31岁。左下后牙自发性肿痛，吸吮时易出血。自诉5天前曾用牙签剔牙。口腔检查：牙间乳头红肿，有明显探触痛，易出血。牙体无龋坏和非龋性疾病。叩诊（+)，无松动，未探及牙周袋。可能的诊断是",
+      "options": {
+        "A": "急性牙髓炎",
+        "B": "慢性牙髓炎急性发作",
+        "C": "急性根尖炎",
+        "D": "急性牙龈乳头炎",
+        "E": "三叉神经痛"
+      },
+      "answer": "D",
+      "explanation": "牙签刺激后出现局限牙间乳头红肿、触痛和出血，而未探及牙周袋，最符合急性龈乳头炎。牙体未发现病损，也不支持首先考虑牙髓源性疼痛。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "牙龈炎与牙周炎鉴别"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-3-v1",
+      "paperName": "CMB · 牙周病学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 49422,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 49422 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 49421,
+        "originalRecordSha256": "f9ab7f3cd45019ca06bc27dc7dbaaf7c0dbf3759bb6a4958a57a893852cad032",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    }
+  ]
+}

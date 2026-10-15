@@ -30,9 +30,21 @@ class SourceDetails extends StatelessWidget {
                               style: const TextStyle(
                                   fontSize: 12, color: Colors.blueGrey)),
                           const SizedBox(height: 6),
-                          Text(question.reference,
+                          SelectableText(question.reference,
                               style: const TextStyle(
-                                  fontSize: 12, color: Colors.blueGrey))
+                                  fontSize: 12, color: Colors.blueGrey)),
+                          if (question.data['sourceType'] ==
+                              'open_dataset') ...[
+                            const SizedBox(height: 8),
+                            SelectableText(
+                                '来源链接：${question.data['sourceUrl'] ?? ''}\n'
+                                '许可：${question.data['license']}\n'
+                                '许可全文：https://dentstudy.uno/licenses/CMB-APACHE-2.0.txt\n'
+                                '解析：${question.data['explanationSource'] ?? '见来源说明'}\n'
+                                '练习资料，非历年真题；未完成专业医学审核。',
+                                style:
+                                    const TextStyle(fontSize: 12, height: 1.6)),
+                          ]
                         ])))
           ]);
 }

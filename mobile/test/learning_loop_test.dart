@@ -120,7 +120,9 @@ void main() {
     final store = StudyStore();
     await store.init();
     expect(store.questions.any((q) => q.id == 'q9999'), isTrue);
-    expect(store.questions.length, 3521);
+    final bundled =
+        jsonDecode(await rootBundle.loadString('assets/all_questions.json'));
+    expect(store.questions.length, (bundled['questions'] as List).length + 1);
   });
   test('daily plan is bounded, stable and review-first', () async {
     final store = await freshStore();

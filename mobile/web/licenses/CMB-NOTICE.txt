@@ -1,0 +1,18 @@
+CMB — A Comprehensive Medical Benchmark in Chinese
+Source: https://github.com/FreedomIntelligence/CMB
+Dataset card: https://huggingface.co/datasets/FreedomIntelligence/CMB
+Upstream revision: 6c8ece46097dae736c6805dd3b831e1a38c08971
+Upstream dataset license: Apache License 2.0 (as declared by FreedomIntelligence).
+The full license is distributed alongside this notice as CMB-APACHE-2.0.txt.
+
+Suggested upstream citation:
+Xidong Wang, Guiming Hardy Chen, Dingjie Song, Zhiyi Zhang, Zhihong Chen,
+Qingying Xiao, Feng Jiang, Jianquan Li, Xiang Wan, Benyou Wang, Haizhou Li.
+CMB: A Comprehensive Medical Benchmark in Chinese, 2023. arXiv:2308.08833.
+
+DentStudy changes (2026-10-15): selected a subset of oral-practitioner single-choice
+training records; added subject/chapter tags, immutable local IDs, and Chinese
+AI-assisted explanations. Original question text, options and answer keys retained.
+No examination year is claimed. These records are practice material, not official
+past papers. Added explanations have not undergone professional medical approval.
+This notice does not imply endorsement by CMB authors or examination authorities.

@@ -100,6 +100,19 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(validate(bank),[])
         self.assertTrue(validate(bank,production=True))
 
+    def test_open_practice_fifth_option_sync_and_comments(self):
+        token = self.register('open-practice')
+        q = next(q for q in server.questions()
+                 if q['id'].startswith('cmb-train-') and q['answer'] == 'E')
+        event = dict(id='cmb-review-test-1234567890', at='2026-01-01T04:00:00Z',
+                     questionId=q['id'], kind='review',
+                     value={'answer': 'E', 'grade': 'mastered', 'mode': 'practice'})
+        status, data = self.request('/v1/sync', {'events': [event]}, token)
+        self.assertEqual(status, 200)
+        self.assertEqual(data['attempts'][0]['grade'], 'mastered')
+        self.assertEqual(self.request(f"/v1/questions/{q['id']}/comments",
+                                     {'body': '测试新题目评论'}, token)[0], 200)
+
     def test_settings_sync_validation_and_account_isolation(self):
         token=self.register('settings')
         settings={'dailyNewLimit':25,'dailyReviewTarget':None,

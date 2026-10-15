@@ -73,11 +73,21 @@ class _LibraryPageState extends State<LibraryPage> {
               heading('题库建设中', sub: '当前方向资料题不足 50 道，暂未开放常规练习'),
             for (final name in building)
               ListTile(
-                  enabled: false,
                   leading: const Icon(Icons.hourglass_empty),
                   title: Text(name),
                   subtitle:
-                      Text('${catalog.material(name).length} 道资料题 · 题库建设中')),
+                      Text('${catalog.material(name).length} 道资料题 · 题库建设中'),
+                  trailing: catalog.material(name).isEmpty
+                      ? null
+                      : TextButton(
+                          key: ValueKey('building-preview-$name'),
+                          onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => QuestionPreviewPage(
+                                      questions: catalog.material(name),
+                                      title: '$name · 已收录题目'))),
+                          child: const Text('查看已收录'))),
             const SizedBox(height: 16),
             OutlinedButton.icon(
                 onPressed: _papers,

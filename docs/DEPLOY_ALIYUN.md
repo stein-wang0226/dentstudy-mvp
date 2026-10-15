@@ -5,13 +5,14 @@
 实际服务器使用宿主机 Nginx + `dentstudy.service`，不是下面的 Docker 方案。
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
-- 客户端版本：`0.2.17`（考研、本科期末、执医三类题库入口，执医历年试题按年份浏览）；综合题库 3520 道，本次新增真题 0 道，等待可用来源资料。
-- 后端：`/opt/dentstudy-current` 指向 `/opt/dentstudy-releases/20261015-avatar-fix-v0213`。
-- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261015-library-tracks-v0217`。
+- 客户端版本：`0.2.18`（执医分科开放数据补充练习）；综合题库 3650 道，新增 130 道 CMB 练习题，新增真题仍为 0 道。
+- 后端：`/opt/dentstudy-current` 指向 `/opt/dentstudy-releases/20261015-open-practice-v0218`；仅替换综合题库，Python 服务代码未修改。
+- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261015-open-practice-v0218`。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
 - 用户投稿：`/var/lib/dentstudy/question-bank-submissions/`，仅服务端进程可读写，不能映射到 Nginx 静态目录；备份时须与 SQLite 一起保留。
 - 旧代码 `/opt/dentstudy`、旧网页 `/var/www/dentstudy` 均保留。
 - 更新前的数据库与配置备份：`/opt/backups/dentstudy-20261013`，数据库已验证完整性。
+- 0.2.18 发布前另以 SQLite 在线 backup API 备份至 `/opt/backups/dentstudy-open-practice-v0218/dentstudy.sqlite3`，完整性检查通过，备份仅 root 可读；未替换线上数据库或用户投稿。
 - HTTPS 使用 Let's Encrypt，`dentstudy-certbot.timer` 每天检查两次续期，续期成功后检查并重载 Nginx。
 - `/.well-known/acme-challenge/` 继续使用 `/var/www/dentstudy`，不要随发布删除此目录。
 
@@ -19,7 +20,7 @@
 `deploy/dentstudy-certbot.service` 和 `deploy/dentstudy-certbot.timer`。
 构建 Web 时使用 `--no-web-resources-cdn --dart-define=API_URL=/api`
 及 `--dart-define=QUESTION_BANK_ASSET=assets/all_questions.json`。
-发布时同时传入 `--dart-define=APP_VERSION=0.2.17` 和
+发布时同时传入 `--dart-define=APP_VERSION=0.2.18` 和
 `--dart-define=BUILD_TIME=实际北京时间`，在“我的”显示版本与更新时间。
 当前 GitHub workflow 只做检查，不会自动部署；代码推送后仍需单独构建和上传。
 
@@ -27,7 +28,17 @@
 Flutter Web 构建时随根目录静态资源发布。HTTP 和 HTTPS 的同名路径均需直接返回 200 和原始 TXT 内容；
 HTTP 仅此验证文件与证书验证路径不跳转，其余页面仍强制 HTTPS。不要误删验证文件。
 
-0.2.17 验收：题库 → 考研 / 本科期末 / 执医三类卡片，分别显示当前可练题数；切换分类后进入对应学科列表，返回今日继续使用所选方向。
+0.2.18 验收：重新打开网站 → 题库 → 执医，可练总数 1310；口外 1210、修复 50、牙体牙髓 50。
+牙周 10、组织病理 5、黏膜 5 显示建设中，点击“查看已收录”只浏览题目，不启动常规练习。
+新题解析 → 展开“开放数据练习题 · 待审核”，显示 CMB 来源、上游版本、Apache-2.0 许可和 AI 补充解析说明；五选项完整保留。
+考研仍可练 3504 道；历年试题仍为空，不将 CMB 无年份练习题标成真题。
+原有 3520 条题目逐条比对无变化；新增 130 条按六科导出，详见 `docs/ORAL_PRACTITIONER_SOURCES.md`。
+检查：Flutter 静态检查、34 项原生客户端测试、33 项后端及导入测试通过；Chrome 4 项交互测试通过，实际资产计数测试在 Chrome 跳过、由原生运行器覆盖。
+公开 API 与网页静态题库逐条一致，共 3650 个唯一 ID；线上 JavaScript 哈希与本地构建一致；首页、HTTP/HTTPS 微信验证文件返回 200，许可全文可访问。
+风险：本次是小规模分科补充，并非完整考试覆盖；所有新增解析仍待专业医学审核。生产页面的自动交互连接不可用，因此没有把 Chrome 测试运行器的通过表述成线上逐页人工验收。
+回退目录仍保留：后端 `20261015-avatar-fix-v0213`、前端 `20261015-library-tracks-v0217`。通常应保留新题库 ID，仅回退网页，避免新作答引用的题目在旧题库中缺失；不得回滚用户数据库。
+
+0.2.17 历史验收：题库 → 考研 / 本科期末 / 执医三类卡片，分别显示当前可练题数；切换分类后进入对应学科列表，返回今日继续使用所选方向。
 执医 → 历年试题 → 目前显示整理中，无占位年份。导入具备核验年份的数据后，按年份 → 试卷 → 题目浏览，解析带年份标注，支持原有三种练习模式。
 年份按考试年份字段和核验记录分组；真题、回忆题、来源待核验分别展示，五选项完整保留。
 本版未复制互联网真题，题量、题目 ID 与历史作答均未变。资料来源限制和 JSON 拆分工具见 `docs/ORAL_PRACTITIONER_SOURCES.md`。

@@ -1,0 +1,668 @@
+{
+  "version": 1,
+  "name": "CMB · 口腔颌面外科学执医补充练习",
+  "isDemo": false,
+  "sourceNote": "开放数据练习题，非历年真题；AI 辅助补充解析待审核。",
+  "questions": [
+    {
+      "id": "cmb-train-029517-v1",
+      "subject": "口腔颌面外科学",
+      "chapter": "颌骨骨髓炎",
+      "type": "A1",
+      "stem": "新生儿颌骨骨髓炎的感染来源多为",
+      "options": {
+        "A": "腺源性",
+        "B": "血源性",
+        "C": "损伤性",
+        "D": "牙源性",
+        "E": "医源性"
+      },
+      "answer": "B",
+      "explanation": "新生儿尚未出现通常的龋源性感染条件，颌骨骨髓炎可由血流播散的感染引起。因此与成人常见的牙源性感染不同，本题应选择血源性。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "颌骨骨髓炎"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-5-v1",
+      "paperName": "CMB · 口腔颌面外科学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 29518,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 29518 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 29517,
+        "originalRecordSha256": "c63104f3ce375baa0179c67f0acd712397685e0939924d201bbc491db6594ec3",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    },
+    {
+      "id": "cmb-train-029614-v1",
+      "subject": "口腔颌面外科学",
+      "chapter": "唇腭裂",
+      "type": "A2",
+      "stem": "患儿，8个月。右上红唇、白唇裂开，鼻底正常，左侧红唇至鼻底完全裂开。该患儿诊断分类为",
+      "options": {
+        "A": "不完全性双侧唇裂",
+        "B": "完全性双侧唇裂",
+        "C": "混合性双侧唇裂",
+        "D": "单纯性唇裂",
+        "E": "Ⅱ度唇裂"
+      },
+      "answer": "C",
+      "explanation": "一侧唇裂未达鼻底，另一侧从红唇至鼻底完全裂开，说明双侧程度不同。一侧完全、一侧不完全的组合属于混合性双侧唇裂。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "唇腭裂"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-5-v1",
+      "paperName": "CMB · 口腔颌面外科学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 29615,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 29615 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 29614,
+        "originalRecordSha256": "b6830d45a47fa232aaed4bd01e0180b60e512be83419227ea36c6fdfd98f4cc7",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    },
+    {
+      "id": "cmb-train-030309-v1",
+      "subject": "口腔颌面外科学",
+      "chapter": "组织移植与修复",
+      "type": "A1",
+      "stem": "皮瓣的组成",
+      "options": {
+        "A": "表皮+真皮乳头",
+        "B": "表皮+真皮全层",
+        "C": "表皮+真皮+皮下组织",
+        "D": "表皮+真皮+皮下组织+肌",
+        "E": "表皮+真皮+皮下组织+肌+骨"
+      },
+      "answer": "C",
+      "explanation": "通常所说的皮瓣包含皮肤全层及皮下组织，并保留或重建血液供应。仅皮肤层属于皮片概念，额外包含肌或骨则属于更具体的复合组织瓣。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "组织移植与修复"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-5-v1",
+      "paperName": "CMB · 口腔颌面外科学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 30310,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 30310 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 30309,
+        "originalRecordSha256": "e2352c1d77d007323a463dc277abd9898776c4493c8081d08a661eec6a0d2052",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    },
+    {
+      "id": "cmb-train-031013-v1",
+      "subject": "口腔颌面外科学",
+      "chapter": "局部麻醉基础",
+      "type": "A1",
+      "stem": "普鲁卡因偶能发生过敏反应的原因是",
+      "options": {
+        "A": "通透性差",
+        "B": "酰胺类药物",
+        "C": "用量过大",
+        "D": "酯类药物",
+        "E": "与青霉素交叉过敏"
+      },
+      "answer": "D",
+      "explanation": "普鲁卡因属于酯类局部麻醉药，其代谢相关成分可与过敏反应有关。它并非酰胺类药物；用量过大主要关系毒性反应，不应与真正过敏混同。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "局部麻醉基础"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-5-v1",
+      "paperName": "CMB · 口腔颌面外科学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 31014,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 31014 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 31013,
+        "originalRecordSha256": "88a52fa1420e3fae059addebb0c94b45a50a4c1eceb1c360e39538f652fa3719",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    },
+    {
+      "id": "cmb-train-031667-v1",
+      "subject": "口腔颌面外科学",
+      "chapter": "颌面创伤检查与处理",
+      "type": "A1",
+      "stem": "颌面部创伤病员包扎的直接作用不包括",
+      "options": {
+        "A": "压迫止血",
+        "B": "防止骨折进一步移位",
+        "C": "保护并缩小创口",
+        "D": "保证呼吸道通畅",
+        "E": "减少污染，防止涎液外流"
+      },
+      "answer": "D",
+      "explanation": "包扎可压迫止血、减少污染和辅助固定，但不能直接保证呼吸道通畅。颌面创伤必须独立检查并处理气道风险，不能因完成包扎就认为气道安全。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "颌面创伤检查与处理"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-5-v1",
+      "paperName": "CMB · 口腔颌面外科学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 31668,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 31668 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 31667,
+        "originalRecordSha256": "73951479aad065e2407304516eed0f4ffd7c5d1b4c1c0c6b0297112f548d3718",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    },
+    {
+      "id": "cmb-train-031722-v1",
+      "subject": "口腔颌面外科学",
+      "chapter": "口腔颌面临床检查",
+      "type": "A1",
+      "stem": "张口度的正确测量方法是",
+      "options": {
+        "A": "上下中切牙切缘之间的距离",
+        "B": "上下磨牙（牙合）面之间的距离",
+        "C": "上下尖牙的牙尖之间的距离",
+        "D": "上下侧切牙切缘之间的距离",
+        "E": "上下前磨牙颊尖之间的距离"
+      },
+      "answer": "A",
+      "explanation": "常规张口度测量以上下中切牙切缘之间的距离作为指标。它不同于后牙咬合面间距，记录时还需注明测量方法和患者有无疼痛、偏斜等情况。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "口腔颌面临床检查"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-5-v1",
+      "paperName": "CMB · 口腔颌面外科学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 31723,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 31723 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 31722,
+        "originalRecordSha256": "9a73555a4c23af446d3e94d65bb4549804da6df3780cf6c1fbec605688d68da2",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    },
+    {
+      "id": "cmb-train-033387-v1",
+      "subject": "口腔颌面外科学",
+      "chapter": "血管性病变",
+      "type": "A1",
+      "stem": "葡萄酒斑状血管瘤属于",
+      "options": {
+        "A": "微静脉畸形",
+        "B": "海绵状血管瘤",
+        "C": "混合型血管瘤",
+        "D": "蔓状血管瘤",
+        "E": "杨梅状血管瘤"
+      },
+      "answer": "A",
+      "explanation": "葡萄酒色斑在现代血管异常分类中属于毛细血管或微静脉性畸形范畴，并非典型增殖性血管瘤。本题选项中微静脉畸形最相符。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "血管性病变"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-5-v1",
+      "paperName": "CMB · 口腔颌面外科学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 33388,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 33388 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 33387,
+        "originalRecordSha256": "668a45488a007ab83e8d2a85291ce3d629fe707cb787a30be80468e5a41fbb17",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    },
+    {
+      "id": "cmb-train-034197-v1",
+      "subject": "口腔颌面外科学",
+      "chapter": "颌面创伤检查与处理",
+      "type": "A1",
+      "stem": "颌面部硬组织损伤独具的特点是常伴有",
+      "options": {
+        "A": "颅脑损伤",
+        "B": "水肿反应明显",
+        "C": "咬合关系错乱",
+        "D": "呼吸道阻塞",
+        "E": "骨创感染"
+      },
+      "answer": "C",
+      "explanation": "上下颌骨承载牙列，骨折移位可改变牙齿间的接触关系，因此咬合错乱是颌面硬组织损伤的重要特征。颅脑伤、感染等也可伴发，但不具有同样的部位特异性。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "颌面创伤检查与处理"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-5-v1",
+      "paperName": "CMB · 口腔颌面外科学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 34198,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 34198 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 34197,
+        "originalRecordSha256": "4bfa75f554425d9ed76f95e346f91ee168b4dfe479e3f18d2eb98df5490a1386",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    },
+    {
+      "id": "cmb-train-042612-v1",
+      "subject": "口腔颌面外科学",
+      "chapter": "唇腭裂",
+      "type": "A2",
+      "stem": "患儿，女，4岁，先天性左侧完全性腭裂，行腭裂修复术后为了达到满意的语音效果，术后应",
+      "options": {
+        "A": "长期佩戴腭护板",
+        "B": "局部理疗",
+        "C": "调整饮食习惯",
+        "D": "进行语音训练",
+        "E": "大剂量应用抗生素"
+      },
+      "answer": "D",
+      "explanation": "腭裂修复改善结构条件后，仍可能存在习得的异常发音方式，需要评估并进行语音训练。长期应用抗生素或单纯改变饮食不能替代语言康复。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "唇腭裂"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-5-v1",
+      "paperName": "CMB · 口腔颌面外科学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 42613,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 42613 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 42612,
+        "originalRecordSha256": "16bdb9829d4de202b5b9de79b7b807341051a52ec601bd6dca4838adc7e0b389",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    },
+    {
+      "id": "cmb-train-048783-v1",
+      "subject": "口腔颌面外科学",
+      "chapter": "口腔肿瘤检查",
+      "type": "A2",
+      "stem": "青年男性，76┘颊侧牙龈溃疡3个月，经两周抗炎治疗不愈。为明确诊断，应选用的检查为",
+      "options": {
+        "A": "牙片",
+        "B": "CT",
+        "C": "B超",
+        "D": "切取活检",
+        "E": "细针吸活检"
+      },
+      "answer": "D",
+      "explanation": "持续数月、常规抗炎治疗不愈的口腔溃疡需要组织病理学检查明确性质。对这类可疑黏膜病损，切取活检比单纯影像或细针抽吸更适合取得诊断组织。",
+      "warning": "开放数据练习题，非历年真题；解析为 AI 辅助整理，尚未通过专业医学审核。",
+      "topics": [
+        "口腔肿瘤检查"
+      ],
+      "tags": [
+        "CMB",
+        "执医补充练习"
+      ],
+      "modes": [
+        "执医"
+      ],
+      "school": null,
+      "year": null,
+      "paperId": "cmb-practice-5-v1",
+      "paperName": "CMB · 口腔颌面外科学补充练习（非真题）",
+      "durationMinutes": 90,
+      "order": 48784,
+      "points": 1,
+      "reference": "CMB / FreedomIntelligence · CMB-Exam 训练集 · 原始第 48784 条。原分类：口腔执业医师。题干、选项与答案按原数据保留；学科与章节由 DentStudy 整理。",
+      "citation": {
+        "publisher": "FreedomIntelligence",
+        "title": "CMB",
+        "edition": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "chapter": "CMB-Exam/CMB-train",
+        "page": null,
+        "verified": false
+      },
+      "reviewStatus": "draft",
+      "isDemo": false,
+      "sourceType": "open_dataset",
+      "license": "Apache-2.0（CMB 发布方标注）；本站分科与补充解析变更已说明",
+      "sourceUrl": "https://github.com/FreedomIntelligence/CMB/tree/6c8ece46097dae736c6805dd3b831e1a38c08971",
+      "explanationSource": "DentStudy AI 辅助补充解析，待专业医学审核",
+      "datasetProvenance": {
+        "dataset": "CMB",
+        "split": "train",
+        "revision": "6c8ece46097dae736c6805dd3b831e1a38c08971",
+        "archiveGitBlob": "c05ff2040d8257408aee77a774d41f29727401bf",
+        "rowIndex": 48783,
+        "originalRecordSha256": "d9aa22bd5f4162b1655af917d7b2018f90c23ef88db734f5570ae83cb71e81f0",
+        "licenseId": "Apache-2.0",
+        "licenseUrl": "https://github.com/FreedomIntelligence/CMB/blob/6c8ece46097dae736c6805dd3b831e1a38c08971/LICENSE",
+        "datasetCardUrl": "https://huggingface.co/datasets/FreedomIntelligence/CMB",
+        "changes": [
+          "增加学科、章节与单选题型映射",
+          "增加 AI 辅助补充解析及来源记录"
+        ],
+        "yearVerified": false
+      },
+      "rubric": null
+    }
+  ]
+}

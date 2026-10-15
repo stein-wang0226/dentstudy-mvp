@@ -36,6 +36,7 @@ class QuestionCatalog {
     if (q.data['sourceType'] == 'past_paper')
       return ExamYearCatalog.verifiedPaper(q) ? '真题' : '真题来源待核验';
     if (q.data['sourceType'] == 'recalled_paper') return '考生回忆题';
+    if (q.data['sourceType'] == 'open_dataset') return '开放数据练习题';
     if (q.data['sourceType'] == 'user_material') return '资料整理题';
     return '来源待核验';
   }
