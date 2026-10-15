@@ -7,6 +7,7 @@ import '../../app/build_info.dart';
 import 'user_avatar.dart';
 import 'avatar_crop.dart';
 import 'author_comments_page.dart';
+import 'author_records_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -16,12 +17,10 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   bool importingBank = false;
-  bool loadingSubmissions = false;
   bool isSubmissionAdmin = false;
-  List<Map<String, dynamic>> submissionInbox = [];
+  int? submissionCount;
   bool loadingProfile = false;
   Map<String, dynamic> accountProfile = {};
-  List<Map<String, dynamic>> authorUserDirectory = [];
   int? authorUserCount;
 
   @override
@@ -39,28 +38,22 @@ class _ProfilePageState extends State<ProfilePage> {
       if (mounted)
         setState(() {
           isSubmissionAdmin = false;
-          submissionInbox = [];
-          authorUserDirectory = [];
+          submissionCount = null;
           authorUserCount = null;
         });
       return;
     }
-    setState(() => loadingSubmissions = true);
     try {
       final result = await store.questionBankSubmissions();
       if (!mounted) return;
       setState(() {
         isSubmissionAdmin = result['isAdmin'] == true;
-        submissionInbox = (result['submissions'] as List)
-            .map((item) => Map<String, dynamic>.from(item as Map))
-            .toList();
+        submissionCount = (result['submissions'] as List).length;
       });
       if (isSubmissionAdmin) await refreshAuthorUserDirectory();
     } catch (_) {
       // The personal learning experience stays usable if the optional inbox
       // endpoint is unavailable while an older server is being updated.
-    } finally {
-      if (mounted) setState(() => loadingSubmissions = false);
     }
   }
 
@@ -90,15 +83,18 @@ class _ProfilePageState extends State<ProfilePage> {
       final result = await store.authorUsers();
       if (mounted)
         setState(() {
-          authorUserDirectory = (result['users'] as List)
-              .map((user) => Map<String, dynamic>.from(user as Map))
-              .toList();
           authorUserCount =
-              result['totalCount'] as int? ?? authorUserDirectory.length;
+              result['totalCount'] as int? ?? (result['users'] as List).length;
         });
     } catch (_) {
       // The author inbox remains optional while a rolling deployment updates.
     }
+  }
+
+  Future<void> openAuthorRecords(AuthorRecordKind kind) async {
+    await Navigator.push(context,
+        MaterialPageRoute(builder: (_) => AuthorRecordsPage(kind: kind)));
+    if (mounted) await refreshSubmissionInbox();
   }
 
   Future<void> pickQuestionBank() async {
@@ -270,65 +266,37 @@ class _ProfilePageState extends State<ProfilePage> {
                       : '选择 JSON 并提交')),
         ])),
         if (isSubmissionAdmin) ...[
-          heading('题库投稿箱', sub: '仅作者账号可见 · 文件保存在服务器私有目录'),
-          box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                    onPressed:
-                        loadingSubmissions ? null : refreshSubmissionInbox,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('刷新'))),
-            if (submissionInbox.isEmpty)
-              const Text('暂时还没有投稿。', style: TextStyle(color: Colors.blueGrey))
-            else
-              ...submissionInbox.map((item) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.description_outlined),
-                  title: Text(item['filename'] as String),
-                  subtitle: Text(
-                      '${item['email'] ?? '本人投稿'} · ${item['question_count']} 题 · ${_formatSubmissionTime(item['submitted_at'] as String)}'),
-                  trailing: Text(_formatBytes(item['content_bytes'] as int),
-                      style: const TextStyle(
-                          fontSize: 12, color: Colors.blueGrey))))
+          heading('作者管理'),
+          box(Column(children: [
+            ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.people_outline),
+                title: Text(
+                    '用户目录${authorUserCount == null ? '' : ' · $authorUserCount 人'}'),
+                subtitle: const Text('查看昵称、院校与邮箱'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => openAuthorRecords(AuthorRecordKind.users)),
+            const Divider(),
+            ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.folder_outlined),
+                title: Text(
+                    '题库投稿箱${submissionCount == null ? '' : ' · $submissionCount 份'}'),
+                subtitle: const Text('查看用户提交的题库'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => openAuthorRecords(AuthorRecordKind.submissions)),
+            const Divider(),
+            ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.forum_outlined),
+                title: const Text('评论管理'),
+                subtitle: const Text('查看发布者、题目与评论'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AuthorCommentsPage()))),
           ]))
-        ],
-        if (isSubmissionAdmin) ...[
-          heading(
-              '用户目录${authorUserCount == null ? '' : ' · $authorUserCount 人'}',
-              sub: '仅作者账号可见 · 邮箱不会公开显示在评论中'),
-          box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                    onPressed: refreshAuthorUserDirectory,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('刷新'))),
-            if (authorUserDirectory.isEmpty)
-              const Text('暂时还没有已注册用户。',
-                  style: TextStyle(color: Colors.blueGrey))
-            else
-              ...authorUserDirectory.map((user) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: _profileAvatar(user['avatar'] as String? ?? 'book'),
-                  title: Text(user['nickname'] as String? ?? '齿间同学'),
-                  subtitle: Text(
-                      '${(user['university'] as String? ?? '').isEmpty ? '未填写院校' : user['university']}\n${user['email']}'),
-                  isThreeLine: true))
-          ]))
-        ],
-        if (isSubmissionAdmin) ...[
-          heading('评论管理'),
-          box(ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.forum_outlined),
-              title: const Text('查看全部题目评论'),
-              subtitle: const Text('查看发布者、题目、评论内容与时间'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const AuthorCommentsPage())))),
         ],
         heading('学习设置'),
         box(Column(children: [
@@ -581,13 +549,6 @@ class _ProfilePageState extends State<ProfilePage> {
         await reminders.refresh(store);
       });
   }
-
-  String _formatSubmissionTime(String value) =>
-      value.replaceFirst('T', ' ').replaceFirst('Z', '');
-
-  String _formatBytes(int value) => value < 1024 * 1024
-      ? '${(value / 1024).toStringAsFixed(0)} KB'
-      : '${(value / 1024 / 1024).toStringAsFixed(1)} MB';
 }
 
 Future<void> showAccountDialog(BuildContext context,

@@ -5,9 +5,9 @@
 实际服务器使用宿主机 Nginx + `dentstudy.service`，不是下面的 Docker 方案。
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
-- 客户端版本：`0.2.13`（修复网页头像解码，加入可调整的正方形裁剪、删除自己的评论、作者评论管理和记住密码）；综合题库 3520 道，原有 ID 全部保留。
+- 客户端版本：`0.2.14`（作者管理入口收纳：用户目录、题库投稿箱和评论管理均点击后进入独立页面）；综合题库 3520 道，原有 ID 全部保留。
 - 后端：`/opt/dentstudy-current` 指向 `/opt/dentstudy-releases/20261015-avatar-fix-v0213`。
-- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261015-avatar-fix-v0213`。
+- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261015-author-pages-v0214`。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
 - 用户投稿：`/var/lib/dentstudy/question-bank-submissions/`，仅服务端进程可读写，不能映射到 Nginx 静态目录；备份时须与 SQLite 一起保留。
 - 旧代码 `/opt/dentstudy`、旧网页 `/var/www/dentstudy` 均保留。
@@ -19,9 +19,14 @@
 `deploy/dentstudy-certbot.service` 和 `deploy/dentstudy-certbot.timer`。
 构建 Web 时使用 `--no-web-resources-cdn --dart-define=API_URL=/api`
 及 `--dart-define=QUESTION_BANK_ASSET=assets/all_questions.json`。
-发布时同时传入 `--dart-define=APP_VERSION=0.2.13` 和
+发布时同时传入 `--dart-define=APP_VERSION=0.2.14` 和
 `--dart-define=BUILD_TIME=实际北京时间`，在“我的”显示版本与更新时间。
 当前 GitHub workflow 只做检查，不会自动部署；代码推送后仍需单独构建和上传。
+
+0.2.14 验收：作者账号 → 我的 → 作者管理，只展示三个紧凑入口；
+用户目录保留总人数，题库投稿箱保留投稿份数。点击分别打开独立列表，支持刷新、加载失败重试和空状态；
+返回“我的”后更新数量。普通账号不显示作者管理。列表按可视范围构建，避免一次渲染大量条目。
+本次仅更新前端，后端和数据库无需迁移；Flutter 静态检查及现有客户端测试通过。
 
 0.2.13 验收：我的 → 编辑资料 → 从图库上传 → 拖动/缩放正方形裁剪 → 使用此头像 → 保存；
 上传照片和预设头像共享唯一选中值，取消裁剪不替换原头像。
