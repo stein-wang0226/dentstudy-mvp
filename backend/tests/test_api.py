@@ -190,8 +190,49 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(status,200)
         listed=next(user for user in directory['users']
                     if user['email']=='profile-learner@test.local')
+        self.assertEqual(directory['totalCount'], len(directory['users']))
         self.assertEqual(listed['nickname'],'小齿同学')
         self.assertEqual(listed['university'],'齿间大学')
         self.assertEqual(self.request('/v1/admin/users',token=learner)[0],401)
+
+    def test_comment_votes_replies_and_participant_counts(self):
+        first=self.register('discussion-first')
+        second=self.register('discussion-second')
+        question_id=server.questions()[1]['id']
+        path=f'/v1/questions/{question_id}/comments'
+        status,posted=self.request(path,{'body':'讨论主评论'},first)
+        self.assertEqual(status,200)
+        comment_id=posted['comment']['id']
+        vote=f'/v1/comments/{comment_id}/vote'
+        self.assertEqual(self.request(vote,{'value':1})[0],401)
+        for _ in range(2):
+            self.assertEqual(self.request(vote,{'value':1},first)[1],
+                             {'likes':1,'dislikes':0,'myVote':1})
+        self.assertEqual(self.request(vote,{'value':-1},first)[1],
+                         {'likes':0,'dislikes':1,'myVote':-1})
+        self.assertEqual(self.request(vote,{'value':1},second)[1]['likes'],1)
+        self.assertEqual(self.request(vote,{'value':0},first)[1]['dislikes'],0)
+        self.assertEqual(self.request(vote,{'value':True},first)[0],400)
+        status,reply=self.request(path,{'body':'回复讨论','parentId':comment_id},second)
+        self.assertEqual(status,200)
+        listing=self.request(path,token=second)[1]
+        self.assertEqual(listing['participantCount'],2)
+        self.assertEqual(listing['totalCount'],2)
+        self.assertEqual(listing['comments'][0]['myVote'],1)
+        self.assertEqual(listing['comments'][1]['parentId'],comment_id)
+        other_path=f"/v1/questions/{server.questions()[2]['id']}/comments"
+        self.assertEqual(self.request(other_path,{'body':'跨题回复','parentId':comment_id},first)[0],400)
+        self.assertNotIn('email',listing['comments'][0])
+        server.initialize()  # Idempotent migration preserves comments and votes.
+        self.assertEqual(self.request(path)[1]['participantCount'],2)
+
+    def test_uploaded_avatar_validation(self):
+        token=self.register('avatar-upload')
+        image='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQ0AAAAASUVORK5CYII='
+        payload={'nickname':'头像同学','avatar':image,'university':''}
+        self.assertEqual(self.request('/v1/profile',payload,token)[0],200)
+        self.assertEqual(self.request('/v1/profile',token=token)[1]['avatar'],image)
+        self.assertEqual(self.request('/v1/profile',{**payload,'avatar':'data:image/png;base64,invalid'},token)[0],400)
+        self.assertEqual(self.request('/v1/profile',{**payload,'avatar':'https://example.com/avatar.png'},token)[0],400)
 
 if __name__=='__main__':unittest.main()

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../models.dart';
 import '../../store.dart';
-import '../../app/shared.dart' show box, message, pill, safely, store, teal;
+import '../../app/shared.dart' show pill, safely;
 import '../library/catalog.dart';
 import '../library/question_preview.dart';
 import '../statistics/learning_metrics.dart';
+import 'question_comments.dart';
+export 'question_comments.dart';
 
 class SourceDetails extends StatelessWidget {
   final Question question;
@@ -106,180 +108,10 @@ class QuestionTools extends StatelessWidget {
             child: SizedBox(
                 height: MediaQuery.sizeOf(sheetContext).height * .8,
                 child: ListView(
-                    padding: const EdgeInsets.all(20),
+                    padding: EdgeInsets.fromLTRB(20, 20, 20,
+                        20 + MediaQuery.viewInsetsOf(sheetContext).bottom),
                     children: [QuestionComments(question: question)]))));
   }
-}
-
-class QuestionComments extends StatefulWidget {
-  final Question question;
-  const QuestionComments({super.key, required this.question});
-
-  @override
-  State<QuestionComments> createState() => _QuestionCommentsState();
-}
-
-class _QuestionCommentsState extends State<QuestionComments> {
-  final field = TextEditingController();
-  List<Map<String, dynamic>> comments = [];
-  bool loading = true, sending = false, composing = false;
-  String? loadError;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  @override
-  void dispose() {
-    field.dispose();
-    super.dispose();
-  }
-
-  Future<void> _load() async {
-    if (mounted)
-      setState(() {
-        loading = true;
-        loadError = null;
-      });
-    try {
-      final result = await store.questionComments(widget.question.id);
-      if (mounted) setState(() => comments = result);
-    } catch (_) {
-      if (mounted) setState(() => loadError = '讨论暂时无法加载');
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
-  }
-
-  Future<void> _send() async {
-    if (store.token.isEmpty) {
-      message(context, '登录后即可参与讨论');
-      return;
-    }
-    final body = field.text.trim();
-    if (body.isEmpty) {
-      message(context, '写点内容再发布吧');
-      return;
-    }
-    setState(() => sending = true);
-    try {
-      await store.postQuestionComment(widget.question.id, body);
-      field.clear();
-      if (mounted) setState(() => composing = false);
-      await _load();
-    } catch (error) {
-      if (mounted) message(context, error.toString());
-    } finally {
-      if (mounted) setState(() => sending = false);
-    }
-  }
-
-  IconData _avatarIcon(String value) => switch (value) {
-        'tooth' => Icons.health_and_safety_outlined,
-        'science' => Icons.science_outlined,
-        'leaf' => Icons.eco_outlined,
-        'star' => Icons.star_outline,
-        'smile' => Icons.sentiment_satisfied_alt_outlined,
-        _ => Icons.auto_stories_outlined,
-      };
-
-  String _time(String value) {
-    final date = DateTime.tryParse(value);
-    if (date == null) return value;
-    final local = date.toLocal();
-    String two(int number) => number.toString().padLeft(2, '0');
-    return '${local.year}-${two(local.month)}-${two(local.day)} ${two(local.hour)}:${two(local.minute)}';
-  }
-
-  @override
-  Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.only(top: 16),
-      child:
-          box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          const Icon(Icons.forum_outlined, size: 20),
-          const SizedBox(width: 8),
-          Text('题目讨论${comments.isEmpty ? '' : ' · ${comments.length}'}',
-              style: const TextStyle(fontWeight: FontWeight.w700)),
-          const Spacer(),
-          IconButton(
-              tooltip: '刷新讨论',
-              onPressed: loading ? null : _load,
-              icon: const Icon(Icons.refresh, size: 20))
-        ]),
-        const SizedBox(height: 6),
-        if (loading)
-          const Padding(
-              padding: EdgeInsets.all(12),
-              child: Center(child: CircularProgressIndicator()))
-        else if (loadError != null)
-          Text(loadError!, style: const TextStyle(color: Colors.blueGrey))
-        else if (comments.isEmpty)
-          const Text('暂时还没有讨论，留下你的理解吧。',
-              style: TextStyle(color: Colors.blueGrey))
-        else
-          ...comments.map((comment) => Padding(
-              padding: const EdgeInsets.only(top: 14),
-              child:
-                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                CircleAvatar(
-                    radius: 18,
-                    backgroundColor: teal.withAlpha(20),
-                    child: Icon(_avatarIcon(comment['avatar'] as String? ?? ''),
-                        color: teal, size: 19)),
-                const SizedBox(width: 10),
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      Text(
-                          '${comment['nickname'] ?? '齿间同学'}${(comment['university'] as String? ?? '').isEmpty ? '' : ' · ${comment['university']}'}',
-                          style: const TextStyle(fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 3),
-                      Text(_time(comment['createdAt'] as String? ?? ''),
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.blueGrey)),
-                      const SizedBox(height: 5),
-                      Text(comment['body'] as String,
-                          style: const TextStyle(height: 1.55)),
-                    ]))
-              ]))),
-        const SizedBox(height: 16),
-        if (!composing)
-          Align(
-              alignment: Alignment.centerRight,
-              child: OutlinedButton.icon(
-                  onPressed: store.token.isEmpty
-                      ? _send
-                      : () => setState(() => composing = true),
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('写评论')))
-        else ...[
-          TextField(
-              controller: field,
-              minLines: 2,
-              maxLines: 5,
-              maxLength: 500,
-              decoration: const InputDecoration(hintText: '分享你的理解或易错点'),
-              enabled: !sending),
-          const SizedBox(height: 8),
-          Align(
-              alignment: Alignment.centerRight,
-              child: Wrap(spacing: 8, children: [
-                TextButton(
-                    onPressed: sending
-                        ? null
-                        : () => setState(() => composing = false),
-                    child: const Text('取消')),
-                FilledButton.icon(
-                    onPressed: sending ? null : _send,
-                    icon: const Icon(Icons.send_outlined),
-                    label: Text(sending ? '发布中…' : '发布评论'))
-              ]))
-        ]
-      ])));
 }
 
 /// Shown with an explanation.  It uses the existing bank as a small,

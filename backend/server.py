@@ -1,5 +1,6 @@
 """Development API. Python 3.10+, standard library only. See docs/DEPLOYMENT.md."""
 import argparse
+import base64
 import hashlib
 import hmac
 import json
@@ -75,7 +76,14 @@ def initialize():
           created_at TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS question_comments_question_created
           ON question_comments(question_id, created_at);
+        CREATE TABLE IF NOT EXISTS comment_votes(
+          comment_id TEXT NOT NULL REFERENCES question_comments(id),
+          user_id TEXT NOT NULL REFERENCES users(id),
+          value INTEGER NOT NULL CHECK(value IN (-1,1)),
+          PRIMARY KEY(comment_id,user_id));
         ''')
+        if 'parent_id' not in {row['name'] for row in db.execute('PRAGMA table_info(question_comments)')}:
+            db.execute('ALTER TABLE question_comments ADD COLUMN parent_id TEXT REFERENCES question_comments(id)')
 
 
 def password_hash(password, salt):
@@ -231,7 +239,17 @@ class Handler(BaseHTTPRequestHandler):
             raise ValueError('昵称长度为 1–24 个字')
         if len(university) > 60:
             raise ValueError('院校名称不能超过 60 个字')
-        if avatar not in ('book', 'tooth', 'science', 'leaf', 'star', 'smile'):
+        if avatar.startswith('data:image/png;base64,'):
+            try:
+                raw = base64.b64decode(avatar.split(',', 1)[1], validate=True)
+                if len(raw) > 512 * 1024 or not raw.startswith(b'\x89PNG\r\n\x1a\n'):
+                    raise ValueError()
+                width, height = int.from_bytes(raw[16:20], 'big'), int.from_bytes(raw[20:24], 'big')
+                if not 1 <= width <= 512 or not 1 <= height <= 512:
+                    raise ValueError()
+            except (ValueError, TypeError):
+                raise ValueError('头像须为不超过 512 KB、512 像素的 PNG 图片')
+        elif avatar not in ('book', 'tooth', 'science', 'leaf', 'star', 'smile'):
             raise ValueError('头像样式无效')
         updated_at = datetime.now(timezone.utc).isoformat(
             timespec='seconds').replace('+00:00', 'Z')
@@ -254,19 +272,43 @@ class Handler(BaseHTTPRequestHandler):
             return None
         return question_id
 
-    def question_comments(self, db, question_id):
+    def question_comments(self, db, question_id, uid=None):
         if question_id not in {question['id'] for question in questions()}:
             raise ValueError('题目不存在')
-        rows = db.execute('''SELECT c.id,c.question_id AS questionId,c.body,
+        rows = db.execute('''SELECT c.id,c.question_id AS questionId,c.body,c.parent_id AS parentId,
                     c.created_at AS createdAt,
+                    COALESCE(v.likes,0) AS likes, COALESCE(v.dislikes,0) AS dislikes,
+                    COALESCE(mine.value,0) AS myVote,
+                    parent_profile.nickname AS replyTo,
                     COALESCE(p.nickname, '齿间同学') AS nickname,
                     COALESCE(p.avatar, 'book') AS avatar,
                     COALESCE(p.university, '') AS university
                 FROM question_comments c
                 LEFT JOIN profiles p ON p.user_id=c.user_id
+                LEFT JOIN (SELECT comment_id,SUM(value=1) AS likes,SUM(value=-1) AS dislikes
+                    FROM comment_votes GROUP BY comment_id) v ON v.comment_id=c.id
+                LEFT JOIN comment_votes mine ON mine.comment_id=c.id AND mine.user_id=?
+                LEFT JOIN question_comments parent ON parent.id=c.parent_id
+                LEFT JOIN profiles parent_profile ON parent_profile.user_id=parent.user_id
                 WHERE c.question_id=? ORDER BY c.created_at ASC LIMIT 100''',
-                          (question_id,))
-        return {'comments': [dict(row) for row in rows]}
+                          (uid, question_id))
+        count = db.execute('SELECT COUNT(DISTINCT user_id),COUNT(*) FROM question_comments WHERE question_id=?', (question_id,)).fetchone()
+        return {'comments': [dict(row) for row in rows], 'participantCount': count[0], 'totalCount': count[1]}
+
+    def vote_comment(self, db, uid, comment_id, payload):
+        value = payload.get('value')
+        if isinstance(value, bool) or not isinstance(value, int) or value not in (-1, 0, 1):
+            raise ValueError('无效的评价')
+        if not db.execute('SELECT 1 FROM question_comments WHERE id=?', (comment_id,)).fetchone():
+            raise ValueError('评论不存在')
+        if value == 0:
+            db.execute('DELETE FROM comment_votes WHERE comment_id=? AND user_id=?', (comment_id, uid))
+        else:
+            db.execute('''INSERT INTO comment_votes VALUES(?,?,?) ON CONFLICT(comment_id,user_id)
+                DO UPDATE SET value=excluded.value''', (comment_id, uid, value))
+        db.commit()
+        counts = db.execute('SELECT COALESCE(SUM(value=1),0),COALESCE(SUM(value=-1),0) FROM comment_votes WHERE comment_id=?', (comment_id,)).fetchone()
+        return {'likes': counts[0], 'dislikes': counts[1], 'myVote': value}
 
     def post_question_comment(self, db, uid, question_id, payload):
         if question_id not in {question['id'] for question in questions()}:
@@ -277,6 +319,11 @@ class Handler(BaseHTTPRequestHandler):
         body = body.strip()
         if not 1 <= len(body) <= 500:
             raise ValueError('评论长度为 1–500 个字')
+        parent_id = payload.get('parentId')
+        if parent_id is not None and (not isinstance(parent_id, str) or not db.execute(
+                'SELECT 1 FROM question_comments WHERE id=? AND question_id=?',
+                (parent_id, question_id)).fetchone()):
+            raise ValueError('回复的评论不存在或不属于当前题目')
         previous = db.execute('''SELECT created_at FROM question_comments
                 WHERE user_id=? ORDER BY created_at DESC LIMIT 1''',
                               (uid,)).fetchone()
@@ -288,9 +335,9 @@ class Handler(BaseHTTPRequestHandler):
         created_at = datetime.now(timezone.utc).isoformat(
             timespec='seconds').replace('+00:00', 'Z')
         comment_id = secrets.token_urlsafe(12)
-        db.execute('''INSERT INTO question_comments(id,user_id,question_id,body,created_at)
-                VALUES(?,?,?,?,?)''',
-                   (comment_id, uid, question_id, body, created_at))
+        db.execute('''INSERT INTO question_comments(id,user_id,question_id,body,created_at,parent_id)
+                VALUES(?,?,?,?,?,?)''',
+                   (comment_id, uid, question_id, body, created_at, parent_id))
         db.commit()
         return {'ok': True, 'comment': {
             'id': comment_id, 'questionId': question_id, 'body': body,
@@ -307,7 +354,8 @@ class Handler(BaseHTTPRequestHandler):
                 FROM users u LEFT JOIN profiles p ON p.user_id=u.id
                 ORDER BY COALESCE(p.updated_at, '') DESC, u.email ASC
                 LIMIT 1000''')
-        return {'users': [dict(row) for row in rows]}
+        return {'users': [dict(row) for row in rows],
+                'totalCount': db.execute('SELECT COUNT(*) FROM users').fetchone()[0]}
 
     def submit_question_bank(self, db, uid, payload):
         filename, content = payload.get('filename'), payload.get('content')
@@ -380,7 +428,8 @@ class Handler(BaseHTTPRequestHandler):
             question_id = self.comments_question_id(path)
             if question_id is not None:
                 with connect() as db:
-                    return self.respond(200, self.question_comments(db, question_id))
+                    uid = self.user(db) if self.headers.get('Authorization') else None
+                    return self.respond(200, self.question_comments(db, question_id, uid))
             self.respond(404, {'error': '接口不存在'})
         except PermissionError as e:
             self.respond(401, {'error': str(e)})
@@ -432,6 +481,9 @@ class Handler(BaseHTTPRequestHandler):
                     db.commit()
                     return self.respond(200, dict(token=token, userId=uid, email=email))
                 uid = self.user(db)
+                if path.startswith('/v1/comments/') and path.endswith('/vote'):
+                    comment_id = path[len('/v1/comments/'):-len('/vote')]
+                    return self.respond(200, self.vote_comment(db, uid, comment_id, data))
                 if path == '/v1/auth/logout':
                     token = self.headers.get('Authorization', '').removeprefix('Bearer ')
                     db.execute('DELETE FROM sessions WHERE token=?', (hashlib.sha256(token.encode()).hexdigest(),))

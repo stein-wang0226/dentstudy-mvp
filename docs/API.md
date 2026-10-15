@@ -13,6 +13,11 @@ API 默认 `http://127.0.0.1:8787`，JSON UTF-8。私有接口使用 `Authorizat
 | GET | `/v1/state` | 返回当前账号快照 |
 | POST | `/v1/question-bank-submissions` | 登录后提交 `{filename,content}`；仅 `.json`，原文件最大 12 MB |
 | GET | `/v1/question-bank-submissions` | 登录后查看自己的投稿；配置的作者账号可查看全部投稿元数据 |
+| GET / POST | `/v1/profile` | 当前账号资料；保存 `{nickname,avatar,university}`。头像兼容预设键或客户端裁剪的 PNG data URI（512 KB、512 像素以内） |
+| GET | `/v1/questions/{id}/comments` | 返回 `comments`、去重后的 `participantCount` 和 `totalCount`；携带登录 token 时附带每条评论的 `myVote` |
+| POST | `/v1/questions/{id}/comments` | `{body,parentId?}`；登录后评论或回复，回复限定同一题目 |
+| POST | `/v1/comments/{id}/vote` | `{value:1/-1/0}` 表示赞/踩/取消；同账号仅保留一种评价，返回 `likes,dislikes,myVote` |
+| GET | `/v1/admin/users` | 仅作者可见用户资料和邮箱；返回 `users`（最多 1000 条）、实际注册账号总数 `totalCount` |
 
 快照：`events` 原始日志，`states` 每题排期/题本状态，`attempts` 用于统计的作答记录，`plan` 含今日 due、新题与 newLocked，`settings` 为账号级学习目标。
 

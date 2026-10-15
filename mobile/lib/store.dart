@@ -516,25 +516,25 @@ class StudyStore extends ChangeNotifier {
     });
   }
 
-  Future<List<Map<String, dynamic>>> questionComments(String questionId) async {
-    final result = await request('/v1/questions/$questionId/comments');
-    return (result['comments'] as List)
-        .map((item) => Map<String, dynamic>.from(item as Map))
-        .toList();
+  Future<Map<String, dynamic>> questionComments(String questionId) async {
+    return request('/v1/questions/${Uri.encodeComponent(questionId)}/comments');
   }
 
   Future<Map<String, dynamic>> postQuestionComment(
-      String questionId, String body) async {
+      String questionId, String body,
+      {String? parentId}) async {
     if (token.isEmpty) throw Exception('登录后即可参与讨论');
-    return request('/v1/questions/$questionId/comments', {'body': body});
+    return request('/v1/questions/${Uri.encodeComponent(questionId)}/comments',
+        {'body': body, if (parentId != null) 'parentId': parentId});
   }
 
-  Future<List<Map<String, dynamic>>> authorUsers() async {
+  Future<Map<String, dynamic>> voteComment(String commentId, int value) async =>
+      request('/v1/comments/${Uri.encodeComponent(commentId)}/vote',
+          {'value': value});
+
+  Future<Map<String, dynamic>> authorUsers() async {
     if (token.isEmpty) throw Exception('请先登录');
-    final result = await request('/v1/admin/users');
-    return (result['users'] as List)
-        .map((item) => Map<String, dynamic>.from(item as Map))
-        .toList();
+    return request('/v1/admin/users');
   }
 }
 

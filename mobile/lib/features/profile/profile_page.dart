@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../app/shared.dart';
 import '../../app/build_info.dart';
+import 'user_avatar.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -18,6 +20,7 @@ class _ProfilePageState extends State<ProfilePage> {
   bool loadingProfile = false;
   Map<String, dynamic> accountProfile = {};
   List<Map<String, dynamic>> authorUserDirectory = [];
+  int? authorUserCount;
 
   @override
   void initState() {
@@ -36,6 +39,7 @@ class _ProfilePageState extends State<ProfilePage> {
           isSubmissionAdmin = false;
           submissionInbox = [];
           authorUserDirectory = [];
+          authorUserCount = null;
         });
       return;
     }
@@ -81,8 +85,15 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> refreshAuthorUserDirectory() async {
     if (!isSubmissionAdmin || store.token.isEmpty) return;
     try {
-      final users = await store.authorUsers();
-      if (mounted) setState(() => authorUserDirectory = users);
+      final result = await store.authorUsers();
+      if (mounted)
+        setState(() {
+          authorUserDirectory = (result['users'] as List)
+              .map((user) => Map<String, dynamic>.from(user as Map))
+              .toList();
+          authorUserCount =
+              result['totalCount'] as int? ?? authorUserDirectory.length;
+        });
     } catch (_) {
       // The author inbox remains optional while a rolling deployment updates.
     }
@@ -134,8 +145,48 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) => PageBody(children: profile());
   List<Widget> profile() => [
-        heading('把进步留在每一天',
-            sub: store.email.isEmpty ? '当前为本机访客模式' : store.email),
+        const SizedBox(height: 24),
+        box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            UserAvatar(
+                value: accountProfile['avatar'] as String? ?? 'book',
+                radius: 34),
+            const SizedBox(width: 16),
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text(
+                      store.token.isEmpty
+                          ? '访客同学'
+                          : accountProfile['nickname'] as String? ?? '齿间同学',
+                      style: TextStyle(
+                          fontSize: 23,
+                          fontWeight: FontWeight.w700,
+                          color: ink)),
+                  const SizedBox(height: 5),
+                  Text(
+                      store.token.isEmpty
+                          ? '把进步留在每一天'
+                          : ((accountProfile['university'] as String? ?? '')
+                                  .isEmpty
+                              ? '填写你的就读院校'
+                              : accountProfile['university'] as String),
+                      style: const TextStyle(color: Colors.blueGrey)),
+                ])),
+            if (store.token.isNotEmpty)
+              IconButton(
+                  tooltip: '编辑个人资料',
+                  onPressed: loadingProfile ? null : editProfile,
+                  icon: const Icon(Icons.edit_outlined))
+          ]),
+          if (store.email.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(store.email,
+                style: const TextStyle(fontSize: 12, color: Colors.blueGrey))
+          ]
+        ])),
+        const SizedBox(height: 12),
         box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(store.syncMessage),
           SizedBox(height: 10),
@@ -170,22 +221,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: Text('退出登录'))
           ])
         ])),
-        if (store.token.isNotEmpty) ...[
-          heading('个人资料'),
-          box(ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading:
-                  _profileAvatar(accountProfile['avatar'] as String? ?? 'book'),
-              title: Text(loadingProfile
-                  ? '正在读取资料…'
-                  : accountProfile['nickname'] as String? ?? '齿间同学'),
-              subtitle: Text(
-                  (accountProfile['university'] as String? ?? '').isEmpty
-                      ? '尚未填写就读院校'
-                      : accountProfile['university'] as String),
-              trailing: const Icon(Icons.edit_outlined),
-              onTap: loadingProfile ? null : editProfile)),
-        ],
         heading('主题色'),
         box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('选择你喜欢的界面主色，深浅层级会自动保持一致。'),
@@ -257,7 +292,9 @@ class _ProfilePageState extends State<ProfilePage> {
           ]))
         ],
         if (isSubmissionAdmin) ...[
-          heading('用户目录', sub: '仅作者账号可见 · 邮箱不会公开显示在评论中'),
+          heading(
+              '用户目录${authorUserCount == null ? '' : ' · $authorUserCount 人'}',
+              sub: '仅作者账号可见 · 邮箱不会公开显示在评论中'),
           box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Align(
                 alignment: Alignment.centerRight,
@@ -321,18 +358,67 @@ class _ProfilePageState extends State<ProfilePage> {
             style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
       ];
 
-  IconData _avatarIcon(String value) => switch (value) {
-        'tooth' => Icons.health_and_safety_outlined,
-        'science' => Icons.science_outlined,
-        'leaf' => Icons.eco_outlined,
-        'star' => Icons.star_outline,
-        'smile' => Icons.sentiment_satisfied_alt_outlined,
-        _ => Icons.auto_stories_outlined,
-      };
+  Widget _profileAvatar(String value) => UserAvatar(value: value);
 
-  Widget _profileAvatar(String value) => CircleAvatar(
-      backgroundColor: teal.withAlpha(20),
-      child: Icon(_avatarIcon(value), color: teal));
+  Future<String?> pickAvatar() async {
+    final picked = await FilePicker.platform
+        .pickFiles(type: FileType.image, withData: true);
+    if (picked == null) return null;
+    final bytes = picked.files.single.bytes;
+    if (bytes == null || bytes.length > 10 * 1024 * 1024) {
+      throw Exception('请选择不超过 10 MB 的图片');
+    }
+    final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+    final descriptor = await ui.ImageDescriptor.encoded(buffer);
+    late ui.Codec codec;
+    try {
+      final shortest = descriptor.width < descriptor.height
+          ? descriptor.width
+          : descriptor.height;
+      final longest = descriptor.width > descriptor.height
+          ? descriptor.width
+          : descriptor.height;
+      if (shortest < 1 || longest / shortest > 20)
+        throw Exception('图片比例不适合作为头像');
+      codec = await descriptor.instantiateCodec(
+          targetWidth: (descriptor.width * 256 / shortest).round(),
+          targetHeight: (descriptor.height * 256 / shortest).round());
+    } finally {
+      descriptor.dispose();
+      buffer.dispose();
+    }
+    try {
+      final frame = await codec.getNextFrame();
+      try {
+        final recorder = ui.PictureRecorder();
+        final canvas = ui.Canvas(recorder);
+        final width = frame.image.width.toDouble(),
+            height = frame.image.height.toDouble();
+        final side = width < height ? width : height;
+        canvas.drawImageRect(
+            frame.image,
+            ui.Rect.fromLTWH(
+                (width - side) / 2, (height - side) / 2, side, side),
+            const ui.Rect.fromLTWH(0, 0, 256, 256),
+            ui.Paint());
+        final picture = recorder.endRecording();
+        final cropped = await picture.toImage(256, 256);
+        try {
+          final data = await cropped.toByteData(format: ui.ImageByteFormat.png);
+          if (data == null || data.lengthInBytes > 512 * 1024)
+            throw Exception('图片过大，请换一张图片');
+          return 'data:image/png;base64,${base64Encode(data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes))}';
+        } finally {
+          cropped.dispose();
+          picture.dispose();
+        }
+      } finally {
+        frame.image.dispose();
+      }
+    } finally {
+      codec.dispose();
+    }
+  }
 
   Future<void> editProfile() async {
     final nickname = TextEditingController(
@@ -340,6 +426,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final university = TextEditingController(
         text: accountProfile['university'] as String? ?? '');
     var avatar = accountProfile['avatar'] as String? ?? 'book';
+    var picking = false;
     final result = await showDialog<Map<String, String>>(
         context: context,
         builder: (c) => StatefulBuilder(
@@ -348,6 +435,25 @@ class _ProfilePageState extends State<ProfilePage> {
                     content: SingleChildScrollView(
                         child:
                             Column(mainAxisSize: MainAxisSize.min, children: [
+                      UserAvatar(value: avatar, radius: 40),
+                      TextButton.icon(
+                          onPressed: picking
+                              ? null
+                              : () async {
+                                  set(() => picking = true);
+                                  try {
+                                    final selected = await pickAvatar();
+                                    if (c.mounted && selected != null)
+                                      set(() => avatar = selected);
+                                  } catch (_) {
+                                    if (c.mounted)
+                                      message(c, '图片无法读取，请选择 JPG、PNG 等常见图片');
+                                  } finally {
+                                    if (c.mounted) set(() => picking = false);
+                                  }
+                                },
+                          icon: const Icon(Icons.photo_library_outlined),
+                          label: Text(picking ? '正在处理…' : '从图库上传头像')),
                       TextField(
                           controller: nickname,
                           maxLength: 24,
@@ -399,15 +505,19 @@ class _ProfilePageState extends State<ProfilePage> {
                           onPressed: () => Navigator.pop(c),
                           child: const Text('取消')),
                       FilledButton(
-                          onPressed: () => Navigator.pop(c, {
-                                'nickname': nickname.text,
-                                'university': university.text,
-                                'avatar': avatar,
-                              }),
+                          onPressed: picking
+                              ? null
+                              : () => Navigator.pop(c, {
+                                    'nickname': nickname.text,
+                                    'university': university.text,
+                                    'avatar': avatar,
+                                  }),
                           child: const Text('保存'))
                     ])));
-    nickname.dispose();
-    university.dispose();
+    Future.delayed(const Duration(milliseconds: 400), () {
+      nickname.dispose();
+      university.dispose();
+    });
     if (result == null || !mounted) return;
     await safely(context, () async {
       final updated = await store.updateProfile(
