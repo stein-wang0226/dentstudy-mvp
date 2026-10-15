@@ -260,6 +260,9 @@ class _QuestionPreviewPageState extends State<QuestionPreviewPage> {
                                         key: ValueKey('source:${q.id}'),
                                         question: q),
                                   ])),
+                              QuestionComments(
+                                  key: ValueKey('comments:${q.id}'),
+                                  question: q),
                               if (nextChapter) ...[
                                 const SizedBox(height: 20),
                                 box(Column(

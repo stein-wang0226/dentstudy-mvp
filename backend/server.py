@@ -11,7 +11,7 @@ import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 from core import reduce_events, plan
 from bank import validate as validate_bank
 
@@ -61,6 +61,20 @@ def initialize():
           checksum TEXT NOT NULL,
           submitted_at TEXT NOT NULL,
           UNIQUE(user_id, checksum));
+        CREATE TABLE IF NOT EXISTS profiles(
+          user_id TEXT PRIMARY KEY REFERENCES users(id),
+          nickname TEXT NOT NULL DEFAULT '齿间同学',
+          avatar TEXT NOT NULL DEFAULT 'book',
+          university TEXT NOT NULL DEFAULT '',
+          updated_at TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS question_comments(
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES users(id),
+          question_id TEXT NOT NULL,
+          body TEXT NOT NULL,
+          created_at TEXT NOT NULL);
+        CREATE INDEX IF NOT EXISTS question_comments_question_created
+          ON question_comments(question_id, created_at);
         ''')
 
 
@@ -198,6 +212,103 @@ class Handler(BaseHTTPRequestHandler):
                     ORDER BY submitted_at DESC''', (uid,))
         return {'isAdmin': admin, 'submissions': [dict(row) for row in rows]}
 
+    def profile(self, db, uid):
+        row = db.execute('''SELECT nickname,avatar,university,updated_at
+                FROM profiles WHERE user_id=?''', (uid,)).fetchone()
+        return dict(row) if row else {
+            'nickname': '齿间同学', 'avatar': 'book', 'university': '',
+            'updated_at': None}
+
+    def update_profile(self, db, uid, payload):
+        nickname = payload.get('nickname', '')
+        avatar = payload.get('avatar', '')
+        university = payload.get('university', '')
+        if not all(isinstance(value, str)
+                   for value in (nickname, avatar, university)):
+            raise ValueError('个人资料格式错误')
+        nickname, university = nickname.strip(), university.strip()
+        if not 1 <= len(nickname) <= 24:
+            raise ValueError('昵称长度为 1–24 个字')
+        if len(university) > 60:
+            raise ValueError('院校名称不能超过 60 个字')
+        if avatar not in ('book', 'tooth', 'science', 'leaf', 'star', 'smile'):
+            raise ValueError('头像样式无效')
+        updated_at = datetime.now(timezone.utc).isoformat(
+            timespec='seconds').replace('+00:00', 'Z')
+        db.execute('''INSERT INTO profiles(user_id,nickname,avatar,university,updated_at)
+                VALUES(?,?,?,?,?)
+                ON CONFLICT(user_id) DO UPDATE SET nickname=excluded.nickname,
+                avatar=excluded.avatar, university=excluded.university,
+                updated_at=excluded.updated_at''',
+                   (uid, nickname, avatar, university, updated_at))
+        db.commit()
+        return self.profile(db, uid)
+
+    def comments_question_id(self, path):
+        prefix = '/v1/questions/'
+        suffix = '/comments'
+        if not path.startswith(prefix) or not path.endswith(suffix):
+            return None
+        question_id = unquote(path[len(prefix):-len(suffix)])
+        if not question_id or '/' in question_id:
+            return None
+        return question_id
+
+    def question_comments(self, db, question_id):
+        if question_id not in {question['id'] for question in questions()}:
+            raise ValueError('题目不存在')
+        rows = db.execute('''SELECT c.id,c.question_id AS questionId,c.body,
+                    c.created_at AS createdAt,
+                    COALESCE(p.nickname, '齿间同学') AS nickname,
+                    COALESCE(p.avatar, 'book') AS avatar,
+                    COALESCE(p.university, '') AS university
+                FROM question_comments c
+                LEFT JOIN profiles p ON p.user_id=c.user_id
+                WHERE c.question_id=? ORDER BY c.created_at ASC LIMIT 100''',
+                          (question_id,))
+        return {'comments': [dict(row) for row in rows]}
+
+    def post_question_comment(self, db, uid, question_id, payload):
+        if question_id not in {question['id'] for question in questions()}:
+            raise ValueError('题目不存在')
+        body = payload.get('body', '')
+        if not isinstance(body, str):
+            raise ValueError('评论格式错误')
+        body = body.strip()
+        if not 1 <= len(body) <= 500:
+            raise ValueError('评论长度为 1–500 个字')
+        previous = db.execute('''SELECT created_at FROM question_comments
+                WHERE user_id=? ORDER BY created_at DESC LIMIT 1''',
+                              (uid,)).fetchone()
+        if previous:
+            last = datetime.fromisoformat(
+                previous['created_at'].replace('Z', '+00:00')).timestamp()
+            if time.time() - last < 10:
+                raise ValueError('评论发布过快，请稍后再试')
+        created_at = datetime.now(timezone.utc).isoformat(
+            timespec='seconds').replace('+00:00', 'Z')
+        comment_id = secrets.token_urlsafe(12)
+        db.execute('''INSERT INTO question_comments(id,user_id,question_id,body,created_at)
+                VALUES(?,?,?,?,?)''',
+                   (comment_id, uid, question_id, body, created_at))
+        db.commit()
+        return {'ok': True, 'comment': {
+            'id': comment_id, 'questionId': question_id, 'body': body,
+            'createdAt': created_at, **self.profile(db, uid)}}
+
+    def admin_users(self, db, uid):
+        if not self.is_admin(db, uid):
+            raise PermissionError('仅作者账号可查看用户资料')
+        rows = db.execute('''SELECT u.id,u.email,
+                    COALESCE(p.nickname, '齿间同学') AS nickname,
+                    COALESCE(p.avatar, 'book') AS avatar,
+                    COALESCE(p.university, '') AS university,
+                    p.updated_at AS updatedAt
+                FROM users u LEFT JOIN profiles p ON p.user_id=u.id
+                ORDER BY COALESCE(p.updated_at, '') DESC, u.email ASC
+                LIMIT 1000''')
+        return {'users': [dict(row) for row in rows]}
+
     def submit_question_bank(self, db, uid, payload):
         filename, content = payload.get('filename'), payload.get('content')
         if (not isinstance(filename, str) or not filename.lower().endswith('.json')
@@ -258,9 +369,23 @@ class Handler(BaseHTTPRequestHandler):
                 with connect() as db:
                     uid = self.user(db)
                     return self.respond(200, self.submissions(db, uid))
+            if path == '/v1/profile':
+                with connect() as db:
+                    uid = self.user(db)
+                    return self.respond(200, self.profile(db, uid))
+            if path == '/v1/admin/users':
+                with connect() as db:
+                    uid = self.user(db)
+                    return self.respond(200, self.admin_users(db, uid))
+            question_id = self.comments_question_id(path)
+            if question_id is not None:
+                with connect() as db:
+                    return self.respond(200, self.question_comments(db, question_id))
             self.respond(404, {'error': '接口不存在'})
         except PermissionError as e:
             self.respond(401, {'error': str(e)})
+        except (ValueError, TypeError, KeyError, sqlite3.IntegrityError) as e:
+            self.respond(400, {'error': str(e)})
 
     def snapshot(self, db, uid):
         events = [json.loads(r['payload']) for r in db.execute('SELECT payload FROM events WHERE user_id=?', (uid,))]
@@ -293,6 +418,11 @@ class Handler(BaseHTTPRequestHandler):
                             raise ValueError('该邮箱已注册')
                         uid, salt = secrets.token_hex(16), secrets.token_hex(16)
                         db.execute('INSERT INTO users VALUES(?,?,?,?)', (uid, email, salt, password_hash(password, salt)))
+                        db.execute('''INSERT INTO profiles(user_id,nickname,avatar,university,updated_at)
+                                VALUES(?,?,?,?,?)''',
+                                   (uid, '齿间同学', 'book', '',
+                                    datetime.now(timezone.utc).isoformat(
+                                        timespec='seconds').replace('+00:00', 'Z')))
                     else:
                         if not row or not hmac.compare_digest(row['password'], password_hash(password, row['salt'])):
                             raise PermissionError('邮箱或密码错误')
@@ -340,6 +470,12 @@ class Handler(BaseHTTPRequestHandler):
                     return self.respond(200, self.snapshot(db, uid))
                 if path == '/v1/question-bank-submissions':
                     return self.respond(200, self.submit_question_bank(db, uid, data))
+                if path == '/v1/profile':
+                    return self.respond(200, self.update_profile(db, uid, data))
+                question_id = self.comments_question_id(path)
+                if question_id is not None:
+                    return self.respond(200,
+                                        self.post_question_comment(db, uid, question_id, data))
                 self.respond(404, {'error': '接口不存在'})
         except PermissionError as e:
             self.respond(401, {'error': str(e)})

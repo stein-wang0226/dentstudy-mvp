@@ -486,7 +486,7 @@ class StudyStore extends ChangeNotifier {
     required String filename,
     required String content,
   }) async {
-    if (token.isEmpty) throw Exception('登录后才能将题库投稿给作者');
+    if (token.isEmpty) throw Exception('请先登录后再提交题库');
     return request(
         '/v1/question-bank-submissions',
         {'filename': filename, 'content': content},
@@ -496,6 +496,45 @@ class StudyStore extends ChangeNotifier {
   Future<Map<String, dynamic>> questionBankSubmissions() async {
     if (token.isEmpty) throw Exception('请先登录');
     return request('/v1/question-bank-submissions');
+  }
+
+  Future<Map<String, dynamic>> profile() async {
+    if (token.isEmpty) throw Exception('请先登录');
+    return request('/v1/profile');
+  }
+
+  Future<Map<String, dynamic>> updateProfile({
+    required String nickname,
+    required String avatar,
+    required String university,
+  }) async {
+    if (token.isEmpty) throw Exception('请先登录');
+    return request('/v1/profile', {
+      'nickname': nickname,
+      'avatar': avatar,
+      'university': university,
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> questionComments(String questionId) async {
+    final result = await request('/v1/questions/$questionId/comments');
+    return (result['comments'] as List)
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> postQuestionComment(
+      String questionId, String body) async {
+    if (token.isEmpty) throw Exception('登录后即可参与讨论');
+    return request('/v1/questions/$questionId/comments', {'body': body});
+  }
+
+  Future<List<Map<String, dynamic>>> authorUsers() async {
+    if (token.isEmpty) throw Exception('请先登录');
+    final result = await request('/v1/admin/users');
+    return (result['users'] as List)
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
   }
 }
 

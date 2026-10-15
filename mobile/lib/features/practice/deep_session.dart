@@ -379,7 +379,8 @@ class _StudySessionState extends State<StudySession>
           SourceDetails(question: question),
           Text(question.explanation, style: TextStyle(height: 1.8)),
           QuestionLearningSupport(question: question, store: store),
-        ]))
+        ])),
+        QuestionComments(question: question),
       ];
   Future<void> editNote() async {
     final field =

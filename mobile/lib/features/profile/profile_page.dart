@@ -15,12 +15,14 @@ class _ProfilePageState extends State<ProfilePage> {
   bool loadingSubmissions = false;
   bool isSubmissionAdmin = false;
   List<Map<String, dynamic>> submissionInbox = [];
+  bool loadingProfile = false;
+  Map<String, dynamic> accountProfile = {};
+  List<Map<String, dynamic>> authorUserDirectory = [];
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => refreshSubmissionInbox());
+    WidgetsBinding.instance.addPostFrameCallback((_) => refreshAccountData());
   }
 
   void changed() {
@@ -33,6 +35,7 @@ class _ProfilePageState extends State<ProfilePage> {
         setState(() {
           isSubmissionAdmin = false;
           submissionInbox = [];
+          authorUserDirectory = [];
         });
       return;
     }
@@ -46,11 +49,42 @@ class _ProfilePageState extends State<ProfilePage> {
             .map((item) => Map<String, dynamic>.from(item as Map))
             .toList();
       });
+      if (isSubmissionAdmin) await refreshAuthorUserDirectory();
     } catch (_) {
       // The personal learning experience stays usable if the optional inbox
       // endpoint is unavailable while an older server is being updated.
     } finally {
       if (mounted) setState(() => loadingSubmissions = false);
+    }
+  }
+
+  Future<void> refreshAccountData() async {
+    await Future.wait([refreshProfile(), refreshSubmissionInbox()]);
+  }
+
+  Future<void> refreshProfile() async {
+    if (store.token.isEmpty) {
+      if (mounted) setState(() => accountProfile = {});
+      return;
+    }
+    if (mounted) setState(() => loadingProfile = true);
+    try {
+      final result = await store.profile();
+      if (mounted) setState(() => accountProfile = result);
+    } catch (_) {
+      // An older API must not block access to locally stored learning data.
+    } finally {
+      if (mounted) setState(() => loadingProfile = false);
+    }
+  }
+
+  Future<void> refreshAuthorUserDirectory() async {
+    if (!isSubmissionAdmin || store.token.isEmpty) return;
+    try {
+      final users = await store.authorUsers();
+      if (mounted) setState(() => authorUserDirectory = users);
+    } catch (_) {
+      // The author inbox remains optional while a rolling deployment updates.
     }
   }
 
@@ -79,13 +113,13 @@ class _ProfilePageState extends State<ProfilePage> {
           message(
               context,
               submitted['duplicate'] == true
-                  ? '本机已导入；这份文件此前已投稿。'
-                  : '已导入 $imported 道题，本文件已提交给作者审核。');
+                  ? '本机已导入；这份文件此前已提交。'
+                  : '已导入 $imported 道题，文件已提交保存。');
         }
         await refreshSubmissionInbox();
       } catch (error) {
         if (mounted) {
-          message(context, '已导入 $imported 道题到本机；投稿上传未完成：$error');
+          message(context, '已导入 $imported 道题到本机；文件提交未完成：$error');
         }
       }
     } on FormatException {
@@ -114,7 +148,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ? null
                     : () => store.token.isEmpty
                         ? showAccountDialog(context,
-                            onSuccess: refreshSubmissionInbox)
+                            onSuccess: refreshAccountData)
                         : safely(context, store.sync),
                 child: Text(store.syncing
                     ? '同步中…'
@@ -131,11 +165,27 @@ class _ProfilePageState extends State<ProfilePage> {
               TextButton(
                   onPressed: () async {
                     await safely(context, store.logout);
-                    await refreshSubmissionInbox();
+                    await refreshAccountData();
                   },
                   child: Text('退出登录'))
           ])
         ])),
+        if (store.token.isNotEmpty) ...[
+          heading('个人资料'),
+          box(ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading:
+                  _profileAvatar(accountProfile['avatar'] as String? ?? 'book'),
+              title: Text(loadingProfile
+                  ? '正在读取资料…'
+                  : accountProfile['nickname'] as String? ?? '齿间同学'),
+              subtitle: Text(
+                  (accountProfile['university'] as String? ?? '').isEmpty
+                      ? '尚未填写就读院校'
+                      : accountProfile['university'] as String),
+              trailing: const Icon(Icons.edit_outlined),
+              onTap: loadingProfile ? null : editProfile)),
+        ],
         heading('主题色'),
         box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('选择你喜欢的界面主色，深浅层级会自动保持一致。'),
@@ -166,9 +216,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                 : null)));
               }).toList())
         ])),
-        heading('导入题库 / 投稿'),
+        heading('导入题库'),
         box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('仅支持 JSON 题库文件。会先导入当前设备供你本地练习；登录后，原文件会提交至作者的私有投稿箱供人工查看。'),
+          const Text('仅支持 JSON 题库文件，会先导入当前设备供你本地练习；登录后可提交保存。'),
           const SizedBox(height: 8),
           const Text('请仅上传你有权分享的资料；不要上传含个人隐私、受限或来源不明的内容。',
               style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
@@ -180,7 +230,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ? '正在导入…'
                   : store.token.isEmpty
                       ? '选择 JSON 并本地导入'
-                      : '选择 JSON 并投稿')),
+                      : '选择 JSON 并提交')),
         ])),
         if (isSubmissionAdmin) ...[
           heading('题库投稿箱', sub: '仅作者账号可见 · 文件保存在服务器私有目录'),
@@ -204,6 +254,28 @@ class _ProfilePageState extends State<ProfilePage> {
                   trailing: Text(_formatBytes(item['content_bytes'] as int),
                       style: const TextStyle(
                           fontSize: 12, color: Colors.blueGrey))))
+          ]))
+        ],
+        if (isSubmissionAdmin) ...[
+          heading('用户目录', sub: '仅作者账号可见 · 邮箱不会公开显示在评论中'),
+          box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                    onPressed: refreshAuthorUserDirectory,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('刷新'))),
+            if (authorUserDirectory.isEmpty)
+              const Text('暂时还没有已注册用户。',
+                  style: TextStyle(color: Colors.blueGrey))
+            else
+              ...authorUserDirectory.map((user) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: _profileAvatar(user['avatar'] as String? ?? 'book'),
+                  title: Text(user['nickname'] as String? ?? '齿间同学'),
+                  subtitle: Text(
+                      '${(user['university'] as String? ?? '').isEmpty ? '未填写院校' : user['university']}\n${user['email']}'),
+                  isThreeLine: true))
           ]))
         ],
         heading('学习设置'),
@@ -248,6 +320,104 @@ class _ProfilePageState extends State<ProfilePage> {
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
       ];
+
+  IconData _avatarIcon(String value) => switch (value) {
+        'tooth' => Icons.health_and_safety_outlined,
+        'science' => Icons.science_outlined,
+        'leaf' => Icons.eco_outlined,
+        'star' => Icons.star_outline,
+        'smile' => Icons.sentiment_satisfied_alt_outlined,
+        _ => Icons.auto_stories_outlined,
+      };
+
+  Widget _profileAvatar(String value) => CircleAvatar(
+      backgroundColor: teal.withAlpha(20),
+      child: Icon(_avatarIcon(value), color: teal));
+
+  Future<void> editProfile() async {
+    final nickname = TextEditingController(
+        text: accountProfile['nickname'] as String? ?? '齿间同学');
+    final university = TextEditingController(
+        text: accountProfile['university'] as String? ?? '');
+    var avatar = accountProfile['avatar'] as String? ?? 'book';
+    final result = await showDialog<Map<String, String>>(
+        context: context,
+        builder: (c) => StatefulBuilder(
+            builder: (c, set) => AlertDialog(
+                    title: const Text('编辑个人资料'),
+                    content: SingleChildScrollView(
+                        child:
+                            Column(mainAxisSize: MainAxisSize.min, children: [
+                      TextField(
+                          controller: nickname,
+                          maxLength: 24,
+                          decoration: const InputDecoration(labelText: '昵称')),
+                      const SizedBox(height: 8),
+                      TextField(
+                          controller: university,
+                          maxLength: 60,
+                          decoration:
+                              const InputDecoration(labelText: '就读院校（可自行填写）')),
+                      const SizedBox(height: 12),
+                      const Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text('选择头像',
+                              style: TextStyle(fontWeight: FontWeight.w700))),
+                      const SizedBox(height: 8),
+                      Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            'book',
+                            'tooth',
+                            'science',
+                            'leaf',
+                            'star',
+                            'smile'
+                          ]
+                              .map((item) => InkWell(
+                                  onTap: () => set(() => avatar = item),
+                                  borderRadius: BorderRadius.circular(24),
+                                  child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                              color: avatar == item
+                                                  ? teal
+                                                  : Colors.transparent,
+                                              width: 2)),
+                                      child: _profileAvatar(item))))
+                              .toList()),
+                      const SizedBox(height: 12),
+                      const Text('昵称、头像和院校会显示在题目讨论中；邮箱不会公开。',
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.blueGrey))
+                    ])),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(c),
+                          child: const Text('取消')),
+                      FilledButton(
+                          onPressed: () => Navigator.pop(c, {
+                                'nickname': nickname.text,
+                                'university': university.text,
+                                'avatar': avatar,
+                              }),
+                          child: const Text('保存'))
+                    ])));
+    nickname.dispose();
+    university.dispose();
+    if (result == null || !mounted) return;
+    await safely(context, () async {
+      final updated = await store.updateProfile(
+          nickname: result['nickname']!,
+          avatar: result['avatar']!,
+          university: result['university']!);
+      if (mounted) setState(() => accountProfile = updated);
+      if (isSubmissionAdmin) await refreshAuthorUserDirectory();
+    });
+  }
 
   Future<void> goalsDialog() async {
     final newField = TextEditingController(text: '${store.dailyNewLimit}');

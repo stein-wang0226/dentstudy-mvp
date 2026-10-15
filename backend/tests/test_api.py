@@ -18,6 +18,18 @@ class ApiTests(unittest.TestCase):
         server.SUBMISSIONS=Path(cls.temp.name)/'question-bank-submissions'
         server.ADMIN_EMAIL='author@test.local'
         server.initialize()
+        cls.author_password='testing-pass-123'
+        cls.author_id='author-test-user'
+        salt=server.secrets.token_hex(16)
+        with server.connect() as db:
+            db.execute('INSERT INTO users VALUES(?,?,?,?)',
+                       (cls.author_id,'author@test.local',salt,
+                        server.password_hash(cls.author_password,salt)))
+            db.execute('''INSERT INTO profiles(user_id,nickname,avatar,university,updated_at)
+                       VALUES(?,?,?,?,?)''',
+                       (cls.author_id,'齿间同学','book','',
+                        '2026-01-01T00:00:00Z'))
+            db.commit()
         cls.http=ThreadingHTTPServer(('127.0.0.1',0),server.Handler)
         cls.thread=threading.Thread(target=cls.http.serve_forever,daemon=True)
         cls.thread.start()
@@ -37,6 +49,13 @@ class ApiTests(unittest.TestCase):
 
     def register(self,name):
         status,result=self.request('/v1/auth/register',{'email':name+'@test.local','password':'testing-pass-123'})
+        self.assertEqual(status,200)
+        return result['token']
+
+    def author(self):
+        status,result=self.request('/v1/auth/login',
+                                   {'email':'author@test.local',
+                                    'password':self.author_password})
         self.assertEqual(status,200)
         return result['token']
 
@@ -138,12 +157,41 @@ class ApiTests(unittest.TestCase):
         self.assertNotIn('email',own['submissions'][0])
         duplicate=self.request('/v1/question-bank-submissions',payload,contributor)[1]
         self.assertTrue(duplicate['duplicate'])
-        author=self.register('author')
+        author=self.author()
         status,inbox=self.request('/v1/question-bank-submissions',token=author)
         self.assertEqual(status,200)
         self.assertTrue(inbox['isAdmin'])
         self.assertEqual(inbox['submissions'][0]['email'],'contributor@test.local')
         self.assertEqual(self.request('/v1/question-bank-submissions',
                                       {'filename':'bad.json','content':'{}'},contributor)[0],400)
+
+    def test_profile_comments_and_author_user_directory(self):
+        learner=self.register('profile-learner')
+        status,profile=self.request('/v1/profile',token=learner)
+        self.assertEqual(status,200)
+        self.assertEqual(profile['nickname'],'齿间同学')
+        status,profile=self.request('/v1/profile',{
+            'nickname':'小齿同学','avatar':'tooth','university':'齿间大学'},learner)
+        self.assertEqual(status,200)
+        self.assertEqual(profile['university'],'齿间大学')
+        self.assertEqual(self.request('/v1/questions/demo-001/comments')[1]['comments'],[])
+        status,result=self.request('/v1/questions/demo-001/comments',
+                                   {'body':'这题的解析很清楚。'},learner)
+        self.assertEqual(status,200)
+        self.assertEqual(result['comment']['nickname'],'小齿同学')
+        self.assertEqual(result['comment']['university'],'齿间大学')
+        self.assertNotIn('email',result['comment'])
+        comments=self.request('/v1/questions/demo-001/comments')[1]['comments']
+        self.assertEqual(comments[0]['body'],'这题的解析很清楚。')
+        self.assertEqual(self.request('/v1/questions/demo-001/comments',
+                                      {'body':'未登录评论'})[0],401)
+        author=self.author()
+        status,directory=self.request('/v1/admin/users',token=author)
+        self.assertEqual(status,200)
+        listed=next(user for user in directory['users']
+                    if user['email']=='profile-learner@test.local')
+        self.assertEqual(listed['nickname'],'小齿同学')
+        self.assertEqual(listed['university'],'齿间大学')
+        self.assertEqual(self.request('/v1/admin/users',token=learner)[0],401)
 
 if __name__=='__main__':unittest.main()
