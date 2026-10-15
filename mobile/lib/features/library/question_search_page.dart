@@ -86,7 +86,7 @@ class _QuestionSearchPageState extends State<QuestionSearchPage> {
                     child: const Text('清空范围筛选'))
             ],
             for (final q in results.take(shown))
-              Card(
+              studyCard(
                   child: ListTile(
                       title: Text(q.stem,
                           maxLines: 3, overflow: TextOverflow.ellipsis),

@@ -170,7 +170,7 @@ class _NotebooksPageState extends State<NotebooksPage> {
         TextButton(onPressed: _clear, child: const Text('清空筛选'))
       ] else
         for (final q in qs.take(shown))
-          Card(
+          studyCard(
               child: ListTile(
                   title: Text(q.stem,
                       maxLines: 2, overflow: TextOverflow.ellipsis),

@@ -1,69 +1,110 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
-/// Glossy, translucent surfaces avoid a blur layer for every scrolling card.
-/// Real backdrop blur is reserved for the fixed navigation chrome.
+/// The blur is clipped to each visible surface, not the entire scrolling page.
 class StudySurface extends StatelessWidget {
   final Widget child;
   final bool glass;
-  final Color accent, borderColor, color;
+  final Color tint, borderColor, color;
   final double radius;
   final EdgeInsetsGeometry padding;
   const StudySurface(
       {super.key,
       required this.child,
       required this.glass,
-      required this.accent,
+      required this.tint,
       required this.borderColor,
       this.color = Colors.white,
       this.radius = 22,
       this.padding = const EdgeInsets.all(20)});
 
   @override
-  Widget build(BuildContext context) => AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      width: double.infinity,
-      padding: padding,
-      decoration: BoxDecoration(
-          color: glass ? null : color,
-          gradient: glass
-              ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                      Color.lerp(color, Colors.white, .5)!.withAlpha(225),
-                      color.withAlpha(155)
-                    ])
-              : null,
-          borderRadius: BorderRadius.circular(radius),
-          border: Border.all(
-              color: glass ? Colors.white.withAlpha(220) : borderColor),
-          boxShadow: glass
-              ? [
-                  BoxShadow(
-                      color: accent.withAlpha(16),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8)),
-                  BoxShadow(
-                      color: Colors.white.withAlpha(150),
-                      blurRadius: 2,
-                      offset: const Offset(-1, -1))
-                ]
-              : []),
-      child: Material(type: MaterialType.transparency, child: child));
+  Widget build(BuildContext context) {
+    final content = Padding(
+        padding: padding,
+        child: Material(type: MaterialType.transparency, child: child));
+    if (!glass) {
+      return Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(radius),
+              border: Border.all(color: borderColor)),
+          child: content);
+    }
+    return Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(radius),
+            boxShadow: [
+              BoxShadow(
+                  color: const Color(0xFF26313D).withAlpha(14),
+                  blurRadius: 22,
+                  offset: const Offset(0, 8)),
+              BoxShadow(color: tint.withAlpha(10), blurRadius: 28)
+            ]),
+        child: ClipRRect(
+            borderRadius: BorderRadius.circular(radius),
+            child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                child: CustomPaint(
+                    foregroundPainter: _GlassRim(radius),
+                    child: DecoratedBox(
+                        decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                stops: const [
+                              0,
+                              .48,
+                              1
+                            ],
+                                colors: [
+                              Colors.white.withAlpha(145),
+                              color.withAlpha(42),
+                              Colors.white.withAlpha(100)
+                            ])),
+                        child: content)))));
+  }
+}
+
+/// A bright rim and a quieter lower edge read as glass rather than a white card.
+class _GlassRim extends CustomPainter {
+  final double radius;
+  const _GlassRim(this.radius);
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = (Offset.zero & size).deflate(.75);
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withAlpha(250),
+            Colors.white.withAlpha(65),
+            Colors.white.withAlpha(210)
+          ]).createShader(rect);
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, Radius.circular(radius)), paint);
+  }
+
+  @override
+  bool shouldRepaint(_GlassRim oldDelegate) => oldDelegate.radius != radius;
 }
 
 class StudyBackdrop extends StatelessWidget {
   final Widget child;
   final bool glass;
-  final Color background, tint, accent;
+  // Deliberately no primary/accent input: the backdrop only uses its own hue.
+  final Color background, tint;
   const StudyBackdrop(
       {super.key,
       required this.child,
       required this.glass,
       required this.background,
-      required this.tint,
-      required this.accent});
+      required this.tint});
   @override
   Widget build(BuildContext context) => Stack(children: [
         Positioned.fill(
@@ -74,20 +115,26 @@ class StudyBackdrop extends StatelessWidget {
                         decoration: BoxDecoration(
                             gradient: RadialGradient(
                                 center: const Alignment(-.85, -.8),
-                                radius: 1.3,
+                                radius: .95,
                                 colors: [
-                              accent.withAlpha(28),
-                              accent.withAlpha(0)
+                              tint.withAlpha(65),
+                              tint.withAlpha(0)
                             ])),
                         child: DecoratedBox(
                             decoration: BoxDecoration(
                                 gradient: RadialGradient(
                                     center: const Alignment(.9, .65),
-                                    radius: 1.15,
+                                    radius: 1.05,
                                     colors: [
-                              tint.withAlpha(35),
-                              tint.withAlpha(0)
-                            ]))))
+                                  tint.withAlpha(55),
+                                  tint.withAlpha(0)
+                                ])),
+                            child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                    gradient: RadialGradient(
+                                        center: const Alignment(.05, -.1),
+                                        radius: .75,
+                                        colors: [Colors.white.withAlpha(185), Colors.white.withAlpha(0)])))))
                     : null)),
         child
       ]);
@@ -101,9 +148,16 @@ class FrostedChrome extends StatelessWidget {
   Widget build(BuildContext context) => enabled
       ? ClipRect(
           child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
               child: DecoratedBox(
                   decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white.withAlpha(100),
+                            Colors.white.withAlpha(25)
+                          ]),
                       border: Border(
                           top: BorderSide(color: Colors.white.withAlpha(190)))),
                   child: child)))

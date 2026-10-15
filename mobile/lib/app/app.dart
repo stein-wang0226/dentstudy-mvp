@@ -34,7 +34,6 @@ class DentStudy extends StatelessWidget {
                 glass: store.glassEnabled,
                 background: paper,
                 tint: backgroundTint,
-                accent: teal,
                 child: child ?? const SizedBox.shrink()),
             theme: ThemeData(
                 useMaterial3: true,
@@ -51,13 +50,13 @@ class DentStudy extends StatelessWidget {
                     store.glassEnabled ? Colors.transparent : paper,
                 appBarTheme: AppBarTheme(
                     backgroundColor:
-                        store.glassEnabled ? paper.withAlpha(190) : paper,
+                        store.glassEnabled ? paper.withAlpha(120) : paper,
                     surfaceTintColor: Colors.transparent,
                     foregroundColor: ink,
                     elevation: 0),
                 navigationBarTheme: NavigationBarThemeData(
                     backgroundColor: store.glassEnabled
-                        ? paper.withAlpha(175)
+                        ? paper.withAlpha(90)
                         : Color.lerp(Colors.white, backgroundTint, .07),
                     indicatorColor: teal.withAlpha(30)),
                 cardTheme: CardThemeData(

@@ -1,4 +1,6 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -84,6 +86,7 @@ void main() {
     await tester.tap(find.text('玻璃质感'));
     await tester.pumpAndSettle();
     expect(app.store.glassEnabled, isTrue);
+    expect(find.byType(BackdropFilter), findsWidgets);
     expect(tester.widget<FrostedChrome>(find.byType(FrostedChrome)).enabled,
         isTrue);
     await tester.tap(find.text('题库'));
@@ -94,6 +97,65 @@ void main() {
     expect(app.store.prefs.getBool('glassEnabled'), isTrue);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('glass backdrop stays rose when primary color changes',
+      (tester) async {
+    app.store.prefs = await SharedPreferences.getInstance();
+    final boundaryKey = GlobalKey();
+    Future<List<int>> backgroundPixels(String primary) async {
+      await app.store.setCustomTheme(primary: primary, background: 'rose');
+      await tester.pumpWidget(Directionality(
+          textDirection: TextDirection.ltr,
+          child: Center(
+              child: RepaintBoundary(
+                  key: boundaryKey,
+                  child: SizedBox(
+                      width: 400,
+                      height: 400,
+                      child: StudyBackdrop(
+                          glass: true,
+                          background: app.paper,
+                          tint: app.backgroundTint,
+                          child: const SizedBox.expand()))))));
+      await tester.pumpAndSettle();
+      final boundary = boundaryKey.currentContext!.findRenderObject()
+          as RenderRepaintBoundary;
+      final pixels = (await tester.runAsync(() async {
+        final image = await boundary.toImage();
+        final bytes =
+            (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+        final result = List<int>.from(bytes.buffer.asUint8List());
+        image.dispose();
+        return result;
+      }))!;
+      // Check the actual upper-left pixels, where the old primary glow leaked.
+      final offset = (30 * 400 + 30) * 4;
+      expect(pixels[offset], greaterThan(pixels[offset + 1]));
+      return pixels;
+    }
+
+    final greenPrimary = await backgroundPixels('forest');
+    final bluePrimary = await backgroundPixels('blue');
+    expect(bluePrimary, orderedEquals(greenPrimary));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('glass cards use clipped backdrop blur; plain cards do not',
+      (tester) async {
+    Widget surface(bool glass) => MaterialApp(
+        home: Scaffold(
+            body: StudySurface(
+                glass: glass,
+                tint: Colors.pink,
+                borderColor: Colors.grey,
+                child: const Text('今日计划'))));
+    await tester.pumpWidget(surface(true));
+    expect(find.byType(BackdropFilter), findsOneWidget);
+    expect(find.byType(ClipRRect), findsOneWidget);
+    await tester.pumpWidget(surface(false));
+    expect(find.byType(BackdropFilter), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(

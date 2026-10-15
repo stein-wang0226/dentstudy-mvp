@@ -95,7 +95,7 @@ class StatisticsPage extends StatelessWidget {
         const Text('还没有需要优先复盘的章节。完成练习后会按你的真实作答生成建议。')
       else
         for (final qs in metrics.priorityChapters.take(3))
-          Card(
+          studyCard(
               child: ListTile(
                   title: Text('${qs.first.subject} · ${qs.first.chapter}'),
                   subtitle: Text(metrics.recommendation(qs)),
@@ -106,7 +106,7 @@ class StatisticsPage extends StatelessWidget {
         const Text('暂无薄弱章节，完成练习后会生成建议。')
       else
         for (final qs in metrics.weakChapters)
-          Card(
+          studyCard(
               child: ListTile(
                   title: Text('${qs.first.subject} · ${qs.first.chapter}'),
                   subtitle: Text(

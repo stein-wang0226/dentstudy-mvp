@@ -33,10 +33,21 @@ Future<void> safely(BuildContext c, Future<void> Function() action) async {
 
 Widget box(Widget child, {Color? color}) => StudySurface(
     glass: store.glassEnabled,
-    accent: teal,
+    tint: backgroundTint,
     borderColor: ink.withAlpha(12),
     color: color ?? Colors.white,
     child: child);
+Widget studyCard({required Widget child}) => store.glassEnabled
+    ? Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: StudySurface(
+            glass: true,
+            tint: backgroundTint,
+            borderColor: Colors.transparent,
+            radius: 18,
+            padding: EdgeInsets.zero,
+            child: child))
+    : Card(child: child);
 Widget heading(String text, {String? sub}) => Padding(
     padding: const EdgeInsets.only(top: 24, bottom: 14),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

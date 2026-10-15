@@ -373,7 +373,10 @@ Future<void> showAccountDialog(BuildContext context,
           text: remember ? store.prefs.getString('rememberedEmail') ?? '' : ''),
       password = TextEditingController(),
       confirmPassword = TextEditingController();
-  bool register = false, busy = false, authenticated = false;
+  bool register = false,
+      busy = false,
+      authenticated = false,
+      justRegistered = false;
   String? error;
   await showDialog(
       context: context,
@@ -478,6 +481,7 @@ Future<void> showAccountDialog(BuildContext context,
                                     await store.prefs.remove('rememberedEmail');
                                   }
                                   authenticated = true;
+                                  justRegistered = register;
                                   if (c.mounted) Navigator.pop(c);
                                 } catch (e) {
                                   if (c.mounted)
@@ -495,13 +499,15 @@ Future<void> showAccountDialog(BuildContext context,
     confirmPassword.dispose();
   });
   if (!authenticated || !context.mounted) return;
-  try {
-    final profile = await store.profile();
-    if (context.mounted)
-      await showProfileEditor(context,
-          initialProfile: profile, onboarding: true);
-  } catch (_) {
-    if (context.mounted) message(context, '个人资料暂时无法加载，可在“我的”中稍后完善');
+  if (justRegistered) {
+    try {
+      final profile = await store.profile();
+      if (context.mounted)
+        await showProfileEditor(context,
+            initialProfile: profile, onboarding: true);
+    } catch (_) {
+      if (context.mounted) message(context, '个人资料暂时无法加载，可在“我的”中稍后完善');
+    }
   }
   if (context.mounted) await onSuccess?.call();
 }

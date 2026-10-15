@@ -141,7 +141,7 @@ class AppearanceSettings extends StatelessWidget {
             SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('玻璃质感'),
-                subtitle: const Text('半透明卡片、柔和高光与磨砂导航'),
+                subtitle: const Text('透出背景的磨砂卡片、玻璃高光与半透明导航'),
                 secondary: const Icon(Icons.blur_on),
                 value: store.glassEnabled,
                 onChanged: (value) =>

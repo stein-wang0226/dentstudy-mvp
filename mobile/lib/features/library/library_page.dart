@@ -38,7 +38,7 @@ class _LibraryPageState extends State<LibraryPage> {
             _searchEntry(),
             const SizedBox(height: 12),
             for (final name in available) ...[
-              Card(
+              studyCard(
                   child: ListTile(
                       contentPadding: const EdgeInsets.all(18),
                       title: Text(name,
@@ -105,7 +105,7 @@ class _LibraryPageState extends State<LibraryPage> {
             _actions(qs.where((q) => q.chapter == chapter).toList()),
             const SizedBox(height: 14),
             for (final q in qs.where((q) => q.chapter == chapter).take(shown))
-              Card(
+              studyCard(
                   child: ListTile(
                       title: Text(q.stem,
                           maxLines: 2, overflow: TextOverflow.ellipsis),
@@ -142,7 +142,7 @@ class _LibraryPageState extends State<LibraryPage> {
   }
 
   Widget _chapter(String name, List<Question> qs, LearningMetrics metrics) =>
-      Card(
+      studyCard(
           child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(

@@ -445,13 +445,12 @@ class _StudySessionState extends State<StudySession>
               style: TextStyle(fontSize: 12, color: Colors.blueGrey))
       ])),
       heading('逐题回顾'),
-      ...widget.questions.map((question) => Card(
-          elevation: 0,
-          child: ExpansionTile(
-              title: Text(question.stem, style: TextStyle(fontSize: 15)),
-              subtitle: Text('你的作答：${answers[question.id] ?? '未作答'}',
-                  maxLines: 2, overflow: TextOverflow.ellipsis),
-              children: [
+      ...widget.questions.map((question) => studyCard(
+              child: ExpansionTile(
+                  title: Text(question.stem, style: TextStyle(fontSize: 15)),
+                  subtitle: Text('你的作答：${answers[question.id] ?? '未作答'}',
+                      maxLines: 2, overflow: TextOverflow.ellipsis),
+                  children: [
                 Padding(
                     padding: EdgeInsets.all(16),
                     child: Column(
