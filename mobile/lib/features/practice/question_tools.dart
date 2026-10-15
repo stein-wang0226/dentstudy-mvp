@@ -64,7 +64,11 @@ class QuestionTools extends StatelessWidget {
               IconButton(
                   tooltip: '题目笔记',
                   icon: const Icon(Icons.edit_note),
-                  onPressed: () => _note(c))
+                  onPressed: () => _note(c)),
+              IconButton(
+                  tooltip: '题目讨论',
+                  icon: const Icon(Icons.forum_outlined),
+                  onPressed: () => _comments(c))
             ]),
           ]));
   Future<void> _note(BuildContext context) async {
@@ -91,6 +95,19 @@ class QuestionTools extends StatelessWidget {
       await safely(context, () => store.add(question.id, 'note', result));
     // Dispose after the dialog's exit animation has detached its text field.
     Future.delayed(const Duration(milliseconds: 400), field.dispose);
+  }
+
+  Future<void> _comments(BuildContext context) async {
+    await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (sheetContext) => SafeArea(
+            child: SizedBox(
+                height: MediaQuery.sizeOf(sheetContext).height * .8,
+                child: ListView(
+                    padding: const EdgeInsets.all(20),
+                    children: [QuestionComments(question: question)]))));
   }
 }
 
