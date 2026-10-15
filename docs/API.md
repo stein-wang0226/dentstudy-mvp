@@ -18,6 +18,11 @@ API 默认 `http://127.0.0.1:8787`，JSON UTF-8。私有接口使用 `Authorizat
 | POST | `/v1/questions/{id}/comments` | `{body,parentId?}`；登录后评论或回复，回复限定同一题目 |
 | POST | `/v1/comments/{id}/vote` | `{value:1/-1/0}` 表示赞/踩/取消；同账号仅保留一种评价，返回 `likes,dislikes,myVote` |
 | GET | `/v1/admin/users` | 仅作者可见用户资料和邮箱；返回 `users`（最多 1000 条）、实际注册账号总数 `totalCount` |
+| POST | `/v1/comments/{id}/delete` | `{}`；仅发布者可删除自己的评论。清除正文与赞踩，保留他人回复所需的占位关系；评论列表返回 `canDelete`、`deletedAt` |
+| GET | `/v1/admin/comments?offset=0` | 仅作者可见评论管理，含发布者邮箱、昵称、题目 ID/题干/章节、评论和时间；每页 50 条，返回 `totalCount`、`nextOffset` |
+
+头像由客户端提供可拖动、缩放的正方形裁剪页，确认后导出为 256×256 PNG，再通过资料接口保存。
+登录表单的“记住密码”使用浏览器或系统密码管理器的 Autofill 功能；本地偏好仅保存是否启用和邮箱，不保存明文密码。
 
 快照：`events` 原始日志，`states` 每题排期/题本状态，`attempts` 用于统计的作答记录，`plan` 含今日 due、新题与 newLocked，`settings` 为账号级学习目标。
 

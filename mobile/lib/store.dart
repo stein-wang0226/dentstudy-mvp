@@ -532,6 +532,13 @@ class StudyStore extends ChangeNotifier {
       request('/v1/comments/${Uri.encodeComponent(commentId)}/vote',
           {'value': value});
 
+  Future<void> deleteComment(String commentId) async {
+    await request('/v1/comments/${Uri.encodeComponent(commentId)}/delete', {});
+  }
+
+  Future<Map<String, dynamic>> authorComments({int offset = 0}) async =>
+      request('/v1/admin/comments?offset=$offset');
+
   Future<Map<String, dynamic>> authorUsers() async {
     if (token.isEmpty) throw Exception('请先登录');
     return request('/v1/admin/users');

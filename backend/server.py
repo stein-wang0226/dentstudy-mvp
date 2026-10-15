@@ -12,7 +12,7 @@ import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 from core import reduce_events, plan
 from bank import validate as validate_bank
 
@@ -84,6 +84,8 @@ def initialize():
         ''')
         if 'parent_id' not in {row['name'] for row in db.execute('PRAGMA table_info(question_comments)')}:
             db.execute('ALTER TABLE question_comments ADD COLUMN parent_id TEXT REFERENCES question_comments(id)')
+        if 'deleted_at' not in {row['name'] for row in db.execute('PRAGMA table_info(question_comments)')}:
+            db.execute('ALTER TABLE question_comments ADD COLUMN deleted_at TEXT')
 
 
 def password_hash(password, salt):
@@ -245,10 +247,10 @@ class Handler(BaseHTTPRequestHandler):
                 if len(raw) > 512 * 1024 or not raw.startswith(b'\x89PNG\r\n\x1a\n'):
                     raise ValueError()
                 width, height = int.from_bytes(raw[16:20], 'big'), int.from_bytes(raw[20:24], 'big')
-                if not 1 <= width <= 512 or not 1 <= height <= 512:
+                if not 1 <= width <= 512 or width != height:
                     raise ValueError()
             except (ValueError, TypeError):
-                raise ValueError('头像须为不超过 512 KB、512 像素的 PNG 图片')
+                raise ValueError('头像须先裁剪为正方形，且不超过 512 KB、512 像素')
         elif avatar not in ('book', 'tooth', 'science', 'leaf', 'star', 'smile'):
             raise ValueError('头像样式无效')
         updated_at = datetime.now(timezone.utc).isoformat(
@@ -277,12 +279,13 @@ class Handler(BaseHTTPRequestHandler):
             raise ValueError('题目不存在')
         rows = db.execute('''SELECT c.id,c.question_id AS questionId,c.body,c.parent_id AS parentId,
                     c.created_at AS createdAt,
+                    c.deleted_at AS deletedAt, c.user_id=? AND c.deleted_at IS NULL AS canDelete,
                     COALESCE(v.likes,0) AS likes, COALESCE(v.dislikes,0) AS dislikes,
                     COALESCE(mine.value,0) AS myVote,
-                    parent_profile.nickname AS replyTo,
-                    COALESCE(p.nickname, '齿间同学') AS nickname,
-                    COALESCE(p.avatar, 'book') AS avatar,
-                    COALESCE(p.university, '') AS university
+                    CASE WHEN parent.deleted_at IS NOT NULL THEN '已删除评论' ELSE parent_profile.nickname END AS replyTo,
+                    CASE WHEN c.deleted_at IS NOT NULL THEN '已删除评论' ELSE COALESCE(p.nickname, '齿间同学') END AS nickname,
+                    CASE WHEN c.deleted_at IS NOT NULL THEN 'book' ELSE COALESCE(p.avatar, 'book') END AS avatar,
+                    CASE WHEN c.deleted_at IS NOT NULL THEN '' ELSE COALESCE(p.university, '') END AS university
                 FROM question_comments c
                 LEFT JOIN profiles p ON p.user_id=c.user_id
                 LEFT JOIN (SELECT comment_id,SUM(value=1) AS likes,SUM(value=-1) AS dislikes
@@ -290,16 +293,56 @@ class Handler(BaseHTTPRequestHandler):
                 LEFT JOIN comment_votes mine ON mine.comment_id=c.id AND mine.user_id=?
                 LEFT JOIN question_comments parent ON parent.id=c.parent_id
                 LEFT JOIN profiles parent_profile ON parent_profile.user_id=parent.user_id
-                WHERE c.question_id=? ORDER BY c.created_at ASC LIMIT 100''',
-                          (uid, question_id))
-        count = db.execute('SELECT COUNT(DISTINCT user_id),COUNT(*) FROM question_comments WHERE question_id=?', (question_id,)).fetchone()
-        return {'comments': [dict(row) for row in rows], 'participantCount': count[0], 'totalCount': count[1]}
+                WHERE c.question_id=? AND (c.deleted_at IS NULL OR EXISTS(
+                    SELECT 1 FROM question_comments child WHERE child.parent_id=c.id AND child.deleted_at IS NULL))
+                ORDER BY c.created_at ASC LIMIT 100''',
+                          (uid, uid, question_id))
+        count = db.execute('SELECT COUNT(DISTINCT user_id),COUNT(*) FROM question_comments WHERE question_id=? AND deleted_at IS NULL', (question_id,)).fetchone()
+        comments = [dict(row) for row in rows]
+        for comment in comments:
+            comment['canDelete'] = bool(comment['canDelete'])
+        return {'comments': comments, 'participantCount': count[0], 'totalCount': count[1]}
+
+    def delete_comment(self, db, uid, comment_id):
+        row = db.execute('SELECT user_id FROM question_comments WHERE id=?', (comment_id,)).fetchone()
+        if row is None:
+            raise ValueError('评论不存在')
+        if row['user_id'] != uid:
+            raise PermissionError('只能删除自己发布的评论')
+        deleted_at = datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')
+        db.execute("UPDATE question_comments SET body='',deleted_at=COALESCE(deleted_at,?) WHERE id=?", (deleted_at, comment_id))
+        db.execute('DELETE FROM comment_votes WHERE comment_id=?', (comment_id,))
+        db.commit()
+        return {'ok': True}
+
+    def admin_comments(self, db, uid, offset=0):
+        if not self.is_admin(db, uid):
+            raise PermissionError('仅作者账号可查看评论管理')
+        rows = db.execute('''SELECT c.id,c.question_id AS questionId,c.body,c.created_at AS createdAt,
+                    c.parent_id AS parentId,u.email,
+                    COALESCE(p.nickname,'齿间同学') AS nickname,
+                    COALESCE(p.avatar,'book') AS avatar,
+                    COALESCE(p.university,'') AS university
+                FROM question_comments c JOIN users u ON u.id=c.user_id
+                LEFT JOIN profiles p ON p.user_id=c.user_id
+                WHERE c.deleted_at IS NULL ORDER BY c.created_at DESC,c.id DESC LIMIT 50 OFFSET ?''', (offset,))
+        bank = {q['id']: q for q in questions()}
+        comments = []
+        for row in rows:
+            item = dict(row)
+            question = bank.get(item['questionId'], {})
+            item.update(subject=question.get('subject',''), chapter=question.get('chapter',''),
+                        stem=question.get('stem','题目暂不可用'))
+            comments.append(item)
+        total = db.execute('SELECT COUNT(*) FROM question_comments WHERE deleted_at IS NULL').fetchone()[0]
+        return {'comments': comments, 'totalCount': total,
+                'nextOffset': offset + len(comments) if offset + len(comments) < total else None}
 
     def vote_comment(self, db, uid, comment_id, payload):
         value = payload.get('value')
         if isinstance(value, bool) or not isinstance(value, int) or value not in (-1, 0, 1):
             raise ValueError('无效的评价')
-        if not db.execute('SELECT 1 FROM question_comments WHERE id=?', (comment_id,)).fetchone():
+        if not db.execute('SELECT 1 FROM question_comments WHERE id=? AND deleted_at IS NULL', (comment_id,)).fetchone():
             raise ValueError('评论不存在')
         if value == 0:
             db.execute('DELETE FROM comment_votes WHERE comment_id=? AND user_id=?', (comment_id, uid))
@@ -321,7 +364,7 @@ class Handler(BaseHTTPRequestHandler):
             raise ValueError('评论长度为 1–500 个字')
         parent_id = payload.get('parentId')
         if parent_id is not None and (not isinstance(parent_id, str) or not db.execute(
-                'SELECT 1 FROM question_comments WHERE id=? AND question_id=?',
+                'SELECT 1 FROM question_comments WHERE id=? AND question_id=? AND deleted_at IS NULL',
                 (parent_id, question_id)).fetchone()):
             raise ValueError('回复的评论不存在或不属于当前题目')
         previous = db.execute('''SELECT created_at FROM question_comments
@@ -425,6 +468,13 @@ class Handler(BaseHTTPRequestHandler):
                 with connect() as db:
                     uid = self.user(db)
                     return self.respond(200, self.admin_users(db, uid))
+            if path == '/v1/admin/comments':
+                offset = int(parse_qs(urlparse(self.path).query).get('offset', ['0'])[0])
+                if offset < 0:
+                    raise ValueError('无效分页参数')
+                with connect() as db:
+                    uid = self.user(db)
+                    return self.respond(200, self.admin_comments(db, uid, offset))
             question_id = self.comments_question_id(path)
             if question_id is not None:
                 with connect() as db:
@@ -481,6 +531,9 @@ class Handler(BaseHTTPRequestHandler):
                     db.commit()
                     return self.respond(200, dict(token=token, userId=uid, email=email))
                 uid = self.user(db)
+                if path.startswith('/v1/comments/') and path.endswith('/delete'):
+                    comment_id = path[len('/v1/comments/'):-len('/delete')]
+                    return self.respond(200, self.delete_comment(db, uid, comment_id))
                 if path.startswith('/v1/comments/') and path.endswith('/vote'):
                     comment_id = path[len('/v1/comments/'):-len('/vote')]
                     return self.respond(200, self.vote_comment(db, uid, comment_id, data))

@@ -235,4 +235,43 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.request('/v1/profile',{**payload,'avatar':'data:image/png;base64,invalid'},token)[0],400)
         self.assertEqual(self.request('/v1/profile',{**payload,'avatar':'https://example.com/avatar.png'},token)[0],400)
 
+    def test_comment_deletion_ownership_replies_and_author_audit(self):
+        owner=self.register('delete-owner')
+        other=self.register('delete-other')
+        question=server.questions()[3]
+        path=f"/v1/questions/{question['id']}/comments"
+        first=self.request(path,{'body':'这是可删除的评论'},owner)[1]['comment']
+        reply=self.request(path,{'body':'保留他人的回复','parentId':first['id']},other)[1]['comment']
+        listing=self.request(path,token=owner)[1]
+        self.assertTrue(listing['comments'][0]['canDelete'])
+        self.assertFalse(listing['comments'][1]['canDelete'])
+        endpoint=f"/v1/comments/{first['id']}/delete"
+        self.assertEqual(self.request(endpoint,{})[0],401)
+        self.assertEqual(self.request(endpoint,{},other)[0],401)
+        author=self.author()
+        self.assertEqual(self.request(endpoint,{},author)[0],401)
+        self.assertEqual(self.request('/v1/admin/comments',token=other)[0],401)
+        audit=self.request('/v1/admin/comments',token=author)[1]
+        record=next(item for item in audit['comments'] if item['id']==first['id'])
+        self.assertEqual(record['email'],'delete-owner@test.local')
+        self.assertEqual(record['questionId'],question['id'])
+        self.assertEqual(record['stem'],question['stem'])
+        self.assertEqual(self.request(endpoint,{},owner)[0],200)
+        self.assertEqual(self.request(endpoint,{},owner)[0],200)
+        listing=self.request(path,token=owner)[1]
+        self.assertEqual(listing['participantCount'],1)
+        self.assertEqual(listing['totalCount'],1)
+        self.assertEqual(listing['comments'][0]['body'],'')
+        self.assertIsNotNone(listing['comments'][0]['deletedAt'])
+        self.assertFalse(listing['comments'][0]['canDelete'])
+        self.assertEqual(listing['comments'][1]['body'],'保留他人的回复')
+        self.assertEqual(self.request(f"/v1/comments/{first['id']}/vote",{'value':1},other)[0],400)
+        self.assertEqual(self.request(path,{'body':'不能回复已删除内容','parentId':first['id']},owner)[0],400)
+        audit=self.request('/v1/admin/comments',token=author)[1]
+        self.assertNotIn(first['id'],[item['id'] for item in audit['comments']])
+        self.assertIn(reply['id'],[item['id'] for item in audit['comments']])
+        server.initialize()
+        with server.connect() as db:
+            self.assertEqual(db.execute('SELECT body FROM question_comments WHERE id=?',(first['id'],)).fetchone()[0],'')
+
 if __name__=='__main__':unittest.main()

@@ -1,10 +1,12 @@
 import 'dart:convert';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../app/shared.dart';
 import '../../app/build_info.dart';
 import 'user_avatar.dart';
+import 'avatar_crop.dart';
+import 'author_comments_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -315,6 +317,19 @@ class _ProfilePageState extends State<ProfilePage> {
                   isThreeLine: true))
           ]))
         ],
+        if (isSubmissionAdmin) ...[
+          heading('评论管理'),
+          box(ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.forum_outlined),
+              title: const Text('查看全部题目评论'),
+              subtitle: const Text('查看发布者、题目、评论内容与时间'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const AuthorCommentsPage())))),
+        ],
         heading('学习设置'),
         box(Column(children: [
           ListTile(
@@ -360,7 +375,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _profileAvatar(String value) => UserAvatar(value: value);
 
-  Future<String?> pickAvatar() async {
+  Future<String?> pickAvatar(BuildContext dialogContext) async {
     final picked = await FilePicker.platform
         .pickFiles(type: FileType.image, withData: true);
     if (picked == null) return null;
@@ -368,55 +383,14 @@ class _ProfilePageState extends State<ProfilePage> {
     if (bytes == null || bytes.length > 10 * 1024 * 1024) {
       throw Exception('请选择不超过 10 MB 的图片');
     }
-    final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
-    final descriptor = await ui.ImageDescriptor.encoded(buffer);
-    late ui.Codec codec;
+    final image = await decodeAvatarImage(bytes);
     try {
-      final shortest = descriptor.width < descriptor.height
-          ? descriptor.width
-          : descriptor.height;
-      final longest = descriptor.width > descriptor.height
-          ? descriptor.width
-          : descriptor.height;
-      if (shortest < 1 || longest / shortest > 20)
-        throw Exception('图片比例不适合作为头像');
-      codec = await descriptor.instantiateCodec(
-          targetWidth: (descriptor.width * 256 / shortest).round(),
-          targetHeight: (descriptor.height * 256 / shortest).round());
+      if (!dialogContext.mounted) return null;
+      return await Navigator.of(dialogContext).push<String>(
+          MaterialPageRoute(builder: (_) => AvatarCropPage(image: image)));
     } finally {
-      descriptor.dispose();
-      buffer.dispose();
-    }
-    try {
-      final frame = await codec.getNextFrame();
-      try {
-        final recorder = ui.PictureRecorder();
-        final canvas = ui.Canvas(recorder);
-        final width = frame.image.width.toDouble(),
-            height = frame.image.height.toDouble();
-        final side = width < height ? width : height;
-        canvas.drawImageRect(
-            frame.image,
-            ui.Rect.fromLTWH(
-                (width - side) / 2, (height - side) / 2, side, side),
-            const ui.Rect.fromLTWH(0, 0, 256, 256),
-            ui.Paint());
-        final picture = recorder.endRecording();
-        final cropped = await picture.toImage(256, 256);
-        try {
-          final data = await cropped.toByteData(format: ui.ImageByteFormat.png);
-          if (data == null || data.lengthInBytes > 512 * 1024)
-            throw Exception('图片过大，请换一张图片');
-          return 'data:image/png;base64,${base64Encode(data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes))}';
-        } finally {
-          cropped.dispose();
-          picture.dispose();
-        }
-      } finally {
-        frame.image.dispose();
-      }
-    } finally {
-      codec.dispose();
+      // The crop route can still paint during its exit transition.
+      Future.delayed(const Duration(milliseconds: 400), image.dispose);
     }
   }
 
@@ -427,6 +401,7 @@ class _ProfilePageState extends State<ProfilePage> {
         text: accountProfile['university'] as String? ?? '');
     var avatar = accountProfile['avatar'] as String? ?? 'book';
     var picking = false;
+    String? avatarError;
     final result = await showDialog<Map<String, String>>(
         context: context,
         builder: (c) => StatefulBuilder(
@@ -440,20 +415,32 @@ class _ProfilePageState extends State<ProfilePage> {
                           onPressed: picking
                               ? null
                               : () async {
-                                  set(() => picking = true);
+                                  set(() {
+                                    picking = true;
+                                    avatarError = null;
+                                  });
                                   try {
-                                    final selected = await pickAvatar();
+                                    final selected = await pickAvatar(c);
                                     if (c.mounted && selected != null)
                                       set(() => avatar = selected);
                                   } catch (_) {
                                     if (c.mounted)
-                                      message(c, '图片无法读取，请选择 JPG、PNG 等常见图片');
+                                      set(() => avatarError =
+                                          '图片无法读取，请选择 10 MB 以内的 JPG 或 PNG 图片');
                                   } finally {
                                     if (c.mounted) set(() => picking = false);
                                   }
                                 },
                           icon: const Icon(Icons.photo_library_outlined),
                           label: Text(picking ? '正在处理…' : '从图库上传头像')),
+                      if (avatarError != null)
+                        Text(avatarError!,
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.deepOrange)),
+                      if (avatar.startsWith('data:image/'))
+                        const Text('已选择裁剪后的照片',
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.blueGrey)),
                       TextField(
                           controller: nickname,
                           maxLength: 24,
@@ -467,7 +454,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       const SizedBox(height: 12),
                       const Align(
                           alignment: Alignment.centerLeft,
-                          child: Text('选择头像',
+                          child: Text('或使用预设头像',
                               style: TextStyle(fontWeight: FontWeight.w700))),
                       const SizedBox(height: 8),
                       Wrap(
@@ -482,7 +469,12 @@ class _ProfilePageState extends State<ProfilePage> {
                             'smile'
                           ]
                               .map((item) => InkWell(
-                                  onTap: () => set(() => avatar = item),
+                                  onTap: picking
+                                      ? null
+                                      : () => set(() {
+                                            avatar = item;
+                                            avatarError = null;
+                                          }),
                                   borderRadius: BorderRadius.circular(24),
                                   child: Container(
                                       padding: const EdgeInsets.all(8),
@@ -600,7 +592,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
 Future<void> showAccountDialog(BuildContext context,
     {Future<void> Function()? onSuccess}) async {
-  final email = TextEditingController(),
+  bool remember = store.prefs.getBool('rememberPassword') ?? true;
+  final email = TextEditingController(
+          text: remember ? store.prefs.getString('rememberedEmail') ?? '' : ''),
       password = TextEditingController(),
       confirmPassword = TextEditingController();
   bool register = false, busy = false;
@@ -611,40 +605,75 @@ Future<void> showAccountDialog(BuildContext context,
       builder: (c) => StatefulBuilder(
           builder: (c, set) => AlertDialog(
                   title: Text(register ? '创建学习账号' : '同步学习进度'),
-                  content: SingleChildScrollView(
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    TextField(
-                        controller: email,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: InputDecoration(labelText: '邮箱')),
-                    SizedBox(height: 10),
-                    TextField(
-                        controller: password,
-                        obscureText: true,
-                        decoration: InputDecoration(labelText: '密码（至少10位）')),
-                    if (register) ...[
-                      SizedBox(height: 10),
-                      TextField(
-                          controller: confirmPassword,
-                          obscureText: true,
-                          decoration: InputDecoration(labelText: '确认密码')),
-                      SizedBox(height: 10),
-                      const Text('务必记住密码，目前忘记密码无法找回！！！',
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.deepOrange))
-                    ],
-                    SizedBox(height: 10),
-                    Text('登录后访客记录独立保留，可在“我的”中手动导入。',
-                        style: TextStyle(fontSize: 12)),
-                    if (error != null)
-                      Text(error!, style: TextStyle(color: Colors.red)),
-                    TextButton(
-                        onPressed:
-                            busy ? null : () => set(() => register = !register),
-                        child: Text(register ? '已有账号？登录' : '没有账号？注册'))
-                  ])),
+                  content: AutofillGroup(
+                      onDisposeAction: AutofillContextAction.cancel,
+                      child: SingleChildScrollView(
+                          child:
+                              Column(mainAxisSize: MainAxisSize.min, children: [
+                        TextField(
+                            controller: email,
+                            autofillHints: remember
+                                ? const [
+                                    AutofillHints.username,
+                                    AutofillHints.email
+                                  ]
+                                : null,
+                            autocorrect: false,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(labelText: '邮箱')),
+                        SizedBox(height: 10),
+                        TextField(
+                            controller: password,
+                            autofillHints: remember
+                                ? [
+                                    register
+                                        ? AutofillHints.newPassword
+                                        : AutofillHints.password
+                                  ]
+                                : null,
+                            enableSuggestions: false,
+                            autocorrect: false,
+                            obscureText: true,
+                            decoration:
+                                InputDecoration(labelText: '密码（至少10位）')),
+                        if (register) ...[
+                          SizedBox(height: 10),
+                          TextField(
+                              controller: confirmPassword,
+                              autofillHints: remember
+                                  ? const [AutofillHints.newPassword]
+                                  : null,
+                              obscureText: true,
+                              decoration: InputDecoration(labelText: '确认密码')),
+                          SizedBox(height: 10),
+                          const Text('务必记住密码，目前忘记密码无法找回！！！',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.deepOrange))
+                        ],
+                        SizedBox(height: 10),
+                        CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            title: const Text('记住密码'),
+                            subtitle: const Text('由浏览器或系统密码管理器保存',
+                                style: TextStyle(fontSize: 12)),
+                            value: remember,
+                            onChanged: busy
+                                ? null
+                                : (value) =>
+                                    set(() => remember = value ?? false)),
+                        Text('登录后访客记录独立保留，可在“我的”中手动导入。',
+                            style: TextStyle(fontSize: 12)),
+                        if (error != null)
+                          Text(error!, style: TextStyle(color: Colors.red)),
+                        TextButton(
+                            onPressed: busy
+                                ? null
+                                : () => set(() => register = !register),
+                            child: Text(register ? '已有账号？登录' : '没有账号？注册'))
+                      ]))),
                   actions: [
                     TextButton(
                         onPressed: busy ? null : () => Navigator.pop(c),
@@ -662,6 +691,16 @@ Future<void> showAccountDialog(BuildContext context,
                                 try {
                                   await store.login(
                                       email.text, password.text, register);
+                                  TextInput.finishAutofillContext(
+                                      shouldSave: remember);
+                                  await store.prefs
+                                      .setBool('rememberPassword', remember);
+                                  if (remember) {
+                                    await store.prefs.setString(
+                                        'rememberedEmail', email.text.trim());
+                                  } else {
+                                    await store.prefs.remove('rememberedEmail');
+                                  }
                                   if (c.mounted) Navigator.pop(c);
                                   await onSuccess?.call();
                                 } catch (e) {
@@ -674,4 +713,9 @@ Future<void> showAccountDialog(BuildContext context,
                               },
                         child: Text(busy ? '连接中…' : '继续'))
                   ])));
+  Future.delayed(const Duration(milliseconds: 400), () {
+    email.dispose();
+    password.dispose();
+    confirmPassword.dispose();
+  });
 }

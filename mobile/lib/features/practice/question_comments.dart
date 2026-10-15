@@ -19,6 +19,7 @@ class _QuestionCommentsState extends State<QuestionComments> {
   int participantCount = 0;
   Map<String, dynamic>? replyingTo;
   final voting = <String>{};
+  final deleting = <String>{};
   int loadGeneration = 0;
   final composerKey = GlobalKey();
 
@@ -136,6 +137,35 @@ class _QuestionCommentsState extends State<QuestionComments> {
     }
   }
 
+  Future<void> _delete(Map<String, dynamic> comment) async {
+    final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+                title: const Text('删除这条评论？'),
+                content: const Text('删除后不再显示评论内容，其他同学的回复会保留。'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(c, false),
+                      child: const Text('取消')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(c, true),
+                      child: const Text('删除'))
+                ]));
+    if (confirmed != true || !mounted) return;
+    final id = comment['id'] as String;
+    setState(() => deleting.add(id));
+    try {
+      await store.deleteComment(id);
+      if (!mounted) return;
+      if (replyingTo?['id'] == id) setState(() => replyingTo = null);
+      await _load();
+    } catch (error) {
+      if (mounted) message(context, error.toString());
+    } finally {
+      if (mounted) setState(() => deleting.remove(id));
+    }
+  }
+
   Widget _voteButton(Map<String, dynamic> comment, int value) {
     final selected = comment['myVote'] == value;
     final color = value == 1
@@ -216,21 +246,33 @@ class _QuestionCommentsState extends State<QuestionComments> {
                       if (comment['parentId'] != null)
                         Text('回复 ${comment['replyTo'] ?? '齿间同学'}',
                             style: TextStyle(fontSize: 12, color: teal)),
-                      Text(comment['body'] as String,
+                      Text(
+                          comment['deletedAt'] != null
+                              ? '此评论已由发布者删除'
+                              : comment['body'] as String,
                           style: const TextStyle(height: 1.55)),
-                      Wrap(spacing: 2, children: [
-                        _voteButton(comment, 1),
-                        _voteButton(comment, -1),
-                        TextButton(
-                            onPressed: () {
-                              if (store.token.isEmpty) {
-                                message(context, '登录后即可回复');
-                                return;
-                              }
-                              _compose(comment);
-                            },
-                            child: const Text('回复'))
-                      ]),
+                      if (comment['deletedAt'] == null)
+                        Wrap(spacing: 2, children: [
+                          _voteButton(comment, 1),
+                          _voteButton(comment, -1),
+                          TextButton(
+                              onPressed: () {
+                                if (store.token.isEmpty) {
+                                  message(context, '登录后即可回复');
+                                  return;
+                                }
+                                _compose(comment);
+                              },
+                              child: const Text('回复')),
+                          if (comment['canDelete'] == true)
+                            TextButton(
+                                onPressed: deleting.contains(comment['id'])
+                                    ? null
+                                    : () => _delete(comment),
+                                child: Text(deleting.contains(comment['id'])
+                                    ? '删除中…'
+                                    : '删除'))
+                        ]),
                     ]))
               ]))),
         const SizedBox(height: 16),
