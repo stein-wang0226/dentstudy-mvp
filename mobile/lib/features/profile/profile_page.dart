@@ -9,6 +9,7 @@ import 'profile_editor.dart';
 import 'author_comments_page.dart';
 import 'author_records_page.dart';
 import 'appearance_settings.dart';
+import 'policy_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -209,7 +210,7 @@ class _ProfilePageState extends State<ProfilePage> {
         box(const AppearanceSettings()),
         heading('导入题库'),
         box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('仅支持 JSON 题库文件，会先导入当前设备供你本地练习；登录后可提交保存。'),
+          const Text('仅支持 JSON 题库文件，会先导入当前设备供你本地练习。'),
           const SizedBox(height: 8),
           const Text('请仅上传你有权分享的资料；不要上传含个人隐私、受限或来源不明的内容。',
               style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
@@ -292,6 +293,15 @@ class _ProfilePageState extends State<ProfilePage> {
         heading('关于题库'),
         box(Text(
             '${store.catalog.countLabel}。\n资料整理题与演示题分别标注审核状态；题量不代表学科覆盖完整。')),
+        heading('服务与规则'),
+        box(ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.policy_outlined, color: teal),
+            title: const Text('服务与规则'),
+            subtitle: const Text('用户协议、隐私说明、版权投诉与数据删除'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const PolicyPage())))),
         const SizedBox(height: 20),
         const Text(
             '齿间 DentStudy · ${BuildInfo.version}\n更新于 ${BuildInfo.builtAt}',

@@ -12,6 +12,7 @@ import '../features/library/library_page.dart';
 import '../features/notebooks/notebooks_page.dart';
 import '../features/statistics/statistics_page.dart';
 import '../features/profile/profile_page.dart';
+import '../features/profile/policy_page.dart';
 import '../features/practice/practice_request.dart';
 import '../features/practice/custom_practice.dart';
 import '../features/practice/session_journal.dart';
@@ -468,6 +469,16 @@ void _showContactAuthor(BuildContext context) => showModalBottomSheet<void>(
                       leading: Icon(Icons.email_outlined),
                       title: Text('邮箱'),
                       subtitle: SelectableText('dentstudy1126@aka.yeah.net')),
+                  const SizedBox(height: 4),
+                  OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(sheetContext).pop();
+                        Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => const PolicyDetailPage(
+                                topic: PolicyTopic.copyright)));
+                      },
+                      icon: const Icon(Icons.copyright_outlined),
+                      label: const Text('版权投诉与数据删除')),
                   const SizedBox(height: 10),
                   const Text('微信',
                       style: TextStyle(fontWeight: FontWeight.bold)),
