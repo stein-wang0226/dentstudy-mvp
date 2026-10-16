@@ -9,6 +9,7 @@ import 'package:dentstudy/store.dart';
 import 'package:dentstudy/app/app.dart';
 import 'package:dentstudy/app/shared.dart' as app;
 import 'package:dentstudy/app/theme_surfaces.dart';
+import 'package:dentstudy/app/glass_refraction.dart';
 import 'package:dentstudy/features/profile/profile_editor.dart';
 
 void main() {
@@ -231,7 +232,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('glass cards use clipped backdrop blur; plain cards do not',
+  testWidgets('glass cards use clipped backdrop lenses; plain cards do not',
       (tester) async {
     Widget surface(bool glass) => MaterialApp(
         home: Scaffold(
@@ -248,7 +249,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('clear glass keeps low blur and a nearly transparent center',
+  testWidgets('clear glass has no blur and a nearly transparent center',
       (tester) async {
     await tester.pumpWidget(const MaterialApp(
         home: Scaffold(
@@ -256,8 +257,9 @@ void main() {
                 enabled: true,
                 radius: 30,
                 child: SizedBox(height: 72, child: Text('透明导航'))))));
-    final surface = tester.widget<StudySurface>(find.byType(StudySurface));
-    expect(surface.blurSigma, lessThanOrEqualTo(5));
+    final filter = tester.widget<BackdropFilter>(find.byType(BackdropFilter));
+    expect(filter.filter.toString(), contains('matrix'));
+    expect(filter.filter.toString(), isNot(contains('blur')));
     final gradients = tester
         .widgetList<DecoratedBox>(find.byType(DecoratedBox))
         .map((box) => box.decoration)
@@ -267,14 +269,93 @@ void main() {
     expect(gradients, hasLength(1));
     expect(gradients.single.colors[1].a, lessThan(.02));
     expect(gradients.single.colors.every((c) => c.a < .12), isTrue);
-    expect(
-        const StudySurface(
-                glass: true,
-                tint: Colors.teal,
-                borderColor: Colors.transparent,
-                child: SizedBox())
-            .blurSigma,
-        lessThanOrEqualTo(3));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('lens changes real edge pixels while leaving the center intact',
+      (tester) async {
+    final key = GlobalKey();
+    Future<List<int>> capture(bool lens) async {
+      await tester.pumpWidget(Directionality(
+          textDirection: TextDirection.ltr,
+          child: Center(
+              child: RepaintBoundary(
+                  key: key,
+                  child: SizedBox(
+                      width: 240,
+                      height: 140,
+                      child: Stack(children: [
+                        for (var i = 0; i < 60; i++)
+                          Positioned(
+                              left: i * 4,
+                              top: 0,
+                              bottom: 0,
+                              width: 4,
+                              child: ColoredBox(
+                                  color:
+                                      i.isEven ? Colors.white : Colors.black)),
+                        if (lens)
+                          const Positioned.fill(
+                              child: MediaQuery(
+                                  data: MediaQueryData(),
+                                child: GlassContentViewport(
+                                      enabled: true,
+                                      child: GlassRefraction(radius: 24)))),
+                      ]))))));
+      await tester.pumpAndSettle();
+      return (await tester.runAsync(() async {
+        final boundary =
+            key.currentContext!.findRenderObject() as RenderRepaintBoundary;
+        final image = await boundary.toImage();
+        final bytes =
+            (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+        final result = List<int>.from(bytes.buffer.asUint8List());
+        image.dispose();
+        return result;
+      }))!;
+    }
+
+    final plain = await capture(false), refracted = await capture(true);
+    var changedEdgePixels = 0;
+    for (var y = 30; y < 110; y++) {
+      for (var x = 0; x < 4; x++) {
+        final offset = (y * 240 + x) * 4;
+        if ((plain[offset] - refracted[offset]).abs() > 15) changedEdgePixels++;
+      }
+      for (var x = 20; x < 220; x++) {
+        final offset = (y * 240 + x) * 4;
+        expect(refracted[offset], plain[offset]);
+      }
+    }
+    expect(changedEdgePixels, greaterThan(80));
+    final clip = const GlassEdgeClipper(24).getClip(const Size(240, 140));
+    expect(clip.contains(const Offset(120, 70)), isFalse);
+    expect(clip.contains(const Offset(1, 70)), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('reflection painter updates when primary theme changes',
+      (tester) async {
+    Future<CustomPainter> rim(Color primary) async {
+      await tester.pumpWidget(MaterialApp(
+          theme: ThemeData(colorSchemeSeed: primary),
+          home: const Scaffold(
+              body: StudySurface(
+                  glass: true,
+                  tint: Colors.pink,
+                  borderColor: Colors.transparent,
+                  child: Text('主题边框')))));
+      await tester.pumpAndSettle();
+      return tester
+          .widgetList<CustomPaint>(find.descendant(
+              of: find.byType(StudySurface),
+              matching: find.byType(CustomPaint)))
+          .firstWhere((w) => w.foregroundPainter != null)
+          .foregroundPainter!;
+    }
+
+    final green = await rim(Colors.green), purple = await rim(Colors.purple);
+    expect(purple.shouldRepaint(green), isTrue);
     expect(tester.takeException(), isNull);
   });
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'shared.dart';
 import 'entrance.dart';
 import 'theme_surfaces.dart';
+import 'glass_refraction.dart';
 import '../features/today/today_page.dart';
 import '../features/today/today_plan.dart';
 import '../features/library/library_page.dart';
@@ -367,24 +368,26 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                   label: const Text('联系作者')),
               const SizedBox(width: 8)
             ]),
-        body: ListenableBuilder(
-            listenable: store,
-            builder: (c, _) => switch (tab) {
-                  0 => TodayPage(
-                      plan: plan,
-                      onPlan: _today,
-                      onCustom: _custom,
-                      onResume: _resume,
-                      onModeChanged: (mode) async {
-                        await store.setMode(mode);
-                        await _ensurePlan();
-                      },
-                      onStart: _start),
-                  1 => LibraryPage(onStart: _start),
-                  2 => NotebooksPage(onStart: _start),
-                  3 => StatisticsPage(onStart: _start),
-                  _ => ProfilePage(),
-                }),
+        body: GlassContentViewport(
+            enabled: store.glassEnabled,
+            child: ListenableBuilder(
+                listenable: store,
+                builder: (c, _) => switch (tab) {
+                      0 => TodayPage(
+                          plan: plan,
+                          onPlan: _today,
+                          onCustom: _custom,
+                          onResume: _resume,
+                          onModeChanged: (mode) async {
+                            await store.setMode(mode);
+                            await _ensurePlan();
+                          },
+                          onStart: _start),
+                      1 => LibraryPage(onStart: _start),
+                      2 => NotebooksPage(onStart: _start),
+                      3 => StatisticsPage(onStart: _start),
+                      _ => ProfilePage(),
+                    })),
         bottomNavigationBar: _navigation(),
       );
 

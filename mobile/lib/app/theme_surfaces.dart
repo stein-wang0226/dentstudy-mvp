@@ -1,13 +1,12 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'glass_refraction.dart';
 
-/// The blur is clipped to each visible surface, not the entire scrolling page.
+/// Clear surfaces with edge-only backdrop deformation, without a frosted layer.
 class StudySurface extends StatelessWidget {
   final Widget child;
   final bool glass;
   final Color tint, borderColor, color;
   final double radius;
-  final double blurSigma;
   final bool navigation;
   final EdgeInsetsGeometry padding;
   const StudySurface(
@@ -18,7 +17,6 @@ class StudySurface extends StatelessWidget {
       required this.borderColor,
       this.color = Colors.white,
       this.radius = 22,
-      this.blurSigma = 3,
       this.navigation = false,
       this.padding = const EdgeInsets.all(20)});
 
@@ -42,122 +40,72 @@ class StudySurface extends StatelessWidget {
             borderRadius: BorderRadius.circular(radius),
             boxShadow: [
               BoxShadow(
-                  color: const Color(0xFF26313D).withAlpha(18),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6)),
-              BoxShadow(color: tint.withAlpha(8), blurRadius: 24)
+                  color: tint.withAlpha(10),
+                  blurRadius: 12,
+                  offset: const Offset(0, 3))
             ]),
         child: ClipRRect(
             borderRadius: BorderRadius.circular(radius),
-            child: BackdropFilter(
-                filter:
-                    ui.ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-                child: CustomPaint(
-                    foregroundPainter: _GlassRim(radius),
-                    child: DecoratedBox(
-                        decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                stops: const [
-                              0,
-                              .48,
-                              1
-                            ],
-                                colors: [
-                              Colors.white.withAlpha(navigation ? 28 : 40),
-                              color.withAlpha(navigation ? 3 : 7),
-                              Colors.white.withAlpha(navigation ? 16 : 24)
-                            ])),
-                        child: content)))));
+            child: CustomPaint(
+                foregroundPainter:
+                    _GlassRim(radius, Theme.of(context).colorScheme.primary),
+                child: Stack(children: [
+                  Positioned.fill(child: GlassRefraction(radius: radius)),
+                  DecoratedBox(
+                      decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              stops: const [
+                            0,
+                            .48,
+                            1
+                          ],
+                              colors: [
+                            Colors.white.withAlpha(navigation ? 28 : 40),
+                            color.withAlpha(navigation ? 3 : 7),
+                            Colors.white.withAlpha(navigation ? 16 : 24)
+                          ])),
+                      child: content)
+                ]))));
   }
 }
 
-/// Edge-only optical highlights: the center stays clear. This approximates a
-/// curved lens visually; it does not claim physical refraction of page pixels.
+/// A hairline reflection, independent of the actual backdrop deformation.
 class _GlassRim extends CustomPainter {
   final double radius;
-  const _GlassRim(this.radius);
+  final Color accent;
+  const _GlassRim(this.radius, this.accent);
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = (Offset.zero & size).deflate(.75);
+    final rect = (Offset.zero & size).deflate(.35);
     if (radius == 0) {
-      // Full-width headers have a polished lower lip, not a white picture frame.
-      canvas.drawRect(
-          Rect.fromLTWH(0, size.height - 3, size.width, 3),
+      canvas.drawLine(
+          Offset(0, size.height - .35),
+          Offset(size.width, size.height - .35),
           Paint()
-            ..shader = const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0x00FFFFFF),
-                  Color(0xBFFFFFFF),
-                  Color(0x1826313D)
-                ]).createShader(
-                Rect.fromLTWH(0, size.height - 3, size.width, 3)));
+            ..strokeWidth = .7
+            ..color = accent.withAlpha(40));
       return;
-    }
-    final lens = rect.deflate(3);
-    if (lens.width > 0 && lens.height > 0) {
-      canvas.drawRRect(
-          RRect.fromRectAndRadius(
-              lens, Radius.circular((radius - 3).clamp(0, radius))),
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 6
-            ..shader = const SweepGradient(center: Alignment.center, colors: [
-              Color(0x08FFFFFF),
-              Color(0x7FFFFFFF),
-              Color(0x1526313D),
-              Color(0x00FFFFFF),
-              Color(0xA6FFFFFF),
-              Color(0x304BC6CE),
-              Color(0x08FFFFFF)
-            ], stops: [
-              0,
-              .16,
-              .3,
-              .45,
-              .64,
-              .82,
-              1
-            ]).createShader(rect));
     }
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
+      ..strokeWidth = .7
       ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.white.withAlpha(250),
-            Colors.white.withAlpha(20),
-            Colors.white.withAlpha(210)
+            Colors.white.withAlpha(175),
+            accent.withAlpha(65),
+            Colors.white.withAlpha(120)
           ]).createShader(rect);
     canvas.drawRRect(
         RRect.fromRectAndRadius(rect, Radius.circular(radius)), paint);
-    // A second, inset edge gives the rim thickness without tinting the content.
-    final inner = rect.deflate(1.5);
-    if (inner.width > 0 && inner.height > 0) {
-      canvas.drawRRect(
-          RRect.fromRectAndRadius(
-              inner, Radius.circular((radius - 1.5).clamp(0, radius))),
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1
-            ..shader = LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white.withAlpha(100),
-                  const Color(0xFF26313D).withAlpha(38),
-                  Colors.white.withAlpha(190)
-                ]).createShader(inner));
-    }
   }
 
   @override
-  bool shouldRepaint(_GlassRim oldDelegate) => oldDelegate.radius != radius;
+  bool shouldRepaint(_GlassRim oldDelegate) =>
+      oldDelegate.radius != radius || oldDelegate.accent != accent;
 }
 
 class StudyBackdrop extends StatelessWidget {
@@ -196,7 +144,7 @@ class _GlassBackdrop extends CustomPainter {
           ..shader = RadialGradient(
                   center: const Alignment(-.9, -.85),
                   radius: 1.25,
-                  colors: [tint.withAlpha(110), tint.withAlpha(0)])
+                  colors: [tint.withAlpha(32), tint.withAlpha(0)])
               .createShader(rect));
     canvas.drawRect(
         rect,
@@ -204,7 +152,7 @@ class _GlassBackdrop extends CustomPainter {
           ..shader = RadialGradient(
                   center: const Alignment(1, .8),
                   radius: 1.1,
-                  colors: [tint.withAlpha(90), tint.withAlpha(0)])
+                  colors: [tint.withAlpha(24), tint.withAlpha(0)])
               .createShader(rect));
     final w = size.width, h = size.height;
     final ribbon = Path()
@@ -220,10 +168,10 @@ class _GlassBackdrop extends CustomPainter {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Colors.white.withAlpha(175),
-                Colors.white.withAlpha(45),
-                tint.withAlpha(40),
-                Colors.white.withAlpha(155)
+                Colors.white.withAlpha(110),
+                Colors.white.withAlpha(30),
+                tint.withAlpha(8),
+                Colors.white.withAlpha(95)
               ],
               stops: const [
                 0,
@@ -238,14 +186,14 @@ class _GlassBackdrop extends CustomPainter {
         glint,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5
+          ..strokeWidth = .75
           ..shader = LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.white.withAlpha(150),
+                Colors.white.withAlpha(100),
                 Colors.white.withAlpha(0),
-                Colors.white.withAlpha(115)
+                Colors.white.withAlpha(75)
               ]).createShader(rect));
   }
 
@@ -266,7 +214,6 @@ class FrostedChrome extends StatelessWidget {
           tint: Colors.transparent,
           borderColor: Colors.transparent,
           radius: radius,
-          blurSigma: 5,
           navigation: true,
           padding: EdgeInsets.zero,
           child: child)

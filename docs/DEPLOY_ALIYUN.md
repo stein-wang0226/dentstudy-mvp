@@ -5,9 +5,9 @@
 实际服务器使用宿主机 Nginx + `dentstudy.service`，不是下面的 Docker 方案。
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
-- 客户端版本：`0.2.20`（低磨砂通透玻璃、曲面背景光带）；综合题库仍为 3650 道，本次未修改题目或学习数据。
+- 客户端版本：`0.2.21`（零磨砂、边缘背景取样变形、细主题描边与更淡背景）；综合题库仍为 3650 道，本次未修改题目或学习数据。
 - 后端：`/opt/dentstudy-current` 指向 `/opt/dentstudy-releases/20261015-open-practice-v0218`；仅替换综合题库，Python 服务代码未修改。
-- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261016-clear-glass-v0220`。
+- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261016-edge-lens-v0221`。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
 - 用户投稿：`/var/lib/dentstudy/question-bank-submissions/`，仅服务端进程可读写，不能映射到 Nginx 静态目录；备份时须与 SQLite 一起保留。
 - 旧代码 `/opt/dentstudy`、旧网页 `/var/www/dentstudy` 均保留。
@@ -20,7 +20,7 @@
 `deploy/dentstudy-certbot.service` 和 `deploy/dentstudy-certbot.timer`。
 构建 Web 时使用 `--no-web-resources-cdn --dart-define=API_URL=/api`
 及 `--dart-define=QUESTION_BANK_ASSET=assets/all_questions.json`。
-发布时同时传入 `--dart-define=APP_VERSION=0.2.20` 和
+发布时同时传入 `--dart-define=APP_VERSION=0.2.21` 和
 `--dart-define=BUILD_TIME=实际北京时间`，在“我的”显示版本与更新时间。
 当前 GitHub workflow 只做检查，不会自动部署；代码推送后仍需单独构建和上传。
 
@@ -28,7 +28,15 @@
 Flutter Web 构建时随根目录静态资源发布。HTTP 和 HTTPS 的同名路径均需直接返回 200 和原始 TXT 内容；
 HTTP 仅此验证文件与证书验证路径不跳转，其余页面仍强制 HTTPS。不要误删验证文件。
 
-0.2.20 验收：我的 → 主题与外观 → 开启“玻璃质感”。卡片 blur sigma 从 18 降至 3，导航从 24 降至 5；白色渐变遮罩大幅降低，中心仅约 1%–3% 覆盖。
+0.2.21 验收：开启玻璃，卡片与上下栏不再使用 Gaussian blur；撤去固定青色高光、黑色暗边和 6px 厚亮弧，仅保留 0.7px 细反光线，取当前主题主色并随主题重绘。
+新增 `glass_refraction.dart`，在 4px 窄边缘使用 [Flutter ImageFilter.matrix](https://api.flutter.dev/flutter/dart-ui/ImageFilter/ImageFilter.matrix.html) 放大背景取样，外缘约 3px 位移，中间区域及前景文字不变。是实际背景像素的局部变形，但不是连续曲率的物理液体模拟，也没有添加 Impeller 专用 shader 或大型依赖。
+背景两处色彩光晕 alpha 从 110/90 降到 32/24，光带色彩 alpha 从 40 降到 8，仍只使用独立背景色。导航附近正文使用不创建离屏透明层的裁剪，避免零模糊后的文字重叠，同时保留边缘对真实背景的取样；未使用会阻断取样的 ShaderMask。
+检查：38 项客户端测试、33 项后端测试、Chrome 8 项外观/交互测试通过；棋盘像素测试验证组合裁剪下边缘真实变化、中央逐像素不变；主题画笔重绘与背景色独立性测试通过。手机/桌面预览及构建检查完成。
+手动路径：我的 → 玻璃质感，切换青绿/紫色确认细边更新；独立背景色选玫瑰确认淡背景不被主色污染；滚动今日和题库确认无正文叠在导航标签上；关闭玻璃恢复实色。
+风险：低对比背景上的边缘变形更细微，不承诺复刻 Apple 系统级液态玻璃；旧浏览器与低性能设备需真机观察，可关闭效果。
+仅发布前端；回退为 `20261016-clear-glass-v0220`，不回滚数据库。
+
+0.2.20 历史验收：我的 → 主题与外观 → 开启“玻璃质感”。卡片 blur sigma 从 18 降至 3，导航从 24 降至 5；白色渐变遮罩大幅降低，中心仅约 1%–3% 覆盖。
 卡片边缘增加局部亮弧、暗边与轻微色散高光，顶部改为下沿亮边；背景增加静态曲面光带，透过卡片可见，不增加全屏模糊或持续动画。
 这是折光风格的绘制效果，不是对实际页面像素进行物理折射；文字不扭曲。背景只由用户选择的背景色决定，主色改变不污染背景。
 手机与桌面组件渲染预览已检查；静态检查、36 项客户端测试、33 项后端测试、Chrome 6 项外观/交互测试通过（资产重启测试只在原生执行）。
