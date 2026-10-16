@@ -5,8 +5,8 @@
 实际服务器使用宿主机 Nginx + `dentstudy.service`，不是下面的 Docker 方案。
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
-- 客户端版本：`0.2.31`（修复 Safari 导入题库的本机存储配额问题，并缩短 Word/TXT 弹窗）；综合题库仍为 3650 道，本次未修改题目或学习数据。
-- 后端：`/opt/dentstudy-current` 指向 `/opt/dentstudy-releases/20261015-open-practice-v0218`；仅替换综合题库，Python 服务代码未修改。
+- 客户端版本：`0.2.32`（作者可私密下载投稿 JSON；自导入题库的作答事件不再被服务器误判为不存在题目）；综合题库仍为 3650 道，本次未修改题目或学习数据。
+- 后端：`/opt/dentstudy-current` 指向本次发布目录；只为作者下载投稿增加受认证保护的读取接口，未修改既有同步契约。
 - 前端：`/var/www/dentstudy-current` 指向本次发布目录；发布后将旧目录保留以便无损回退。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
 - 用户投稿：`/var/lib/dentstudy/question-bank-submissions/`，仅服务端进程可读写，不能映射到 Nginx 静态目录；备份时须与 SQLite 一起保留。
@@ -20,13 +20,15 @@
 `deploy/dentstudy-certbot.service` 和 `deploy/dentstudy-certbot.timer`。
 构建 Web 时使用 `--no-web-resources-cdn --dart-define=API_URL=/api`
 及 `--dart-define=QUESTION_BANK_ASSET=assets/all_questions.json`。
-发布时同时传入 `--dart-define=APP_VERSION=0.2.31` 和
+发布时同时传入 `--dart-define=APP_VERSION=0.2.32` 和
 `--dart-define=BUILD_TIME=实际北京时间`，在“我的”显示版本与更新时间。
 当前 GitHub workflow 只做检查，不会自动部署；代码推送后仍需单独构建和上传。
 
 微信网站所有权验证文件保存在 `mobile/web/b1f6d159694b4f3909e0affdfcfefd6e.txt`，
 Flutter Web 构建时随根目录静态资源发布。HTTP 和 HTTPS 的同名路径均需直接返回 200 和原始 TXT 内容；
 HTTP 仅此验证文件与证书验证路径不跳转，其余页面仍强制 HTTPS。不要误删验证文件。
+
+0.2.32 验收：作者账号 → 我的 → 作者管理 → 题库投稿箱，每份投稿均可点“下载 JSON”，浏览器将原始文件保存至本地；普通账号无入口且请求会被服务端拒绝，投稿目录不暴露为静态文件。用户自行导入题库后完成练习再返回今日，不再出现“题目不存在”：这类事件只保存本机，历史遗留的待同步本地事件会自动从上传队列清除；官方题库事件仍照常同步，题目 ID、排期和同步协议不变。测试：静态检查、49 项客户端测试、33 项后端测试通过；未修改题库内容、既有学习记录或数据库结构。
 
 0.2.31 验收：Safari 或其他网页端重开应用后，旧的 `bank` 全题库缓存会自动释放；内置 3650 题改由已发布的离线资源加载，本地偏好、学习记录和账号数据不删除。仅用户导入的题库与服务端差异题写入浏览器存储，因此小型 Word/TXT 测试题库不再触发 `QuotaExceededError`。Word/TXT 初始弹窗仅保留简短说明和两个可点击入口；详细文件要求保留在“导入题库”主卡的可展开行。测试：静态检查、49 项客户端测试通过；仅发布前端，题库内容、学习记录、后端和同步协议未修改。
 

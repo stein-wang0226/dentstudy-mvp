@@ -64,5 +64,14 @@ void main() {
     expect((localImport['questions'] as List), hasLength(1));
     expect(app.store.prefs.getString('bank'), isNull,
         reason: 'the full bundled bank must never consume browser storage');
+
+    await app.store.add(question['id'] as String, 'review', {
+      'answer': 'A',
+      'grade': 'mastered',
+      'mode': 'practice',
+    });
+    expect(app.store.events, hasLength(1));
+    expect(app.store.pending, isEmpty,
+        reason: 'personal imports are not present in the server question bank');
   });
 }

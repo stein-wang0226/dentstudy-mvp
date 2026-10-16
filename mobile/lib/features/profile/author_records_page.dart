@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../app/shared.dart';
+import 'download_file.dart';
 import 'user_avatar.dart';
 
 enum AuthorRecordKind { users, submissions }
@@ -16,6 +17,7 @@ class _AuthorRecordsPageState extends State<AuthorRecordsPage> {
   List<Map<String, dynamic>> records = [];
   int? total;
   bool loading = false;
+  final Set<String> downloadingSubmissions = <String>{};
   String? error;
   bool get isUsers => widget.kind == AuthorRecordKind.users;
   String get title => isUsers ? '用户目录' : '题库投稿箱';
@@ -66,6 +68,28 @@ class _AuthorRecordsPageState extends State<AuthorRecordsPage> {
       ? '${(value / 1024).toStringAsFixed(0)} KB'
       : '${(value / 1024 / 1024).toStringAsFixed(1)} MB';
 
+  Future<void> downloadSubmission(Map<String, dynamic> item) async {
+    final id = item['id'] as String? ?? '';
+    if (id.isEmpty || downloadingSubmissions.contains(id)) return;
+    setState(() => downloadingSubmissions.add(id));
+    try {
+      final result = await store.downloadQuestionBankSubmission(id);
+      final content = result['content'];
+      final filename = result['filename'];
+      if (content is! String || filename is! String) {
+        throw Exception('投稿文件格式异常');
+      }
+      downloadJsonFile(content: content, filename: filename);
+      if (mounted) message(context, '已开始下载 $filename');
+    } catch (exception) {
+      if (mounted) {
+        message(context, exception.toString().replaceFirst('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) setState(() => downloadingSubmissions.remove(id));
+    }
+  }
+
   Widget record(Map<String, dynamic> item) => box(isUsers
       ? ListTile(
           contentPadding: EdgeInsets.zero,
@@ -91,7 +115,23 @@ class _AuthorRecordsPageState extends State<AuthorRecordsPage> {
               '${item['question_count']} 题 · ${bytes(item['content_bytes'] as int)}',
               style: TextStyle(color: teal)),
           Text(time(item['submitted_at'] as String),
-              style: const TextStyle(fontSize: 12, color: Colors.blueGrey))
+              style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
+          const SizedBox(height: 10),
+          Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                  onPressed: downloadingSubmissions.contains(item['id'])
+                      ? null
+                      : () => downloadSubmission(item),
+                  icon: downloadingSubmissions.contains(item['id'])
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.download_outlined),
+                  label: Text(downloadingSubmissions.contains(item['id'])
+                      ? '正在准备…'
+                      : '下载 JSON')))
         ]));
 
   @override

@@ -175,6 +175,12 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(status,200)
         self.assertTrue(inbox['isAdmin'])
         self.assertEqual(inbox['submissions'][0]['email'],'contributor@test.local')
+        download_path='/v1/admin/question-bank-submissions/'+submission['id']
+        status,download=self.request(download_path,token=author)
+        self.assertEqual(status,200)
+        self.assertEqual(download['filename'],'牙周整理.json')
+        self.assertEqual(json.loads(download['content']),bank)
+        self.assertEqual(self.request(download_path,token=contributor)[0],401)
         self.assertEqual(self.request('/v1/question-bank-submissions',
                                       {'filename':'bad.json','content':'{}'},contributor)[0],400)
 

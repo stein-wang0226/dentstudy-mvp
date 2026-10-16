@@ -72,6 +72,8 @@ class StudyStore extends ChangeNotifier {
       prepared.questions.isNotEmpty &&
       prepared.questions
           .every((question) => importedQuestionIds.contains(question.id));
+  bool isLocalOnlyQuestionId(Object? questionId) =>
+      questionId is String && importedQuestionIds.contains(questionId);
   String get _importedQuestionIdsKey => 'importedQuestionIds:$userId';
   String get _lastImportedBankNameKey => 'lastImportedBankName:$userId';
   String get _importedQuestionBankKey => 'importedQuestionBank:$userId';
@@ -429,7 +431,10 @@ class StudyStore extends ChangeNotifier {
         'at': DateTime.now().toUtc().toIso8601String(),
         ...addition,
       });
-      pending.add(id);
+      // Personal imports intentionally stay on this device. Their IDs are not
+      // in the server's reviewed bank, so sending them to /sync would reject
+      // an otherwise valid session with “题目不存在”.
+      if (!isLocalOnlyQuestionId(addition['questionId'])) pending.add(id);
       final localSession = drafts[activeSessionId] ??
           sessions.where((s) => s['id'] == activeSessionId).firstOrNull;
       if (addition['kind'] == 'review' && localSession != null) {
@@ -530,6 +535,15 @@ class StudyStore extends ChangeNotifier {
     syncing = true;
     notifyListeners();
     try {
+      // Remove entries made by older builds before personal imports were
+      // marked local-only. The events remain in the local learning history.
+      final localOnlyEventIds = events
+          .where((event) => isLocalOnlyQuestionId(event['questionId']))
+          .map((event) => event['id'] as String)
+          .toSet();
+      if (localOnlyEventIds.isNotEmpty) {
+        pending.removeWhere(localOnlyEventIds.contains);
+      }
       do {
         final ids = pending.take(500).toSet();
         final result = await request('/v1/sync', {
@@ -666,6 +680,15 @@ class StudyStore extends ChangeNotifier {
   Future<Map<String, dynamic>> questionBankSubmissions() async {
     if (token.isEmpty) throw Exception('请先登录');
     return request('/v1/question-bank-submissions');
+  }
+
+  Future<Map<String, dynamic>> downloadQuestionBankSubmission(
+      String submissionId) async {
+    if (!RegExp(r'^[A-Za-z0-9_-]{16,100}$').hasMatch(submissionId)) {
+      throw Exception('投稿编号无效');
+    }
+    return request('/v1/admin/question-bank-submissions/$submissionId', null,
+        const Duration(seconds: 60));
   }
 
   Future<Map<String, dynamic>> profile() async {

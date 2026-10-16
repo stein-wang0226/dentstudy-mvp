@@ -13,6 +13,7 @@ API 默认 `http://127.0.0.1:8787`，JSON UTF-8。私有接口使用 `Authorizat
 | GET | `/v1/state` | 返回当前账号快照 |
 | POST | `/v1/question-bank-submissions` | 登录后提交 `{filename,content}`；仅 `.json`，原文件最大 12 MB |
 | GET | `/v1/question-bank-submissions` | 登录后查看自己的投稿；配置的作者账号可查看全部投稿元数据 |
+| GET | `/v1/admin/question-bank-submissions/{id}` | 仅作者可下载一份投稿的原始 JSON；响应不缓存且不会经静态目录公开 |
 | GET / POST | `/v1/profile` | 当前账号资料；保存 `{nickname,avatar,university}`。头像兼容预设键或客户端裁剪的 PNG data URI（512 KB、512 像素以内） |
 | GET | `/v1/questions/{id}/comments` | 返回 `comments`、去重后的 `participantCount` 和 `totalCount`；携带登录 token 时附带每条评论的 `myVote` |
 | POST | `/v1/questions/{id}/comments` | `{body,parentId?}`；登录后评论或回复，回复限定同一题目 |
@@ -57,7 +58,9 @@ API 默认 `http://127.0.0.1:8787`，JSON UTF-8。私有接口使用 `Authorizat
 
 常规请求体限制 2 MB；题库投稿允许原文件最大 12 MB（为容纳 JSON 传输封装，请求上限 16 MB）。无认证返回 401，校验失败 400。同步批次原子提交，一条无效则整个批次回滚。不同账号的事件使用复合主键隔离。
 
-题库投稿先在客户端本地校验、合并至该设备的离线题库；登录后才会把原始 JSON 副本提交至服务端。服务端再次执行 `backend/bank.py validate` 校验，保存到 `DENTSTUDY_SUBMISSIONS` 指向的私有目录，不经 Nginx 对外提供。投稿文件只用于人工审核，用户须确保拥有分享权限，不得上传个人隐私、受限或来源不明的内容。`DENTSTUDY_ADMIN_EMAIL` 对应的账号可在客户端投稿箱查看文件名、题数、大小、时间及投稿邮箱。
+题库投稿先在客户端本地校验、合并至该设备的离线题库；登录后才会把原始 JSON 副本提交至服务端。服务端再次执行 `backend/bank.py validate` 校验，保存到 `DENTSTUDY_SUBMISSIONS` 指向的私有目录，不经 Nginx 对外提供。投稿文件只用于人工审核，用户须确保拥有分享权限，不得上传个人隐私、受限或来源不明的内容。`DENTSTUDY_ADMIN_EMAIL` 对应的账号可在客户端投稿箱查看文件名、题数、大小、时间及投稿邮箱，并可通过仅作者可用的下载接口将原始 JSON 保存到本地；下载响应为 `no-store`，不会生成公开链接。
+
+用户自行导入的题库题目 ID 不属于服务端的官方题库。此类题目的作答、收藏、笔记等事件仅保留在该设备本地，不会进入 `/v1/sync`；这样既能正常练习，也不会被服务端按不存在的题目 ID 拒绝。官方题库题目的同步、事件 ID 与排期契约不变。
 
 题目 JSON 模板见 `mobile/assets/questions.json`。主要字段：
 

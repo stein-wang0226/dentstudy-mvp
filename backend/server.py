@@ -222,6 +222,24 @@ class Handler(BaseHTTPRequestHandler):
                     ORDER BY submitted_at DESC''', (uid,))
         return {'isAdmin': admin, 'submissions': [dict(row) for row in rows]}
 
+    def admin_submission_download(self, db, uid, submission_id):
+        if not self.is_admin(db, uid):
+            raise PermissionError('仅作者账号可下载投稿文件')
+        if not re.fullmatch(r'[A-Za-z0-9_-]{16,100}', submission_id):
+            raise ValueError('投稿编号无效')
+        row = db.execute('''SELECT filename FROM question_bank_submissions
+                WHERE id=?''', (submission_id,)).fetchone()
+        if row is None:
+            raise ValueError('投稿不存在')
+        source = SUBMISSIONS / f'{submission_id}.json'
+        try:
+            content = source.read_text(encoding='utf-8')
+        except FileNotFoundError:
+            raise ValueError('投稿原文件暂不可用')
+        # The response stays authenticated, private and no-store. The client
+        # turns it into a local download only after this author check passes.
+        return {'filename': row['filename'], 'content': content}
+
     def profile(self, db, uid):
         row = db.execute('''SELECT nickname,avatar,university,updated_at
                 FROM profiles WHERE user_id=?''', (uid,)).fetchone()
@@ -468,6 +486,13 @@ class Handler(BaseHTTPRequestHandler):
                 with connect() as db:
                     uid = self.user(db)
                     return self.respond(200, self.admin_users(db, uid))
+            download_prefix = '/v1/admin/question-bank-submissions/'
+            if path.startswith(download_prefix):
+                submission_id = path[len(download_prefix):]
+                with connect() as db:
+                    uid = self.user(db)
+                    return self.respond(
+                        200, self.admin_submission_download(db, uid, submission_id))
             if path == '/v1/admin/comments':
                 offset = int(parse_qs(urlparse(self.path).query).get('offset', ['0'])[0])
                 if offset < 0:
