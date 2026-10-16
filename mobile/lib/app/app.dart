@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'shared.dart';
 import 'entrance.dart';
 import 'theme_surfaces.dart';
@@ -45,7 +44,10 @@ class DentStudy extends StatelessWidget {
                   TargetPlatform.macOS: StudyPageTransitions(),
                   TargetPlatform.windows: StudyPageTransitions(),
                   TargetPlatform.linux: StudyPageTransitions(),
-                  TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+                  // Keep one compatible transition implementation across the
+                  // project's supported Flutter 3.35+ range. The previous
+                  // Cupertino builder name is unavailable in 3.35 CI.
+                  TargetPlatform.iOS: StudyPageTransitions(),
                 }),
                 useMaterial3: true,
                 fontFamily: 'DentStudySans',
