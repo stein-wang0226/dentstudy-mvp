@@ -474,8 +474,7 @@ void _showContactAuthor(BuildContext context) => showModalBottomSheet<void>(
                       onPressed: () {
                         Navigator.of(sheetContext).pop();
                         Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => const PolicyDetailPage(
-                                topic: PolicyTopic.copyright)));
+                            builder: (_) => const PolicyPage()));
                       },
                       icon: const Icon(Icons.copyright_outlined),
                       label: const Text('版权投诉与数据删除')),

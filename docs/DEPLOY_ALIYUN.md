@@ -5,9 +5,9 @@
 实际服务器使用宿主机 Nginx + `dentstudy.service`，不是下面的 Docker 方案。
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
-- 客户端版本：`0.2.27`（新增低打扰的服务与规则入口、版权投诉和数据删除邮件模板）；综合题库仍为 3650 道，本次未修改题目或学习数据。
+- 客户端版本：`0.2.28`（新增低打扰的服务与规则入口、版权投诉和数据删除邮件模板）；综合题库仍为 3650 道，本次未修改题目或学习数据。
 - 后端：`/opt/dentstudy-current` 指向 `/opt/dentstudy-releases/20261015-open-practice-v0218`；仅替换综合题库，Python 服务代码未修改。
-- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261016-policy-rules-v0227`。
+- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261016-policy-rules-v0228`。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
 - 用户投稿：`/var/lib/dentstudy/question-bank-submissions/`，仅服务端进程可读写，不能映射到 Nginx 静态目录；备份时须与 SQLite 一起保留。
 - 旧代码 `/opt/dentstudy`、旧网页 `/var/www/dentstudy` 均保留。
@@ -20,7 +20,7 @@
 `deploy/dentstudy-certbot.service` 和 `deploy/dentstudy-certbot.timer`。
 构建 Web 时使用 `--no-web-resources-cdn --dart-define=API_URL=/api`
 及 `--dart-define=QUESTION_BANK_ASSET=assets/all_questions.json`。
-发布时同时传入 `--dart-define=APP_VERSION=0.2.27` 和
+发布时同时传入 `--dart-define=APP_VERSION=0.2.28` 和
 `--dart-define=BUILD_TIME=实际北京时间`，在“我的”显示版本与更新时间。
 当前 GitHub workflow 只做检查，不会自动部署；代码推送后仍需单独构建和上传。
 
@@ -28,7 +28,7 @@
 Flutter Web 构建时随根目录静态资源发布。HTTP 和 HTTPS 的同名路径均需直接返回 200 和原始 TXT 内容；
 HTTP 仅此验证文件与证书验证路径不跳转，其余页面仍强制 HTTPS。不要误删验证文件。
 
-0.2.27 验收：我的 → 服务与规则，可查看用户协议、隐私说明、版权投诉、投稿规则和数据删除申请；联系作者弹窗也可直达版权投诉。首页、题库、刷题和玻璃外观均不新增入口或干扰元素。投诉和删除申请会复制邮件模板，不会自动删除任何账号或学习数据。
+0.2.28 验收：我的 → 服务与规则，可查看用户协议、隐私说明、版权投诉、投稿规则和数据删除申请；联系作者弹窗也可直达同一规则页。首页、题库、刷题和玻璃外观均不新增入口或干扰元素。投诉和删除申请会复制邮件模板，不会自动删除任何账号或学习数据。
 测试：静态检查、43 项客户端测试和 Web release 构建通过；仅发布前端，题库、学习记录、后端和同步协议未修改。
 
 0.2.25 验收：我的 → 主题与外观 → 开启玻璃质感；今日卡片和上下栏恢复清澈透底，再切换主色确认反光与投影颜色跟随。撤销古铜覆盖、全部整面白色渐变和背景 Gaussian blur，无黑色/主题色环形暗带；中心和圆肩都是实际背景取样，文字保持原样。
