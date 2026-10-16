@@ -98,6 +98,7 @@ class TodayPage extends StatelessWidget {
             width: double.infinity,
             child: PressFeedback(
                 child: FilledButton.icon(
+                    key: const ValueKey('today-plan-action'),
                     onPressed: plan.total == 0 && !hasPlanDraft ? null : onPlan,
                     icon: const Icon(Icons.play_arrow_rounded),
                     label: Text(hasPlanDraft || plan.completed > 0

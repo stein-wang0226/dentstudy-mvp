@@ -136,8 +136,9 @@ void main() {
     await prepare();
     await tester.pumpWidget(const MaterialApp(home: Home()));
     await tester.pumpAndSettle();
-    final button = tester
-        .widget<FilledButton>(find.widgetWithText(FilledButton, '开始今日计划'));
+    final button = tester.widget<FilledButton>(
+      find.byKey(const ValueKey('today-plan-action')),
+    );
     button.onPressed!();
     button.onPressed!();
     await tester.pumpAndSettle();
