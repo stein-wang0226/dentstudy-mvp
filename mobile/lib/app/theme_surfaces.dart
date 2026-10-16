@@ -51,6 +51,11 @@ class StudySurface extends StatelessWidget {
                     _GlassRim(radius, Theme.of(context).colorScheme.primary),
                 child: Stack(children: [
                   Positioned.fill(child: GlassRefraction(radius: radius)),
+                  // A neutral, light smoke tint adds depth without darkening
+                  // foreground content or changing the user's background hue.
+                  Positioned.fill(
+                      child: ColoredBox(
+                          color: Colors.black.withAlpha(navigation ? 9 : 7))),
                   DecoratedBox(
                       decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -62,9 +67,9 @@ class StudySurface extends StatelessWidget {
                             1
                           ],
                               colors: [
-                            Colors.white.withAlpha(navigation ? 28 : 40),
+                            Colors.white.withAlpha(navigation ? 20 : 26),
                             color.withAlpha(navigation ? 3 : 7),
-                            Colors.white.withAlpha(navigation ? 16 : 24)
+                            Colors.white.withAlpha(navigation ? 9 : 14)
                           ])),
                       child: content)
                 ]))));

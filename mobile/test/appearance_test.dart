@@ -242,7 +242,7 @@ void main() {
                 borderColor: Colors.grey,
                 child: const Text('今日计划'))));
     await tester.pumpWidget(surface(true));
-    expect(find.byType(BackdropFilter), findsOneWidget);
+    expect(find.byType(BackdropFilter), findsNWidgets(2));
     expect(find.byType(ClipRRect), findsOneWidget);
     await tester.pumpWidget(surface(false));
     expect(find.byType(BackdropFilter), findsNothing);
@@ -257,9 +257,13 @@ void main() {
                 enabled: true,
                 radius: 30,
                 child: SizedBox(height: 72, child: Text('透明导航'))))));
-    final filter = tester.widget<BackdropFilter>(find.byType(BackdropFilter));
-    expect(filter.filter.toString(), contains('matrix'));
-    expect(filter.filter.toString(), isNot(contains('blur')));
+    final filters =
+        tester.widgetList<BackdropFilter>(find.byType(BackdropFilter));
+    expect(filters, hasLength(2));
+    for (final filter in filters) {
+      expect(filter.filter.toString(), contains('matrix'));
+      expect(filter.filter.toString(), isNot(contains('blur')));
+    }
     final gradients = tester
         .widgetList<DecoratedBox>(find.byType(DecoratedBox))
         .map((box) => box.decoration)
@@ -275,32 +279,43 @@ void main() {
   testWidgets('lens changes real edge pixels while leaving the center intact',
       (tester) async {
     final key = GlobalKey();
-    Future<List<int>> capture(bool lens) async {
+    Future<List<int>> capture(bool lens,
+        {bool striped = true, Offset position = Offset.zero}) async {
       await tester.pumpWidget(Directionality(
           textDirection: TextDirection.ltr,
           child: Center(
               child: RepaintBoundary(
                   key: key,
                   child: SizedBox(
-                      width: 240,
-                      height: 140,
+                      width: 420,
+                      height: 360,
                       child: Stack(children: [
-                        for (var i = 0; i < 60; i++)
-                          Positioned(
-                              left: i * 4,
-                              top: 0,
-                              bottom: 0,
-                              width: 4,
-                              child: ColoredBox(
-                                  color:
-                                      i.isEven ? Colors.white : Colors.black)),
-                        if (lens)
-                          const Positioned.fill(
-                              child: MediaQuery(
-                                  data: MediaQueryData(),
-                                child: GlassContentViewport(
-                                      enabled: true,
-                                      child: GlassRefraction(radius: 24)))),
+                        Positioned(
+                            left: position.dx,
+                            top: position.dy,
+                            child: SizedBox(
+                                width: 240,
+                                height: 140,
+                                child: Stack(children: [
+                                  for (var i = 0; i < 60; i++)
+                                    Positioned(
+                                        left: i * 4,
+                                        top: 0,
+                                        bottom: 0,
+                                        width: 4,
+                                        child: ColoredBox(
+                                            color: !striped || i.isEven
+                                                ? Colors.white
+                                                : Colors.black)),
+                                  if (lens)
+                                    const Positioned.fill(
+                                        child: MediaQuery(
+                                            data: MediaQueryData(),
+                                            child: GlassContentViewport(
+                                                enabled: true,
+                                                child: GlassRefraction(
+                                                    radius: 24)))),
+                                ])))
                       ]))))));
       await tester.pumpAndSettle();
       return (await tester.runAsync(() async {
@@ -309,18 +324,35 @@ void main() {
         final image = await boundary.toImage();
         final bytes =
             (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
-        final result = List<int>.from(bytes.buffer.asUint8List());
+        final pixels = bytes.buffer.asUint8List();
+        final result = <int>[];
+        for (var y = 0; y < 140; y++) {
+          final start =
+              ((y + position.dy.toInt()) * image.width + position.dx.toInt()) *
+                  4;
+          result.addAll(pixels.sublist(start, start + 240 * 4));
+        }
         image.dispose();
         return result;
       }))!;
     }
 
     final plain = await capture(false), refracted = await capture(true);
+    final shifted = await capture(true, position: const Offset(90, 160));
+    // Refraction must depend on the surface's local position, not page origin.
+    expect(shifted, orderedEquals(refracted));
     var changedEdgePixels = 0;
+    var changedInnerPixels = 0;
     for (var y = 30; y < 110; y++) {
       for (var x = 0; x < 4; x++) {
         final offset = (y * 240 + x) * 4;
         if ((plain[offset] - refracted[offset]).abs() > 15) changedEdgePixels++;
+      }
+      for (var x = 5; x < 10; x++) {
+        final offset = (y * 240 + x) * 4;
+        if ((plain[offset] - refracted[offset]).abs() > 25) {
+          changedInnerPixels++;
+        }
       }
       for (var x = 20; x < 220; x++) {
         final offset = (y * 240 + x) * 4;
@@ -328,9 +360,24 @@ void main() {
       }
     }
     expect(changedEdgePixels, greaterThan(80));
+    expect(changedInnerPixels, greaterThan(80));
+    final smoke = await capture(true, striped: false);
+    int red(int x) => smoke[(70 * 240 + x) * 4];
+    expect(red(2), inInclusiveRange(247, 251));
+    expect(red(7), greaterThan(red(2)));
+    expect(red(7), lessThan(255));
+    expect(red(120), 255);
     final clip = const GlassEdgeClipper(24).getClip(const Size(240, 140));
     expect(clip.contains(const Offset(120, 70)), isFalse);
     expect(clip.contains(const Offset(1, 70)), isTrue);
+    expect(clip.contains(const Offset(8, 70)), isTrue);
+    final outer =
+        const GlassEdgeClipper(24, width: 5).getClip(const Size(240, 140));
+    final inner = const GlassEdgeClipper(24, inset: 5, width: 5)
+        .getClip(const Size(240, 140));
+    expect(outer.contains(const Offset(7, 70)), isFalse);
+    expect(inner.contains(const Offset(7, 70)), isTrue);
+    expect(inner.contains(const Offset(2, 70)), isFalse);
     expect(tester.takeException(), isNull);
   });
 

@@ -5,9 +5,9 @@
 实际服务器使用宿主机 Nginx + `dentstudy.service`，不是下面的 Docker 方案。
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
-- 客户端版本：`0.2.22`（今日计划三模式选择与轻量交互动画）；综合题库仍为 3650 道，本次未修改题目或学习数据。
+- 客户端版本：`0.2.23`（加强局部玻璃折射与轻烟色透光）；综合题库仍为 3650 道，本次未修改题目或学习数据。
 - 后端：`/opt/dentstudy-current` 指向 `/opt/dentstudy-releases/20261015-open-practice-v0218`；仅替换综合题库，Python 服务代码未修改。
-- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261016-study-motion-v0222`。
+- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261016-smoked-lens-v0223`。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
 - 用户投稿：`/var/lib/dentstudy/question-bank-submissions/`，仅服务端进程可读写，不能映射到 Nginx 静态目录；备份时须与 SQLite 一起保留。
 - 旧代码 `/opt/dentstudy`、旧网页 `/var/www/dentstudy` 均保留。
@@ -20,7 +20,7 @@
 `deploy/dentstudy-certbot.service` 和 `deploy/dentstudy-certbot.timer`。
 构建 Web 时使用 `--no-web-resources-cdn --dart-define=API_URL=/api`
 及 `--dart-define=QUESTION_BANK_ASSET=assets/all_questions.json`。
-发布时同时传入 `--dart-define=APP_VERSION=0.2.22` 和
+发布时同时传入 `--dart-define=APP_VERSION=0.2.23` 和
 `--dart-define=BUILD_TIME=实际北京时间`，在“我的”显示版本与更新时间。
 当前 GitHub workflow 只做检查，不会自动部署；代码推送后仍需单独构建和上传。
 
@@ -28,7 +28,14 @@
 Flutter Web 构建时随根目录静态资源发布。HTTP 和 HTTPS 的同名路径均需直接返回 200 和原始 TXT 内容；
 HTTP 仅此验证文件与证书验证路径不跳转，其余页面仍强制 HTTPS。不要误删验证文件。
 
-0.2.22 验收：今日 → 开始今日计划 → 弹出深度练习、批量练习、速刷，每种有简介和本轮题数；点击选项直接进入已有对应会话。关闭弹窗不创建会话，连续点击不重复打开；到期复习优先规则不变。继续今日计划/续练仍保留原模式，不重新询问，避免损坏断点。
+0.2.23 验收：我的 → 主题与外观 → 开启玻璃质感；观察今日卡片、顶部栏与底部悬浮导航。折射由单层 4px 区域改为两层各 5px 的光学区域，外层矩阵位移参数从 3px 增至 10px，内层 4px；小尺寸组件自动收缩，桌面不随卡片宽度放大位移。
+只对背后像素变形，前景文字与按钮不变形；中心新增约 3% 中性烟色覆盖，外缘额外覆盖不超过 2.4%，白色覆盖同步减弱。保留 0.7px 随主题变化的反光细线、独立淡背景，不添加常驻磨砂或厚黑边。
+折射层以 RepaintBoundary 的局部偏移层定位，避免位于页面下方时从远处取样文字；不使用阻断真实背景采样的透明 saveLayer。
+测试：静态检查、42 项客户端、33 项后端和 Chrome 12 项交互/外观测试通过；新增内外圈真实像素变形、轻微吸光、中心不变、移动位置后像素一致的断言。手机/桌面组件渲染预览已检查。
+未解决风险：两层局部矩阵是曲面光学的近似，并非连续曲率物理模拟；每个玻璃组件增加一个局部背景滤镜，低性能手机帧率仍需真机观察，可关闭玻璃恢复实色。无新依赖、题库/后端/历史记录修改。
+回退仅需将前端 current 切回 `20261016-study-motion-v0222`，不动数据库。
+
+0.2.22 历史验收：今日 → 开始今日计划 → 弹出深度练习、批量练习、速刷，每种有简介和本轮题数；点击选项直接进入已有对应会话。关闭弹窗不创建会话，连续点击不重复打开；到期复习优先规则不变。继续今日计划/续练仍保留原模式，不重新询问，避免损坏断点。
 新增独立 `mode_picker.dart` 与 `motion.dart`：开始/自定义/欢迎页按钮及题目卡片有 90ms 按压缩小和 240ms 回弹；模式弹层 320ms 渐显、滑入、轻微缩放回弹，过渡期间最多 2.5px 动态模糊，停稳后移除滤镜与透明合成层。
 Material 页面路由复用上述过渡；iOS 页面保留原生返回手势过渡。系统减少动态效果开启时，新增缩放、动态模糊与弹层动效关闭。没有给每个弹窗/标签切换强制添加动画，不添加常驻模糊。
 测试：42 项客户端、33 项后端、Chrome 12 项模式/外观交互测试通过；320×640 大字体弹窗及 390×844 预览检查完成。中文子集字体已更新；无新依赖、后端变更或事件协议变化。
