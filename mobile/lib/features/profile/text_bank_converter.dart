@@ -240,8 +240,6 @@ Future<TextBankConversion?> showTextBankConverter(BuildContext context,
                             child: const Text(
                                 '仅转换已整理的客观单选题。每题至少要有：题干、A./B. 选项与“答案：A”。解析可选；不会从讲义或散文中猜答案。')),
                         const SizedBox(height: 12),
-                        const TextBankSourceRequirements(),
-                        const SizedBox(height: 4),
                         TextField(
                             controller: name,
                             decoration:

@@ -225,8 +225,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 8),
                   const Text('支持 .docx、.txt 或直接粘贴文字；请先确认文件能按题目格式读取。',
                       style: TextStyle(color: Colors.blueGrey)),
-                  const SizedBox(height: 8),
-                  const TextBankSourceRequirements(initiallyExpanded: true),
                   const SizedBox(height: 16),
                   FilledButton.icon(
                       onPressed: () => Navigator.pop(sheetContext, 'file'),

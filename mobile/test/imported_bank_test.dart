@@ -58,5 +58,11 @@ void main() {
             .getStringList('importedQuestionIds:import-test-user')!
             .single,
         question['id']);
+    final localImport = jsonDecode(
+            app.store.prefs.getString('importedQuestionBank:import-test-user')!)
+        as Map;
+    expect((localImport['questions'] as List), hasLength(1));
+    expect(app.store.prefs.getString('bank'), isNull,
+        reason: 'the full bundled bank must never consume browser storage');
   });
 }

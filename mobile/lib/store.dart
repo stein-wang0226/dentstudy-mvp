@@ -34,6 +34,7 @@ class StudyStore extends ChangeNotifier {
   Map<String, dynamic>? dailyPlan;
   Set<String> importedQuestionIds = <String>{};
   String? lastImportedBankName;
+  Map<String, Question> _bundledQuestions = <String, Question>{};
   String? activeSessionId;
   Future<void> _writeQueue = Future.value();
   QuestionCatalog get catalog => QuestionCatalog(questions, mode);
@@ -73,6 +74,8 @@ class StudyStore extends ChangeNotifier {
           .every((question) => importedQuestionIds.contains(question.id));
   String get _importedQuestionIdsKey => 'importedQuestionIds:$userId';
   String get _lastImportedBankNameKey => 'lastImportedBankName:$userId';
+  String get _importedQuestionBankKey => 'importedQuestionBank:$userId';
+  static const _questionOverridesKey = 'questionOverrides';
   // Review-first is account-wide, including questions from other exam tracks.
   List<Question> get due => learning.due(questions, DateTime.now());
   String get today => dayOf(DateTime.now());
@@ -138,18 +141,85 @@ class StudyStore extends ChangeNotifier {
     questions = (jsonDecode(raw)['questions'] as List)
         .map((q) => Question(Map<String, dynamic>.from(q)))
         .toList();
-    final cached = prefs.getString('bank');
-    if (cached != null) {
-      try {
-        final updates = (jsonDecode(cached)['questions'] as List)
-            .map((q) => Question(Map<String, dynamic>.from(q)));
-        questions = {
-          for (final q in questions) q.id: q,
-          for (final q in updates) q.id: q
-        }.values.toList();
-      } catch (_) {/* Keep the bundled bank if an old cache is invalid. */}
-    }
+    _bundledQuestions = {
+      for (final question in questions) question.id: question
+    };
     _loadAccount();
+    await _restoreQuestionCache();
+  }
+
+  List<Question> _readQuestionCache(String? content) {
+    if (content == null || content.isEmpty) return const [];
+    try {
+      return (jsonDecode(content)['questions'] as List)
+          .map((value) => Question(Map<String, dynamic>.from(value)))
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  bool _isBundledQuestion(Question question) {
+    final bundled = _bundledQuestions[question.id];
+    return bundled != null &&
+        jsonEncode(bundled.data) == jsonEncode(question.data);
+  }
+
+  /// Older builds stored all 3,650 bundled questions in browser preferences.
+  /// Safari can exhaust its small per-site quota before even a tiny personal
+  /// bank is added. Keep only imported questions and server-only overrides;
+  /// the bundled asset is always restored from the app package on startup.
+  Future<void> _restoreQuestionCache() async {
+    final legacy = prefs.getString('bank');
+    final savedImported =
+        _readQuestionCache(prefs.getString(_importedQuestionBankKey));
+    final savedOverrides =
+        _readQuestionCache(prefs.getString(_questionOverridesKey));
+    final legacyQuestions = _readQuestionCache(legacy);
+    final legacyImported = legacyQuestions
+        .where((question) => importedQuestionIds.contains(question.id))
+        .toList();
+    final legacyOverrides = legacyQuestions
+        .where((question) =>
+            !importedQuestionIds.contains(question.id) &&
+            !_isBundledQuestion(question))
+        .toList();
+
+    // Clear the legacy full-bank cache first. It is reproducible from the
+    // bundled asset and freeing that space makes migration possible in Safari.
+    if (legacy != null) await prefs.remove('bank');
+
+    var imported = savedImported.isNotEmpty ? savedImported : legacyImported;
+    var overrides =
+        savedOverrides.isNotEmpty ? savedOverrides : legacyOverrides;
+    if (savedImported.isEmpty && imported.isNotEmpty) {
+      try {
+        await prefs.setString(
+            _importedQuestionBankKey,
+            jsonEncode({
+              'questions': imported.map((question) => question.data).toList()
+            }));
+      } catch (_) {
+        // The questions remain available for this run. A later import gives a
+        // clear space warning rather than corrupting any study records.
+      }
+    }
+    if (savedOverrides.isEmpty && overrides.isNotEmpty) {
+      try {
+        await prefs.setString(
+            _questionOverridesKey,
+            jsonEncode({
+              'questions': overrides.map((question) => question.data).toList()
+            }));
+      } catch (_) {
+        overrides = const [];
+      }
+    }
+    questions = {
+      for (final question in questions) question.id: question,
+      for (final question in overrides) question.id: question,
+      for (final question in imported) question.id: question,
+    }.values.toList();
   }
 
   void _loadAccount() {
@@ -506,8 +576,12 @@ class StudyStore extends ChangeNotifier {
       for (final q in updated) q.id: q
     };
     questions = byId.values.toList();
-    await prefs.setString('bank',
-        jsonEncode({'questions': questions.map((q) => q.data).toList()}));
+    final overrides =
+        updated.where((question) => !_isBundledQuestion(question)).toList();
+    if (!await prefs.setString(_questionOverridesKey,
+        jsonEncode({'questions': overrides.map((q) => q.data).toList()}))) {
+      throw Exception('本机存储空间不足，未能保存离线题库更新');
+    }
     notifyListeners();
   }
 
@@ -537,10 +611,21 @@ class StudyStore extends ChangeNotifier {
       throw Exception('题目 ID “$conflict” 已存在；为保护既有学习记录，请更换题目 ID 后再导入。');
     }
     final before = questions;
+    final existingImported = questions
+        .where((question) => importedQuestionIds.contains(question.id))
+        .toList();
     questions = [...questions, ...imported];
     try {
-      if (!await prefs.setString('bank',
-          jsonEncode({'questions': questions.map((q) => q.data).toList()}))) {
+      // Never duplicate the bundled bank in SharedPreferences. Storing only
+      // personal imports keeps Safari's site storage free for study records.
+      if (!await prefs.setString(
+          _importedQuestionBankKey,
+          jsonEncode({
+            'questions': [
+              ...existingImported.map((question) => question.data),
+              ...imported.map((question) => question.data),
+            ]
+          }))) {
         throw Exception('本机存储空间不足，未能保存导入题库');
       }
     } catch (_) {
