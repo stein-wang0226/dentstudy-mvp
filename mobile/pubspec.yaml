@@ -1,7 +1,7 @@
 name: dentstudy
 description: 口腔医学间隔复习与题库学习应用
 publish_to: none
-version: 0.2.23+25
+version: 0.2.24+26
 environment:
   sdk: '>=3.6.0 <4.0.0'
 dependencies:

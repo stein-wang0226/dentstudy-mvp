@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'glass_refraction.dart';
 
-/// Clear surfaces with edge-only backdrop deformation, without a frosted layer.
+/// Warm translucent acrylic: full-surface diffusion with a fine lit rim.
 class StudySurface extends StatelessWidget {
   final Widget child;
   final bool glass;
@@ -40,9 +40,9 @@ class StudySurface extends StatelessWidget {
             borderRadius: BorderRadius.circular(radius),
             boxShadow: [
               BoxShadow(
-                  color: tint.withAlpha(10),
-                  blurRadius: 12,
-                  offset: const Offset(0, 3))
+                  color: const Color(0xff49372a).withAlpha(6),
+                  blurRadius: 24,
+                  offset: const Offset(0, 6))
             ]),
         child: ClipRRect(
             borderRadius: BorderRadius.circular(radius),
@@ -50,12 +50,14 @@ class StudySurface extends StatelessWidget {
                 foregroundPainter:
                     _GlassRim(radius, Theme.of(context).colorScheme.primary),
                 child: Stack(children: [
-                  Positioned.fill(child: GlassRefraction(radius: radius)),
-                  // A neutral, light smoke tint adds depth without darkening
-                  // foreground content or changing the user's background hue.
+                  Positioned.fill(
+                      child: GlassRefraction(
+                          radius: radius, blurSigma: navigation ? 22 : 18)),
+                  // Bronze absorption is uniform across the entire pane; it
+                  // never becomes a dark border or affects foreground content.
                   Positioned.fill(
                       child: ColoredBox(
-                          color: Colors.black.withAlpha(navigation ? 9 : 7))),
+                          color: const Color(0xff8c6844).withAlpha(24))),
                   DecoratedBox(
                       decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -67,9 +69,9 @@ class StudySurface extends StatelessWidget {
                             1
                           ],
                               colors: [
-                            Colors.white.withAlpha(navigation ? 20 : 26),
-                            color.withAlpha(navigation ? 3 : 7),
-                            Colors.white.withAlpha(navigation ? 9 : 14)
+                            Colors.white.withAlpha(36),
+                            Colors.white.withAlpha(2),
+                            Colors.white.withAlpha(8)
                           ])),
                       child: content)
                 ]))));
@@ -90,7 +92,7 @@ class _GlassRim extends CustomPainter {
           Offset(size.width, size.height - .35),
           Paint()
             ..strokeWidth = .7
-            ..color = accent.withAlpha(40));
+            ..color = Colors.white.withAlpha(100));
       return;
     }
     final paint = Paint()
@@ -98,14 +100,32 @@ class _GlassRim extends CustomPainter {
       ..strokeWidth = .7
       ..shader = LinearGradient(
           begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          end: Alignment.bottomCenter,
           colors: [
-            Colors.white.withAlpha(175),
-            accent.withAlpha(65),
-            Colors.white.withAlpha(120)
+            Colors.white.withAlpha(220),
+            Colors.white.withAlpha(60),
+            Colors.white.withAlpha(8)
           ]).createShader(rect);
     canvas.drawRRect(
         RRect.fromRectAndRadius(rect, Radius.circular(radius)), paint);
+    // Sparse luminous side arcs follow the selected theme, not fixed blue/pink.
+    // There is no colored bottom stroke or shaded perimeter band.
+    final r = radius.clamp(0.0, size.shortestSide / 2);
+    final glint = Path()
+      ..moveTo(.6, r + 20)
+      ..lineTo(.6, r)
+      ..quadraticBezierTo(.6, .6, r, .6)
+      ..moveTo(size.width - .6, size.height - r - 20)
+      ..lineTo(size.width - .6, size.height - r)
+      ..quadraticBezierTo(
+          size.width - .6, size.height - .6, size.width - r, size.height - .6);
+    canvas.drawPath(
+        glint,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2
+          ..color = accent.withAlpha(42)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2));
   }
 
   @override

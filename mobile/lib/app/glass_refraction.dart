@@ -2,12 +2,13 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
-/// Samples the real backdrop through a narrow curved lens. Only the perimeter
-/// is magnified; foreground text and the clear center are never transformed.
+/// Refracts and diffuses the entire backdrop, not a dark perimeter ring.
+/// Foreground text is painted separately and is never transformed or blurred.
 /// Matrix backdrop filters work in CanvasKit without Impeller-only shaders.
 class GlassRefraction extends StatelessWidget {
   final double radius;
-  const GlassRefraction({super.key, required this.radius});
+  final double blurSigma;
+  const GlassRefraction({super.key, required this.radius, this.blurSigma = 18});
 
   @override
   Widget build(BuildContext context) =>
@@ -19,76 +20,41 @@ class GlassRefraction extends StatelessWidget {
         if (!w.isFinite || !h.isFinite || w < 12 || h < 12) {
           return const SizedBox.shrink();
         }
-        // Two non-overlapping optical bands approximate a convex lip: the
-        // outer band bends more strongly, then relaxes toward the clear center.
-        // Keep displacement bounded in pixels even on wide desktop cards.
-        final band = (w < h ? w : h).clamp(0.0, 20.0) / 4;
-        Widget lens(double inset, double displacement, int smoke) {
-          final matrix = Float64List.fromList([
-            1 + displacement * 2 / w,
-            0,
-            0,
-            0,
-            0,
-            1 + displacement * 2 / h,
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-            -displacement,
-            -displacement,
-            0,
-            1,
-          ]);
-          return Positioned.fill(
-              child: ClipPath(
-                  clipper: GlassEdgeClipper(radius, inset: inset, width: band),
-                  child: BackdropFilter(
-                      filter: ui.ImageFilter.matrix(matrix,
-                          filterQuality: FilterQuality.high),
-                      // Absorption belongs to the sampled backdrop, never the text.
-                      child:
-                          ColoredBox(color: Colors.black.withAlpha(smoke)))));
-        }
-
-        return Stack(children: [
-          lens(0, band * 2, 6),
-          lens(band, band * .8, 2),
+        // A single continuous lens has no concentric bands or dark seams.
+        // Bound the magnification in pixels so desktop cards remain subtle.
+        final displacement = (w < h ? w : h).clamp(0.0, 60.0) / 10;
+        final matrix = Float64List.fromList([
+          1 + displacement * 2 / w,
+          0,
+          0,
+          0,
+          0,
+          1 + displacement * 2 / h,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          -displacement,
+          -displacement,
+          0,
+          1,
         ]);
+        return ClipRRect(
+            borderRadius: BorderRadius.circular(radius),
+            child: BackdropFilter(
+                filter: ui.ImageFilter.compose(
+                    outer: ui.ImageFilter.blur(
+                        sigmaX: blurSigma, sigmaY: blurSigma),
+                    inner: ui.ImageFilter.matrix(matrix,
+                        filterQuality: FilterQuality.high)),
+                child: const SizedBox.expand()));
       })));
 }
 
-class GlassEdgeClipper extends CustomClipper<Path> {
-  final double radius;
-  final double inset, width;
-  const GlassEdgeClipper(this.radius, {this.inset = 0, this.width = 10});
-  @override
-  Path getClip(Size size) {
-    final rect = (Offset.zero & size).deflate(inset);
-    if (radius == 0) {
-      return Path()
-        ..addRect(
-            Rect.fromLTWH(0, size.height - inset - width, size.width, width));
-    }
-    return Path()
-      ..fillType = PathFillType.evenOdd
-      ..addRRect(RRect.fromRectAndRadius(
-          rect, Radius.circular((radius - inset).clamp(0, radius))))
-      ..addRRect(RRect.fromRectAndRadius(rect.deflate(width),
-          Radius.circular((radius - inset - width).clamp(0, radius))));
-  }
-
-  @override
-  bool shouldReclip(GlassEdgeClipper oldClipper) =>
-      oldClipper.radius != radius ||
-      oldClipper.inset != inset ||
-      oldClipper.width != width;
-}
-
 /// Keeps scrolling text from colliding with transparent navigation labels.
-/// A clip preserves access to the real backdrop for nested edge lenses, unlike
+/// A clip preserves access to the real backdrop for nested glass lenses, unlike
 /// an opacity saveLayer. The wallpaper stays visible behind the navigation.
 class GlassContentViewport extends StatelessWidget {
   final bool enabled;
