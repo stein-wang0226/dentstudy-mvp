@@ -21,6 +21,9 @@ void main() {
         final fonts = FontLoader('DentStudySans')
           ..addFont(rootBundle.load('assets/fonts/DentStudySans-Regular.otf'));
         await fonts.load();
+        await (FontLoader('MaterialIcons')
+              ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf')))
+            .load();
         await app.store.init();
       });
       tester.view.devicePixelRatio = 1;
@@ -242,6 +245,36 @@ void main() {
     expect(find.byType(ClipRRect), findsOneWidget);
     await tester.pumpWidget(surface(false));
     expect(find.byType(BackdropFilter), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('clear glass keeps low blur and a nearly transparent center',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(
+            body: FrostedChrome(
+                enabled: true,
+                radius: 30,
+                child: SizedBox(height: 72, child: Text('透明导航'))))));
+    final surface = tester.widget<StudySurface>(find.byType(StudySurface));
+    expect(surface.blurSigma, lessThanOrEqualTo(5));
+    final gradients = tester
+        .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+        .map((box) => box.decoration)
+        .whereType<BoxDecoration>()
+        .map((box) => box.gradient)
+        .whereType<LinearGradient>();
+    expect(gradients, hasLength(1));
+    expect(gradients.single.colors[1].a, lessThan(.02));
+    expect(gradients.single.colors.every((c) => c.a < .12), isTrue);
+    expect(
+        const StudySurface(
+                glass: true,
+                tint: Colors.teal,
+                borderColor: Colors.transparent,
+                child: SizedBox())
+            .blurSigma,
+        lessThanOrEqualTo(3));
     expect(tester.takeException(), isNull);
   });
 

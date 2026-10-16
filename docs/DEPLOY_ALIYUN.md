@@ -5,9 +5,9 @@
 实际服务器使用宿主机 Nginx + `dentstudy.service`，不是下面的 Docker 方案。
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
-- 客户端版本：`0.2.19`（增强玻璃界面）；综合题库仍为 3650 道，本次未修改题目或学习数据。
+- 客户端版本：`0.2.20`（低磨砂通透玻璃、曲面背景光带）；综合题库仍为 3650 道，本次未修改题目或学习数据。
 - 后端：`/opt/dentstudy-current` 指向 `/opt/dentstudy-releases/20261015-open-practice-v0218`；仅替换综合题库，Python 服务代码未修改。
-- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261016-liquid-glass-v0219`。
+- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261016-clear-glass-v0220`。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
 - 用户投稿：`/var/lib/dentstudy/question-bank-submissions/`，仅服务端进程可读写，不能映射到 Nginx 静态目录；备份时须与 SQLite 一起保留。
 - 旧代码 `/opt/dentstudy`、旧网页 `/var/www/dentstudy` 均保留。
@@ -20,7 +20,7 @@
 `deploy/dentstudy-certbot.service` 和 `deploy/dentstudy-certbot.timer`。
 构建 Web 时使用 `--no-web-resources-cdn --dart-define=API_URL=/api`
 及 `--dart-define=QUESTION_BANK_ASSET=assets/all_questions.json`。
-发布时同时传入 `--dart-define=APP_VERSION=0.2.19` 和
+发布时同时传入 `--dart-define=APP_VERSION=0.2.20` 和
 `--dart-define=BUILD_TIME=实际北京时间`，在“我的”显示版本与更新时间。
 当前 GitHub workflow 只做检查，不会自动部署；代码推送后仍需单独构建和上传。
 
@@ -28,7 +28,15 @@
 Flutter Web 构建时随根目录静态资源发布。HTTP 和 HTTPS 的同名路径均需直接返回 200 和原始 TXT 内容；
 HTTP 仅此验证文件与证书验证路径不跳转，其余页面仍强制 HTTPS。不要误删验证文件。
 
-0.2.19 验收：我的 → 主题与外观 → 开启“玻璃质感”，顶部栏和底部导航均为透明底色、24px 局部背景模糊与双层高光边缘。
+0.2.20 验收：我的 → 主题与外观 → 开启“玻璃质感”。卡片 blur sigma 从 18 降至 3，导航从 24 降至 5；白色渐变遮罩大幅降低，中心仅约 1%–3% 覆盖。
+卡片边缘增加局部亮弧、暗边与轻微色散高光，顶部改为下沿亮边；背景增加静态曲面光带，透过卡片可见，不增加全屏模糊或持续动画。
+这是折光风格的绘制效果，不是对实际页面像素进行物理折射；文字不扭曲。背景只由用户选择的背景色决定，主色改变不污染背景。
+手机与桌面组件渲染预览已检查；静态检查、36 项客户端测试、33 项后端测试、Chrome 6 项外观/交互测试通过（资产重启测试只在原生执行）。
+验收路径：今日页滚动观察上下栏透底；我的选择主色松绿、背景玫瑰，确认背景仍为玫瑰；关闭玻璃恢复实色与普通导航。
+风险：更透明时，栏下滚动文字的轮廓更明显；低性能设备仍可关闭玻璃。没有添加依赖或修改后端、题库、学习记录。
+回退仅需将前端 current 切回 `20261016-liquid-glass-v0219`，不用回退数据库。
+
+0.2.19 历史验收：我的 → 主题与外观 → 开启“玻璃质感”，顶部栏和底部导航均为透明底色、24px 局部背景模糊与双层高光边缘。
 底部导航为悬浮圆角玻璃条，桌面最大宽度 720；页面内容可以从上下栏背后滚过，首尾内边距保留导航栏和设备安全区，避免遮挡操作。
 今日卡片降低白色覆盖，背景色只取用户所选淡背景，不与主色混合；关闭玻璃恢复普通导航与实色卡片。
 测试：静态检查、35 项客户端测试、33 项后端测试通过；Chrome 5 项外观/交互测试通过（重启资产测试由原生运行器覆盖）。
