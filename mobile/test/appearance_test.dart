@@ -242,15 +242,15 @@ void main() {
                 borderColor: Colors.grey,
                 child: const Text('今日计划'))));
     await tester.pumpWidget(surface(true));
-    expect(find.byType(BackdropFilter), findsOneWidget);
-    expect(find.byType(ClipRRect), findsNWidgets(2));
+    expect(find.byType(BackdropFilter), findsNWidgets(3));
+    expect(find.byType(ClipRRect), findsOneWidget);
     await tester.pumpWidget(surface(false));
     expect(find.byType(BackdropFilter), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets(
-      'acrylic glass composes whole-pane refraction and strong diffusion',
+      'clear glass has full-pane refraction without blur or color overlays',
       (tester) async {
     await tester.pumpWidget(const MaterialApp(
         home: Scaffold(
@@ -260,10 +260,10 @@ void main() {
                 child: SizedBox(height: 72, child: Text('透明导航'))))));
     final filters =
         tester.widgetList<BackdropFilter>(find.byType(BackdropFilter));
-    expect(filters, hasLength(1));
+    expect(filters, hasLength(3));
     for (final filter in filters) {
       expect(filter.filter.toString(), contains('matrix'));
-      expect(filter.filter.toString(), contains('blur'));
+      expect(filter.filter.toString(), isNot(contains('blur')));
     }
     final gradients = tester
         .widgetList<DecoratedBox>(find.byType(DecoratedBox))
@@ -271,23 +271,22 @@ void main() {
         .whereType<BoxDecoration>()
         .map((box) => box.gradient)
         .whereType<LinearGradient>();
-    expect(gradients, hasLength(1));
-    expect(gradients.single.colors[1].a, lessThan(.02));
-    expect(gradients.single.colors.every((c) => c.a < .15), isTrue);
-    final bronze = tester
-        .widgetList<ColoredBox>(find.byType(ColoredBox))
-        .where((box) => box.color == const Color(0xff8c6844).withAlpha(24));
-    expect(bronze, hasLength(1));
+    expect(gradients, isEmpty);
+    expect(
+        find.descendant(
+            of: find.byType(StudySurface), matching: find.byType(ColoredBox)),
+        findsNothing);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('whole-pane lens diffuses center pixels without dark edge bands',
+  testWidgets('thick clear lens bends pixels but preserves clarity and color',
       (tester) async {
     final key = GlobalKey();
     Future<List<int>> capture(bool lens,
         {bool striped = true,
         Offset position = Offset.zero,
-        double sigma = 18}) async {
+        bool surface = false,
+        Color flatColor = Colors.white}) async {
       await tester.pumpWidget(Directionality(
           textDirection: TextDirection.ltr,
           child: Center(
@@ -311,18 +310,30 @@ void main() {
                                         bottom: 0,
                                         width: 4,
                                         child: ColoredBox(
-                                            color: !striped || i.isEven
-                                                ? Colors.white
-                                                : Colors.black)),
+                                            color: !striped
+                                                ? flatColor
+                                                : (i.isEven
+                                                    ? Colors.white
+                                                    : Colors.black))),
                                   if (lens)
                                     Positioned.fill(
                                         child: MediaQuery(
                                             data: const MediaQueryData(),
                                             child: GlassContentViewport(
                                                 enabled: true,
-                                                child: GlassRefraction(
-                                                    radius: 24,
-                                                    blurSigma: sigma)))),
+                                                child: surface
+                                                    ? const StudySurface(
+                                                        glass: true,
+                                                        radius: 24,
+                                                        tint: Colors.teal,
+                                                        borderColor:
+                                                            Colors.transparent,
+                                                        padding:
+                                                            EdgeInsets.zero,
+                                                        child:
+                                                            SizedBox.expand())
+                                                    : const GlassRefraction(
+                                                        radius: 24)))),
                                 ])))
                       ]))))));
       await tester.pumpAndSettle();
@@ -346,13 +357,12 @@ void main() {
     }
 
     final plain = await capture(false), refracted = await capture(true);
-    var changedCenterPixels = 0;
     var displacedCenterPixels = 0;
-    final clearLens = await capture(true, sigma: 0);
-    final shifted =
-        await capture(true, position: const Offset(90, 160), sigma: 0);
-    // Check lens coordinates without Gaussian sampling beyond the fixture's
-    // top/left canvas boundary, which changes when the fixture moves inward.
+    var sharpPixels = 0;
+    var displacedShoulderPixels = 0;
+    final clearLens = refracted;
+    final shifted = await capture(true, position: const Offset(90, 160));
+    // Lens coordinates remain local as the surface moves or scrolls.
     for (var y = 30; y < 110; y++) {
       for (var x = 30; x < 210; x++) {
         final offset = (y * 240 + x) * 4;
@@ -362,20 +372,34 @@ void main() {
     for (var y = 50; y < 90; y++) {
       for (var x = 50; x < 190; x++) {
         final offset = (y * 240 + x) * 4;
-        if ((refracted[offset] - plain[offset]).abs() > 40)
-          changedCenterPixels++;
         if ((clearLens[offset] - plain[offset]).abs() > 40)
           displacedCenterPixels++;
-        // High-frequency stripes become soft gray behind the whole pane.
-        expect(refracted[offset], inInclusiveRange(110, 145));
+        if (refracted[offset] < 35 || refracted[offset] > 220) sharpPixels++;
+      }
+      for (var x = 0; x < 10; x++) {
+        final offset = (y * 240 + x) * 4;
+        if ((refracted[offset] - plain[offset]).abs() > 40)
+          displacedShoulderPixels++;
       }
     }
-    expect(changedCenterPixels, greaterThan(4000));
     expect(displacedCenterPixels, greaterThan(1000));
+    expect(displacedShoulderPixels, greaterThan(100));
+    expect(sharpPixels, greaterThan(3500));
     final white = await capture(true, striped: false);
     for (final x in [2, 7, 10, 120, 230]) {
       final offset = (70 * 240 + x) * 4;
       expect(white[offset], 255); // no ring-specific tint or absorption
+    }
+    final pane = await capture(true, striped: false, surface: true);
+    for (final x in [20, 70, 120, 180, 220]) {
+      final offset = (70 * 240 + x) * 4;
+      expect(pane.sublist(offset, offset + 3), [255, 255, 255]);
+    }
+    final neutral = await capture(true,
+        striped: false, surface: true, flatColor: const Color(0xff9b8170));
+    for (final x in [20, 70, 120, 180, 220]) {
+      final offset = (70 * 240 + x) * 4;
+      expect(neutral.sublist(offset, offset + 3), [155, 129, 112]);
     }
     expect(tester.takeException(), isNull);
   });

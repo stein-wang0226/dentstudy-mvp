@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'glass_refraction.dart';
 
-/// Warm translucent acrylic: full-surface diffusion with a fine lit rim.
+/// Untinted clear glass; only refracted backdrop and localized reflections.
 class StudySurface extends StatelessWidget {
   final Widget child;
   final bool glass;
@@ -34,48 +34,50 @@ class StudySurface extends StatelessWidget {
               border: Border.all(color: borderColor)),
           child: content);
     }
-    return Container(
+    return SizedBox(
         width: double.infinity,
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(radius),
-            boxShadow: [
-              BoxShadow(
-                  color: const Color(0xff49372a).withAlpha(6),
-                  blurRadius: 24,
-                  offset: const Offset(0, 6))
-            ]),
-        child: ClipRRect(
-            borderRadius: BorderRadius.circular(radius),
-            child: CustomPaint(
-                foregroundPainter:
-                    _GlassRim(radius, Theme.of(context).colorScheme.primary),
-                child: Stack(children: [
-                  Positioned.fill(
-                      child: GlassRefraction(
-                          radius: radius, blurSigma: navigation ? 22 : 18)),
-                  // Bronze absorption is uniform across the entire pane; it
-                  // never becomes a dark border or affects foreground content.
-                  Positioned.fill(
-                      child: ColoredBox(
-                          color: const Color(0xff8c6844).withAlpha(24))),
-                  DecoratedBox(
-                      decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              stops: const [
-                            0,
-                            .48,
-                            1
-                          ],
-                              colors: [
-                            Colors.white.withAlpha(36),
-                            Colors.white.withAlpha(2),
-                            Colors.white.withAlpha(8)
-                          ])),
-                      child: content)
-                ]))));
+        child: CustomPaint(
+            painter:
+                _GlassElevation(radius, Theme.of(context).colorScheme.primary),
+            child: ClipRRect(
+                borderRadius: BorderRadius.circular(radius),
+                child: CustomPaint(
+                    foregroundPainter: _GlassRim(
+                        radius, Theme.of(context).colorScheme.primary),
+                    child: Stack(children: [
+                      Positioned.fill(child: GlassRefraction(radius: radius)),
+                      content
+                    ])))));
   }
+}
+
+/// Cast the shadow only OUTSIDE the pane. A normal BoxShadow also paints under
+/// transparent content, which made earlier versions look gray and opaque.
+class _GlassElevation extends CustomPainter {
+  final double radius;
+  final Color accent;
+  const _GlassElevation(this.radius, this.accent);
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (radius == 0) return;
+    final rect = Offset.zero & size;
+    final shape = RRect.fromRectAndRadius(rect, Radius.circular(radius));
+    canvas.save();
+    canvas.clipPath(Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(rect.inflate(48))
+      ..addRRect(shape));
+    canvas.drawRRect(
+        shape.shift(const Offset(0, 12)),
+        Paint()
+          ..color = accent.withAlpha(22)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12));
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_GlassElevation old) =>
+      old.radius != radius || old.accent != accent;
 }
 
 /// A hairline reflection, independent of the actual backdrop deformation.
@@ -85,7 +87,7 @@ class _GlassRim extends CustomPainter {
   const _GlassRim(this.radius, this.accent);
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = (Offset.zero & size).deflate(.35);
+    final rect = (Offset.zero & size).deflate(.45);
     if (radius == 0) {
       canvas.drawLine(
           Offset(0, size.height - .35),
@@ -97,17 +99,41 @@ class _GlassRim extends CustomPainter {
     }
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = .7
+      ..strokeWidth = .9
       ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.white.withAlpha(220),
-            Colors.white.withAlpha(60),
-            Colors.white.withAlpha(8)
+            Colors.white.withAlpha(240),
+            Colors.white.withAlpha(25),
+            Colors.white.withAlpha(125)
           ]).createShader(rect);
     canvas.drawRRect(
         RRect.fromRectAndRadius(rect, Radius.circular(radius)), paint);
+    // A short inset highlight separates the rounded shoulder from the face.
+    // It fades away instead of drawing a second complete border.
+    final inner = rect.deflate(3);
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(
+            inner, Radius.circular((radius - 3).clamp(0, radius))),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = .6
+          ..shader = LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              stops: const [
+                0,
+                .28,
+                .7,
+                1
+              ],
+              colors: [
+                Colors.white.withAlpha(125),
+                Colors.white.withAlpha(0),
+                Colors.white.withAlpha(0),
+                Colors.white.withAlpha(65)
+              ]).createShader(rect));
     // Sparse luminous side arcs follow the selected theme, not fixed blue/pink.
     // There is no colored bottom stroke or shaded perimeter band.
     final r = radius.clamp(0.0, size.shortestSide / 2);
