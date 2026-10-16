@@ -14,6 +14,33 @@ class TextBankConversion {
   const TextBankConversion({required this.filename, required this.content});
 }
 
+class TextBankSourceRequirements extends StatelessWidget {
+  final bool initiallyExpanded;
+  const TextBankSourceRequirements({
+    super.key,
+    this.initiallyExpanded = false,
+  });
+
+  @override
+  Widget build(BuildContext context) => ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          childrenPadding: const EdgeInsets.only(bottom: 6),
+          initiallyExpanded: initiallyExpanded,
+          leading: const Icon(Icons.rule_folder_outlined),
+          title: const Text('Word / TXT 文件要求'),
+          subtitle: const Text('每题须有题干、选项与明确答案；仅支持客观单选题'),
+          children: const [
+            Padding(
+                padding: EdgeInsets.only(left: 4, right: 4),
+                child: Text(
+                    '• 仅支持 Office 2007 及以上的 .docx、UTF-8 编码的 .txt，或直接粘贴文字；单个文件不超过 5 MB。\n'
+                    '• 不支持旧版 .doc、PDF、图片/扫描件、加密文档；表格、复杂排版可能无法完整识别。\n'
+                    '• 每题按行写：题干：…… → A. …… / B. ……（至少两项）→ 答案：A；“解析：”可不填。\n'
+                    '• 可用“科目：口腔修复学”“章节：固定义齿”切换分类；科目须为站内已有名称。\n'
+                    '• 只转换已有答案的 A1/A2 单选题，不会从讲义、散文或无答案材料中猜题或猜答案。'))
+          ]);
+}
+
 String extractDocxText(Uint8List bytes) {
   if (bytes.isEmpty) throw Exception('Word 文件为空');
   if (bytes.length > maxTextSourceBytes) {
@@ -204,9 +231,17 @@ Future<TextBankConversion?> showTextBankConverter(BuildContext context,
                       child: SingleChildScrollView(
                           child:
                               Column(mainAxisSize: MainAxisSize.min, children: [
-                        const Text(
-                            '只识别已整理成题目的段落：题干：… / A. … / B. … / 答案：A / 解析：… 。讲义或散文不会自动生成答案。'),
+                        Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                                color: Colors.blueGrey.withAlpha(10),
+                                borderRadius: BorderRadius.circular(12)),
+                            child: const Text(
+                                '仅转换已整理的客观单选题。每题至少要有：题干、A./B. 选项与“答案：A”。解析可选；不会从讲义或散文中猜答案。')),
                         const SizedBox(height: 12),
+                        const TextBankSourceRequirements(),
+                        const SizedBox(height: 4),
                         TextField(
                             controller: name,
                             decoration:

@@ -12,6 +12,7 @@ import 'appearance_settings.dart';
 import 'policy_page.dart';
 import 'question_bank_import_help.dart';
 import 'imported_bank_practice.dart';
+import 'question_bank_import_progress.dart';
 import 'text_bank_converter.dart';
 import '../practice/practice_request.dart';
 
@@ -24,6 +25,8 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   bool importingBank = false;
+  QuestionBankImportStage importStage = QuestionBankImportStage.idle;
+  String importProgressDetail = '';
   bool isSubmissionAdmin = false;
   int? submissionCount;
   bool loadingProfile = false;
@@ -39,6 +42,20 @@ class _ProfilePageState extends State<ProfilePage> {
   void changed() {
     if (mounted) setState(() {});
   }
+
+  void updateImportProgress(QuestionBankImportStage stage, String detail) {
+    if (!mounted) return;
+    setState(() {
+      importStage = stage;
+      importProgressDetail = detail;
+    });
+  }
+
+  void clearImportProgress() =>
+      updateImportProgress(QuestionBankImportStage.idle, '');
+
+  String readableImportError(Object error) =>
+      error.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
 
   Future<void> refreshSubmissionInbox() async {
     if (store.token.isEmpty) {
@@ -112,14 +129,30 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> importAndSyncQuestionBank(
       {required String filename, required String content}) async {
-    final prepared = store.prepareQuestionBankImport(content);
+    updateImportProgress(QuestionBankImportStage.validating, '正在核对题干、选项与答案…');
+    // Yield to the event loop before the synchronous normalisation work. The
+    // staged UI is therefore visible, while each transition still maps to real
+    // work instead of a fabricated upload percentage.
+    final prepared =
+        await Future(() => store.prepareQuestionBankImport(content));
     final alreadyImported = store.hasImportedQuestionBank(prepared);
+    updateImportProgress(
+        QuestionBankImportStage.saving,
+        alreadyImported
+            ? '已发现相同题库，正在恢复本机练习…'
+            : '正在保存 ${prepared.questions.length} 道题到本机练习…');
     final imported = alreadyImported
         ? prepared.questions.length
         : await store.importPreparedQuestionBank(prepared);
+    updateImportProgress(QuestionBankImportStage.syncing, '正在同步到作者私密审核箱…');
     try {
       final submitted = await store.submitQuestionBank(
           filename: filename, content: prepared.content);
+      updateImportProgress(
+          QuestionBankImportStage.complete,
+          submitted['duplicate'] == true
+              ? '已恢复 $imported 道题；这份题库此前已同步。'
+              : '已导入 $imported 道题，现在可以开始练习。');
       if (mounted) {
         message(
             context,
@@ -129,32 +162,50 @@ class _ProfilePageState extends State<ProfilePage> {
       }
       await refreshSubmissionInbox();
     } catch (error) {
+      updateImportProgress(
+          QuestionBankImportStage.partial, '已导入 $imported 道题，但私密同步暂未完成。');
       if (mounted) {
-        message(context, '已导入 $imported 道题；私密同步未完成：$error');
+        message(
+            context, '已导入 $imported 道题；私密同步未完成：${readableImportError(error)}');
       }
     }
   }
 
   Future<void> pickQuestionBank() async {
-    setState(() => importingBank = true);
+    setState(() {
+      importingBank = true;
+      importStage = QuestionBankImportStage.reading;
+      importProgressDetail = '请选择需要导入的 JSON 题库…';
+    });
     try {
       final picked = await FilePicker.platform.pickFiles(
           type: FileType.custom,
           allowedExtensions: const ['json'],
           withData: true);
-      if (picked == null) return;
+      if (picked == null) {
+        clearImportProgress();
+        return;
+      }
       final file = picked.files.single;
       if (!file.name.toLowerCase().endsWith('.json') || file.bytes == null) {
         throw Exception('请选择可以读取的 .json 题库文件');
       }
-      if (!await ensureUploadAccount()) return;
-      await importAndSyncQuestionBank(
-          filename: file.name,
-          content: utf8.decode(file.bytes!, allowMalformed: false));
+      updateImportProgress(
+          QuestionBankImportStage.reading, '正在读取 ${file.name}…');
+      final content = utf8.decode(file.bytes!, allowMalformed: false);
+      if (!await ensureUploadAccount()) {
+        clearImportProgress();
+        return;
+      }
+      await importAndSyncQuestionBank(filename: file.name, content: content);
     } on FormatException {
+      updateImportProgress(
+          QuestionBankImportStage.failed, '文件编码无法识别，请保存为 UTF-8 后重试。');
       if (mounted) message(context, '文件编码无法识别，请保存为 UTF-8 后重试。');
     } catch (error) {
-      if (mounted) message(context, error.toString());
+      updateImportProgress(
+          QuestionBankImportStage.failed, readableImportError(error));
+      if (mounted) message(context, readableImportError(error));
     } finally {
       if (mounted) setState(() => importingBank = false);
     }
@@ -172,9 +223,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       style:
                           TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
-                  const Text(
-                      '支持 .docx、.txt 或直接粘贴文字；不支持旧 .doc、PDF、图片。文件不超过 5 MB。',
+                  const Text('支持 .docx、.txt 或直接粘贴文字；请先确认文件能按题目格式读取。',
                       style: TextStyle(color: Colors.blueGrey)),
+                  const SizedBox(height: 8),
+                  const TextBankSourceRequirements(initiallyExpanded: true),
                   const SizedBox(height: 16),
                   FilledButton.icon(
                       onPressed: () => Navigator.pop(sheetContext, 'file'),
@@ -186,7 +238,12 @@ class _ProfilePageState extends State<ProfilePage> {
                       label: const Text('直接粘贴纯文字'))
                 ]))));
     if (choice == null || !mounted) return;
-    setState(() => importingBank = true);
+    setState(() {
+      importingBank = true;
+      importStage = QuestionBankImportStage.reading;
+      importProgressDetail =
+          choice == 'file' ? '请选择 Word 或 TXT 文件…' : '正在准备文字转换…';
+    });
     try {
       String sourceText;
       String sourceName;
@@ -195,7 +252,10 @@ class _ProfilePageState extends State<ProfilePage> {
             type: FileType.custom,
             allowedExtensions: const ['docx', 'txt'],
             withData: true);
-        if (picked == null) return;
+        if (picked == null) {
+          clearImportProgress();
+          return;
+        }
         final file = picked.files.single;
         final extension = file.extension?.toLowerCase();
         if (file.bytes == null || !const ['docx', 'txt'].contains(extension)) {
@@ -204,24 +264,38 @@ class _ProfilePageState extends State<ProfilePage> {
         if (file.bytes!.length > maxTextSourceBytes) {
           throw Exception('Word / 文本文件不能超过 5 MB');
         }
+        updateImportProgress(
+            QuestionBankImportStage.reading, '正在读取 ${file.name}…');
         sourceText = extension == 'docx'
-            ? extractDocxText(file.bytes!)
+            ? await Future(() => extractDocxText(file.bytes!))
             : utf8.decode(file.bytes!, allowMalformed: false);
         sourceName = file.name.replaceFirst(RegExp(r'\.[^.]+$'), '');
       } else {
         sourceText = '';
         sourceName = '文字转换题库';
       }
+      updateImportProgress(
+          QuestionBankImportStage.validating, '已读取内容，请确认题目格式…');
       final converted = await showTextBankConverter(context,
           initialText: sourceText, initialName: sourceName);
-      if (converted == null || !mounted) return;
-      if (!await ensureUploadAccount()) return;
+      if (converted == null || !mounted) {
+        clearImportProgress();
+        return;
+      }
+      if (!await ensureUploadAccount()) {
+        clearImportProgress();
+        return;
+      }
       await importAndSyncQuestionBank(
           filename: converted.filename, content: converted.content);
     } on FormatException {
+      updateImportProgress(
+          QuestionBankImportStage.failed, '文本编码无法识别，请保存为 UTF-8 后重试。');
       if (mounted) message(context, '文本编码无法识别，请保存为 UTF-8 后重试。');
     } catch (error) {
-      if (mounted) message(context, error.toString());
+      updateImportProgress(
+          QuestionBankImportStage.failed, readableImportError(error));
+      if (mounted) message(context, readableImportError(error));
     } finally {
       if (mounted) setState(() => importingBank = false);
     }
@@ -300,16 +374,20 @@ class _ProfilePageState extends State<ProfilePage> {
           const Text('不会自动进入公开题库。请仅上传你有权分享的资料；不要上传含个人隐私、受限或来源不明的内容。',
               style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
           const QuestionBankImportHelp(),
+          const TextBankSourceRequirements(),
           const SizedBox(height: 14),
           FilledButton.icon(
               onPressed: importingBank ? null : pickQuestionBank,
               icon: const Icon(Icons.upload_file_outlined),
-              label: Text(importingBank ? '正在上传…' : '上传 JSON 题库')),
+              label: Text(importingBank ? '正在处理…' : '上传 JSON 题库')),
           const SizedBox(height: 8),
           OutlinedButton.icon(
               onPressed: importingBank ? null : importFromWordOrText,
               icon: const Icon(Icons.description_outlined),
               label: const Text('我只有 Word / 纯文字')),
+          if (importStage != QuestionBankImportStage.idle)
+            QuestionBankImportProgress(
+                stage: importStage, detail: importProgressDetail),
         ])),
         if (store.importedQuestions.isNotEmpty)
           ImportedBankPractice(onStart: widget.onStart),

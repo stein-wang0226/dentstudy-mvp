@@ -5,9 +5,9 @@
 实际服务器使用宿主机 Nginx + `dentstudy.service`，不是下面的 Docker 方案。
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
-- 客户端版本：`0.2.29`（简化 JSON 导入，支持结构化 `.docx` / `.txt` / 粘贴文字转换，并可练习导入题库）；综合题库仍为 3650 道，本次未修改题目或学习数据。
+- 客户端版本：`0.2.30`（导入题库显示真实处理阶段，并补全 Word/TXT 文件要求）；综合题库仍为 3650 道，本次未修改题目或学习数据。
 - 后端：`/opt/dentstudy-current` 指向 `/opt/dentstudy-releases/20261015-open-practice-v0218`；仅替换综合题库，Python 服务代码未修改。
-- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261016-import-assist-v0229`。
+- 前端：`/var/www/dentstudy-current` 指向本次发布目录；发布后将旧目录保留以便无损回退。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
 - 用户投稿：`/var/lib/dentstudy/question-bank-submissions/`，仅服务端进程可读写，不能映射到 Nginx 静态目录；备份时须与 SQLite 一起保留。
 - 旧代码 `/opt/dentstudy`、旧网页 `/var/www/dentstudy` 均保留。
@@ -20,13 +20,15 @@
 `deploy/dentstudy-certbot.service` 和 `deploy/dentstudy-certbot.timer`。
 构建 Web 时使用 `--no-web-resources-cdn --dart-define=API_URL=/api`
 及 `--dart-define=QUESTION_BANK_ASSET=assets/all_questions.json`。
-发布时同时传入 `--dart-define=APP_VERSION=0.2.29` 和
+发布时同时传入 `--dart-define=APP_VERSION=0.2.30` 和
 `--dart-define=BUILD_TIME=实际北京时间`，在“我的”显示版本与更新时间。
 当前 GitHub workflow 只做检查，不会自动部署；代码推送后仍需单独构建和上传。
 
 微信网站所有权验证文件保存在 `mobile/web/b1f6d159694b4f3909e0affdfcfefd6e.txt`，
 Flutter Web 构建时随根目录静态资源发布。HTTP 和 HTTPS 的同名路径均需直接返回 200 和原始 TXT 内容；
 HTTP 仅此验证文件与证书验证路径不跳转，其余页面仍强制 HTTPS。不要误删验证文件。
+
+0.2.30 验收：我的 → 导入题库 → 上传 JSON 或选择 Word/TXT。选中文件后，卡片按真实完成顺序展示“读取文件 → 核对题目 → 保存练习 → 私密同步”，并有动态阶段条；无论同步成功、失败或用户取消，按钮都会恢复可操作。不会以虚假网络百分比冒充进度。Word/TXT 入口和转换页均写明：仅 `.docx`、UTF-8 `.txt` 或粘贴文字、文件上限 5 MB；不接受旧 `.doc`、PDF、图片/扫描件或加密文档；每题须分行提供题干、至少两项选项与明确答案，仅转换已有答案的 A1/A2 单选题。测试：静态检查、49 项客户端测试通过；仅发布前端，题库、学习记录、后端和同步协议未修改。
 
 0.2.29 验收：我的 → 导入题库 → 展开“没有 JSON？从模板开始”，复制最少字段模板即可上传；也可点“我只有 Word / 纯文字”选择 `.docx` / `.txt` 或粘贴已按“题干 / A. / B. / 答案：A / 解析”整理的文字，检查默认科目、章节和方向后生成并上传。旧 `.doc`、PDF、图片及超过 5 MB 的源文件明确拒绝；讲义散文不会被伪造成有答案的题目。上传需要登录，成功后本机可练并同步到仅作者可见的私密审核箱，绝不自动加入公开总题库。导入完成后同页出现“练习导入题库”，复用深度、批量和速刷模式。测试：静态检查、47 项客户端测试通过；仅发布前端，题库、学习记录、后端和同步协议未修改。
 
