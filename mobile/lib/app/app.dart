@@ -50,14 +50,17 @@ class DentStudy extends StatelessWidget {
                     store.glassEnabled ? Colors.transparent : paper,
                 appBarTheme: AppBarTheme(
                     backgroundColor:
-                        store.glassEnabled ? paper.withAlpha(120) : paper,
+                        store.glassEnabled ? Colors.transparent : paper,
                     surfaceTintColor: Colors.transparent,
                     foregroundColor: ink,
-                    elevation: 0),
+                    elevation: 0,
+                    scrolledUnderElevation: 0),
                 navigationBarTheme: NavigationBarThemeData(
                     backgroundColor: store.glassEnabled
-                        ? paper.withAlpha(90)
+                        ? Colors.transparent
                         : Color.lerp(Colors.white, backgroundTint, .07),
+                    surfaceTintColor: Colors.transparent,
+                    elevation: 0,
                     indicatorColor: teal.withAlpha(30)),
                 cardTheme: CardThemeData(
                     elevation: 0,
@@ -342,7 +345,12 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+        extendBody: store.glassEnabled,
+        extendBodyBehindAppBar: store.glassEnabled,
         appBar: AppBar(
+            flexibleSpace: store.glassEnabled
+                ? const FrostedChrome(enabled: true, child: SizedBox.expand())
+                : null,
             title: Row(children: [
               Icon(Icons.auto_stories_rounded, color: teal),
               const SizedBox(width: 9),
@@ -377,27 +385,39 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                   3 => StatisticsPage(onStart: _start),
                   _ => ProfilePage(),
                 }),
-        bottomNavigationBar: FrostedChrome(
-            enabled: store.glassEnabled,
-            child: NavigationBar(
-                selectedIndex: tab,
-                onDestinationSelected: (i) async {
-                  setState(() => tab = i);
-                  if (i == 0) await _ensurePlan();
-                },
-                destinations: const [
-                  NavigationDestination(
-                      icon: Icon(Icons.wb_sunny_outlined), label: '今日'),
-                  NavigationDestination(
-                      icon: Icon(Icons.grid_view_outlined), label: '题库'),
-                  NavigationDestination(
-                      icon: Icon(Icons.bookmarks_outlined), label: '题本'),
-                  NavigationDestination(
-                      icon: Icon(Icons.bar_chart_outlined), label: '学情'),
-                  NavigationDestination(
-                      icon: Icon(Icons.person_outline), label: '我的')
-                ])),
+        bottomNavigationBar: _navigation(),
       );
+
+  Widget _navigation() {
+    final navigation = NavigationBar(
+        height: store.glassEnabled ? 72 : null,
+        selectedIndex: tab,
+        onDestinationSelected: (i) async {
+          setState(() => tab = i);
+          if (i == 0) await _ensurePlan();
+        },
+        destinations: const [
+          NavigationDestination(
+              icon: Icon(Icons.wb_sunny_outlined), label: '今日'),
+          NavigationDestination(
+              icon: Icon(Icons.grid_view_outlined), label: '题库'),
+          NavigationDestination(
+              icon: Icon(Icons.bookmarks_outlined), label: '题本'),
+          NavigationDestination(
+              icon: Icon(Icons.bar_chart_outlined), label: '学情'),
+          NavigationDestination(icon: Icon(Icons.person_outline), label: '我的')
+        ]);
+    if (!store.glassEnabled) return navigation;
+    return SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+        child: Align(
+            heightFactor: 1,
+            child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: FrostedChrome(
+                    enabled: true, radius: 30, child: navigation))));
+  }
 }
 
 void _showContactAuthor(BuildContext context) => showModalBottomSheet<void>(

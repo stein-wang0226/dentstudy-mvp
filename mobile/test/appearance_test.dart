@@ -14,6 +14,39 @@ import 'package:dentstudy/features/profile/profile_editor.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  // Opt-in visual snapshots; not golden baselines or production assets.
+  if (const bool.fromEnvironment('GLASS_PREVIEW')) {
+    testWidgets('render glass preview', (tester) async {
+      await tester.runAsync(() async {
+        final fonts = FontLoader('DentStudySans')
+          ..addFont(rootBundle.load('assets/fonts/DentStudySans-Regular.otf'));
+        await fonts.load();
+        await app.store.init();
+      });
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      await app.store.setThemeColor('teal');
+      await app.store.setGlassEnabled(true);
+      const preview = ValueKey('glass-preview');
+      await tester
+          .pumpWidget(const RepaintBoundary(key: preview, child: DentStudy()));
+      await tester.pumpAndSettle();
+      await expectLater(find.byKey(preview),
+          matchesGoldenFile('/tmp/dentstudy-liquid-glass-mobile.png'));
+      await tester.drag(find.byType(ListView).first, const Offset(0, -220));
+      await tester.pumpAndSettle();
+      await expectLater(find.byKey(preview),
+          matchesGoldenFile('/tmp/dentstudy-liquid-glass-scrolled.png'));
+      tester.view.physicalSize = const Size(1280, 900);
+      await tester.pumpAndSettle();
+      await expectLater(find.byKey(preview),
+          matchesGoldenFile('/tmp/dentstudy-liquid-glass-desktop.png'));
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -87,7 +120,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(app.store.glassEnabled, isTrue);
     expect(find.byType(BackdropFilter), findsWidgets);
-    expect(tester.widget<FrostedChrome>(find.byType(FrostedChrome)).enabled,
+    expect(find.byType(FrostedChrome), findsNWidgets(2));
+    expect(
+        tester
+            .widgetList<FrostedChrome>(find.byType(FrostedChrome))
+            .every((chrome) => chrome.enabled),
         isTrue);
     await tester.tap(find.text('题库'));
     await tester.pumpAndSettle();
@@ -138,6 +175,56 @@ void main() {
     final greenPrimary = await backgroundPixels('forest');
     final bluePrimary = await backgroundPixels('blue');
     expect(bluePrimary, orderedEquals(greenPrimary));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('glass chrome overlays scrolling content with safe end padding',
+      (tester) async {
+    app.store.prefs = await SharedPreferences.getInstance();
+    app.store.questions = [];
+    app.store.token = '';
+    app.store.events = [];
+    await app.store.setGlassEnabled(true);
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.padding = const FakeViewPadding(top: 44, bottom: 34);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetPadding);
+    await tester.pumpWidget(const DentStudy());
+    await tester.pumpAndSettle();
+    if (kIsWeb) {
+      await tester.tap(find.text('访客模式'));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.text('我的'));
+    await tester.pumpAndSettle();
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
+    expect(scaffold.extendBody, isTrue);
+    expect(scaffold.extendBodyBehindAppBar, isTrue);
+    final bar = tester.element(find.byType(NavigationBar));
+    expect(
+        Theme.of(bar).navigationBarTheme.backgroundColor, Colors.transparent);
+    expect(Theme.of(bar).appBarTheme.backgroundColor, Colors.transparent);
+    final scroll = tester.widget<ListView>(find.byType(ListView).first);
+    final padding = scroll.padding! as EdgeInsets;
+    expect(padding.top, greaterThanOrEqualTo(100));
+    expect(padding.bottom, greaterThan(100));
+    final navRect = tester.getRect(find.byType(NavigationBar));
+    expect(navRect.left, greaterThanOrEqualTo(12));
+    expect(navRect.bottom, lessThanOrEqualTo(810));
+    await tester.drag(find.byType(ListView).first, const Offset(0, -350));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    tester.view.physicalSize = const Size(1280, 900);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(find.byType(NavigationBar)).width, 720);
+    await app.store.setGlassEnabled(false);
+    await tester.pumpAndSettle();
+    expect(find.byType(FrostedChrome), findsNothing);
+    expect(tester.widget<Scaffold>(find.byType(Scaffold).first).extendBody,
+        isFalse);
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });
 

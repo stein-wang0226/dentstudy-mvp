@@ -7,6 +7,8 @@ class StudySurface extends StatelessWidget {
   final bool glass;
   final Color tint, borderColor, color;
   final double radius;
+  final double blurSigma;
+  final bool navigation;
   final EdgeInsetsGeometry padding;
   const StudySurface(
       {super.key,
@@ -16,6 +18,8 @@ class StudySurface extends StatelessWidget {
       required this.borderColor,
       this.color = Colors.white,
       this.radius = 22,
+      this.blurSigma = 18,
+      this.navigation = false,
       this.padding = const EdgeInsets.all(20)});
 
   @override
@@ -38,15 +42,16 @@ class StudySurface extends StatelessWidget {
             borderRadius: BorderRadius.circular(radius),
             boxShadow: [
               BoxShadow(
-                  color: const Color(0xFF26313D).withAlpha(14),
-                  blurRadius: 22,
+                  color: const Color(0xFF26313D).withAlpha(22),
+                  blurRadius: 24,
                   offset: const Offset(0, 8)),
               BoxShadow(color: tint.withAlpha(10), blurRadius: 28)
             ]),
         child: ClipRRect(
             borderRadius: BorderRadius.circular(radius),
             child: BackdropFilter(
-                filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                filter:
+                    ui.ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
                 child: CustomPaint(
                     foregroundPainter: _GlassRim(radius),
                     child: DecoratedBox(
@@ -60,9 +65,9 @@ class StudySurface extends StatelessWidget {
                               1
                             ],
                                 colors: [
-                              Colors.white.withAlpha(145),
-                              color.withAlpha(42),
-                              Colors.white.withAlpha(100)
+                              Colors.white.withAlpha(navigation ? 70 : 110),
+                              color.withAlpha(navigation ? 12 : 24),
+                              Colors.white.withAlpha(navigation ? 38 : 65)
                             ])),
                         child: content)))));
   }
@@ -88,6 +93,24 @@ class _GlassRim extends CustomPainter {
           ]).createShader(rect);
     canvas.drawRRect(
         RRect.fromRectAndRadius(rect, Radius.circular(radius)), paint);
+    // A second, inset edge gives the rim thickness without tinting the content.
+    final inner = rect.deflate(1.5);
+    if (inner.width > 0 && inner.height > 0) {
+      canvas.drawRRect(
+          RRect.fromRectAndRadius(
+              inner, Radius.circular((radius - 1.5).clamp(0, radius))),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = .75
+            ..shader = LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withAlpha(100),
+                  const Color(0xFF26313D).withAlpha(26),
+                  Colors.white.withAlpha(130)
+                ]).createShader(inner));
+    }
   }
 
   @override
@@ -117,7 +140,7 @@ class StudyBackdrop extends StatelessWidget {
                                 center: const Alignment(-.85, -.8),
                                 radius: .95,
                                 colors: [
-                              tint.withAlpha(65),
+                              tint.withAlpha(85),
                               tint.withAlpha(0)
                             ])),
                         child: DecoratedBox(
@@ -126,7 +149,7 @@ class StudyBackdrop extends StatelessWidget {
                                     center: const Alignment(.9, .65),
                                     radius: 1.05,
                                     colors: [
-                                  tint.withAlpha(55),
+                                  tint.withAlpha(75),
                                   tint.withAlpha(0)
                                 ])),
                             child: DecoratedBox(
@@ -143,23 +166,19 @@ class StudyBackdrop extends StatelessWidget {
 class FrostedChrome extends StatelessWidget {
   final bool enabled;
   final Widget child;
-  const FrostedChrome({super.key, required this.enabled, required this.child});
+  final double radius;
+  const FrostedChrome(
+      {super.key, required this.enabled, required this.child, this.radius = 0});
   @override
   Widget build(BuildContext context) => enabled
-      ? ClipRect(
-          child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: DecoratedBox(
-                  decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.white.withAlpha(100),
-                            Colors.white.withAlpha(25)
-                          ]),
-                      border: Border(
-                          top: BorderSide(color: Colors.white.withAlpha(190)))),
-                  child: child)))
+      ? StudySurface(
+          glass: true,
+          tint: Colors.transparent,
+          borderColor: Colors.transparent,
+          radius: radius,
+          blurSigma: 24,
+          navigation: true,
+          padding: EdgeInsets.zero,
+          child: child)
       : child;
 }

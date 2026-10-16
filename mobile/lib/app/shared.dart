@@ -68,11 +68,19 @@ class PageBody extends StatelessWidget {
   const PageBody({super.key, required this.children});
   @override
   Widget build(BuildContext context) => SafeArea(
+      top: false,
+      bottom: false,
       child: Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 820),
               child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                  // Insets belong to the scroll content, so it can pass behind
+                  // the glass chrome while the first/last controls remain clear.
+                  padding: EdgeInsets.fromLTRB(
+                      20,
+                      MediaQuery.paddingOf(context).top,
+                      20,
+                      32 + MediaQuery.paddingOf(context).bottom),
                   children: children))));
 }

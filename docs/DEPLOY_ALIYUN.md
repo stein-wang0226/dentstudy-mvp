@@ -1,13 +1,13 @@
 # DentStudy 阿里云 ECS 部署
 
-## 当前线上部署（2026-10-15）
+## 当前线上部署（2026-10-16）
 
 实际服务器使用宿主机 Nginx + `dentstudy.service`，不是下面的 Docker 方案。
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
-- 客户端版本：`0.2.18`（执医分科开放数据补充练习）；综合题库 3650 道，新增 130 道 CMB 练习题，新增真题仍为 0 道。
+- 客户端版本：`0.2.19`（增强玻璃界面）；综合题库仍为 3650 道，本次未修改题目或学习数据。
 - 后端：`/opt/dentstudy-current` 指向 `/opt/dentstudy-releases/20261015-open-practice-v0218`；仅替换综合题库，Python 服务代码未修改。
-- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261015-open-practice-v0218`。
+- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261016-liquid-glass-v0219`。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
 - 用户投稿：`/var/lib/dentstudy/question-bank-submissions/`，仅服务端进程可读写，不能映射到 Nginx 静态目录；备份时须与 SQLite 一起保留。
 - 旧代码 `/opt/dentstudy`、旧网页 `/var/www/dentstudy` 均保留。
@@ -20,7 +20,7 @@
 `deploy/dentstudy-certbot.service` 和 `deploy/dentstudy-certbot.timer`。
 构建 Web 时使用 `--no-web-resources-cdn --dart-define=API_URL=/api`
 及 `--dart-define=QUESTION_BANK_ASSET=assets/all_questions.json`。
-发布时同时传入 `--dart-define=APP_VERSION=0.2.18` 和
+发布时同时传入 `--dart-define=APP_VERSION=0.2.19` 和
 `--dart-define=BUILD_TIME=实际北京时间`，在“我的”显示版本与更新时间。
 当前 GitHub workflow 只做检查，不会自动部署；代码推送后仍需单独构建和上传。
 
@@ -28,7 +28,15 @@
 Flutter Web 构建时随根目录静态资源发布。HTTP 和 HTTPS 的同名路径均需直接返回 200 和原始 TXT 内容；
 HTTP 仅此验证文件与证书验证路径不跳转，其余页面仍强制 HTTPS。不要误删验证文件。
 
-0.2.18 验收：重新打开网站 → 题库 → 执医，可练总数 1310；口外 1210、修复 50、牙体牙髓 50。
+0.2.19 验收：我的 → 主题与外观 → 开启“玻璃质感”，顶部栏和底部导航均为透明底色、24px 局部背景模糊与双层高光边缘。
+底部导航为悬浮圆角玻璃条，桌面最大宽度 720；页面内容可以从上下栏背后滚过，首尾内边距保留导航栏和设备安全区，避免遮挡操作。
+今日卡片降低白色覆盖，背景色只取用户所选淡背景，不与主色混合；关闭玻璃恢复普通导航与实色卡片。
+测试：静态检查、35 项客户端测试、33 项后端测试通过；Chrome 5 项外观/交互测试通过（重启资产测试由原生运行器覆盖）。
+已检查 390×844 与 1280×900 组件渲染预览，覆盖滚动与底栏布局；构建未添加依赖，不修改同步协议、后端或数据库。
+这是网页半透明/模糊/高光效果，不是 Apple 系统级折射实现；低性能设备可关闭玻璃模式，真机帧率仍需观察。
+本次回退仅需将前端 current 切回 `20261015-open-practice-v0218`，无需回退后端或数据库。
+
+0.2.18 历史验收：重新打开网站 → 题库 → 执医，可练总数 1310；口外 1210、修复 50、牙体牙髓 50。
 牙周 10、组织病理 5、黏膜 5 显示建设中，点击“查看已收录”只浏览题目，不启动常规练习。
 新题解析 → 展开“开放数据练习题 · 待审核”，显示 CMB 来源、上游版本、Apache-2.0 许可和 AI 补充解析说明；五选项完整保留。
 考研仍可练 3504 道；历年试题仍为空，不将 CMB 无年份练习题标成真题。
