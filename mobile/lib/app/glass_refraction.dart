@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
-/// Clear thick glass: a mild full-pane lens with stronger rounded shoulders.
+/// Clear thick glass: a full-pane lens with a little more visible curvature.
 /// All regions sample the actual backdrop, with no tint, blur or dark bands.
 /// Matrix backdrop filters work in CanvasKit without Impeller-only shaders.
 class GlassRefraction extends StatelessWidget {
@@ -52,8 +52,8 @@ class GlassRefraction extends StatelessWidget {
         // Curvature is approximated with stepped magnification, not dark strokes.
         return Stack(children: [
           region(0, shoulder * .4, shoulder * 1.6),
-          region(shoulder * .4, shoulder * .6, shoulder * .9),
-          region(shoulder, null, shoulder * .4),
+          region(shoulder * .4, shoulder * .6, shoulder * 1.08),
+          region(shoulder, null, shoulder * .52),
         ]);
       })));
 }
