@@ -5,9 +5,9 @@
 实际服务器使用宿主机 Nginx + `dentstudy.service`，不是下面的 Docker 方案。
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
-- 客户端版本：`0.2.21`（零磨砂、边缘背景取样变形、细主题描边与更淡背景）；综合题库仍为 3650 道，本次未修改题目或学习数据。
+- 客户端版本：`0.2.22`（今日计划三模式选择与轻量交互动画）；综合题库仍为 3650 道，本次未修改题目或学习数据。
 - 后端：`/opt/dentstudy-current` 指向 `/opt/dentstudy-releases/20261015-open-practice-v0218`；仅替换综合题库，Python 服务代码未修改。
-- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261016-edge-lens-v0221`。
+- 前端：`/var/www/dentstudy-current` 指向 `/var/www/dentstudy-releases/20261016-study-motion-v0222`。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
 - 用户投稿：`/var/lib/dentstudy/question-bank-submissions/`，仅服务端进程可读写，不能映射到 Nginx 静态目录；备份时须与 SQLite 一起保留。
 - 旧代码 `/opt/dentstudy`、旧网页 `/var/www/dentstudy` 均保留。
@@ -20,7 +20,7 @@
 `deploy/dentstudy-certbot.service` 和 `deploy/dentstudy-certbot.timer`。
 构建 Web 时使用 `--no-web-resources-cdn --dart-define=API_URL=/api`
 及 `--dart-define=QUESTION_BANK_ASSET=assets/all_questions.json`。
-发布时同时传入 `--dart-define=APP_VERSION=0.2.21` 和
+发布时同时传入 `--dart-define=APP_VERSION=0.2.22` 和
 `--dart-define=BUILD_TIME=实际北京时间`，在“我的”显示版本与更新时间。
 当前 GitHub workflow 只做检查，不会自动部署；代码推送后仍需单独构建和上传。
 
@@ -28,7 +28,13 @@
 Flutter Web 构建时随根目录静态资源发布。HTTP 和 HTTPS 的同名路径均需直接返回 200 和原始 TXT 内容；
 HTTP 仅此验证文件与证书验证路径不跳转，其余页面仍强制 HTTPS。不要误删验证文件。
 
-0.2.21 验收：开启玻璃，卡片与上下栏不再使用 Gaussian blur；撤去固定青色高光、黑色暗边和 6px 厚亮弧，仅保留 0.7px 细反光线，取当前主题主色并随主题重绘。
+0.2.22 验收：今日 → 开始今日计划 → 弹出深度练习、批量练习、速刷，每种有简介和本轮题数；点击选项直接进入已有对应会话。关闭弹窗不创建会话，连续点击不重复打开；到期复习优先规则不变。继续今日计划/续练仍保留原模式，不重新询问，避免损坏断点。
+新增独立 `mode_picker.dart` 与 `motion.dart`：开始/自定义/欢迎页按钮及题目卡片有 90ms 按压缩小和 240ms 回弹；模式弹层 320ms 渐显、滑入、轻微缩放回弹，过渡期间最多 2.5px 动态模糊，停稳后移除滤镜与透明合成层。
+Material 页面路由复用上述过渡；iOS 页面保留原生返回手势过渡。系统减少动态效果开启时，新增缩放、动态模糊与弹层动效关闭。没有给每个弹窗/标签切换强制添加动画，不添加常驻模糊。
+测试：42 项客户端、33 项后端、Chrome 12 项模式/外观交互测试通过；320×640 大字体弹窗及 390×844 预览检查完成。中文子集字体已更新；无新依赖、后端变更或事件协议变化。
+风险：低性能设备的实际帧率仍需真机观察；自动测试不会替代个人对动画速度的偏好。回退只需将前端 current 切回 `20261016-edge-lens-v0221`，不动数据库。
+
+0.2.21 历史验收：开启玻璃，卡片与上下栏不再使用 Gaussian blur；撤去固定青色高光、黑色暗边和 6px 厚亮弧，仅保留 0.7px 细反光线，取当前主题主色并随主题重绘。
 新增 `glass_refraction.dart`，在 4px 窄边缘使用 [Flutter ImageFilter.matrix](https://api.flutter.dev/flutter/dart-ui/ImageFilter/ImageFilter.matrix.html) 放大背景取样，外缘约 3px 位移，中间区域及前景文字不变。是实际背景像素的局部变形，但不是连续曲率的物理液体模拟，也没有添加 Impeller 专用 shader 或大型依赖。
 背景两处色彩光晕 alpha 从 110/90 降到 32/24，光带色彩 alpha 从 40 降到 8，仍只使用独立背景色。导航附近正文使用不创建离屏透明层的裁剪，避免零模糊后的文字重叠，同时保留边缘对真实背景的取样；未使用会阻断取样的 ShaderMask。
 检查：38 项客户端测试、33 项后端测试、Chrome 8 项外观/交互测试通过；棋盘像素测试验证组合裁剪下边缘真实变化、中央逐像素不变；主题画笔重绘与背景色独立性测试通过。手机/桌面预览及构建检查完成。

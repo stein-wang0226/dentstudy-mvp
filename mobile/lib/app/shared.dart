@@ -3,6 +3,7 @@ import '../store.dart';
 import '../reminders.dart';
 import 'theme_palette.dart';
 import 'theme_surfaces.dart';
+import 'motion.dart';
 export 'theme_palette.dart';
 
 final store = StudyStore();
@@ -37,17 +38,18 @@ Widget box(Widget child, {Color? color}) => StudySurface(
     borderColor: ink.withAlpha(12),
     color: color ?? Colors.white,
     child: child);
-Widget studyCard({required Widget child}) => store.glassEnabled
-    ? Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
-        child: StudySurface(
-            glass: true,
-            tint: backgroundTint,
-            borderColor: Colors.transparent,
-            radius: 18,
-            padding: EdgeInsets.zero,
-            child: child))
-    : Card(child: child);
+Widget studyCard({required Widget child}) => PressFeedback(
+    child: store.glassEnabled
+        ? Padding(
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            child: StudySurface(
+                glass: true,
+                tint: backgroundTint,
+                borderColor: Colors.transparent,
+                radius: 18,
+                padding: EdgeInsets.zero,
+                child: child))
+        : Card(child: child));
 Widget heading(String text, {String? sub}) => Padding(
     padding: const EdgeInsets.only(top: 24, bottom: 14),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

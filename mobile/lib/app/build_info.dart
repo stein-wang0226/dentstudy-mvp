@@ -1,6 +1,6 @@
 class BuildInfo {
   static const version =
-      String.fromEnvironment('APP_VERSION', defaultValue: '0.2.21');
+      String.fromEnvironment('APP_VERSION', defaultValue: '0.2.22');
   static const builtAt =
       String.fromEnvironment('BUILD_TIME', defaultValue: '本地开发版');
 }

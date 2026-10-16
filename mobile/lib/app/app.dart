@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'shared.dart';
 import 'entrance.dart';
 import 'theme_surfaces.dart';
 import 'glass_refraction.dart';
+import 'motion.dart';
+import '../features/practice/mode_picker.dart';
 import '../features/today/today_page.dart';
 import '../features/today/today_plan.dart';
 import '../features/library/library_page.dart';
@@ -37,6 +40,13 @@ class DentStudy extends StatelessWidget {
                 tint: backgroundTint,
                 child: child ?? const SizedBox.shrink()),
             theme: ThemeData(
+                pageTransitionsTheme: const PageTransitionsTheme(builders: {
+                  TargetPlatform.android: StudyPageTransitions(),
+                  TargetPlatform.macOS: StudyPageTransitions(),
+                  TargetPlatform.windows: StudyPageTransitions(),
+                  TargetPlatform.linux: StudyPageTransitions(),
+                  TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+                }),
                 useMaterial3: true,
                 fontFamily: 'DentStudySans',
                 fontFamilyFallback: const [
@@ -103,7 +113,7 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> with WidgetsBindingObserver {
   late int tab;
-  bool opening = false, preparing = false;
+  bool opening = false, preparing = false, choosingMode = false;
   late final TodayPlan plan = TodayPlan(store);
   Timer? dayTimer;
   void _storeChanged() {
@@ -152,7 +162,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   }
 
   Future<void> _today() async {
-    if (opening) return;
+    if (opening || preparing || choosingMode) return;
     await _ensurePlan();
     if (!mounted) return;
     final drafts =
@@ -171,7 +181,17 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
       if (mounted) message(context, '本轮计划已完成，暂时没有新的学习任务。');
       return;
     }
+    if (!mounted || choosingMode) return;
+    choosingMode = true;
+    String? mode;
+    try {
+      mode = await chooseStudyMode(context, review: review, count: qs.length);
+    } finally {
+      choosingMode = false;
+    }
+    if (mode == null || !mounted) return;
     await _start(PracticeRequest(qs,
+        mode: mode,
         review: review,
         kind: 'today',
         label: review ? '今日计划 · 到期复习' : '今日计划 · 新题'));

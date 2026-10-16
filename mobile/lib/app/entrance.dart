@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'shared.dart';
+import 'motion.dart';
 import '../features/profile/profile_page.dart' show showAccountDialog;
 
 /// A static web welcome screen. The application is already built underneath,
@@ -96,16 +97,19 @@ class _WelcomeLayer extends StatelessWidget {
                             const SizedBox(height: 42),
                             SizedBox(
                                 width: double.infinity,
-                                child: FilledButton.icon(
-                                    onPressed: onStart,
-                                    icon: const Icon(Icons.play_arrow_rounded),
-                                    label: const Text('访客模式'))),
+                                child: PressFeedback(
+                                    child: FilledButton.icon(
+                                        onPressed: onStart,
+                                        icon: const Icon(
+                                            Icons.play_arrow_rounded),
+                                        label: const Text('访客模式')))),
                             const SizedBox(height: 10),
                             SizedBox(
                                 width: double.infinity,
-                                child: OutlinedButton.icon(
-                                    onPressed: onLogin,
-                                    icon: const Icon(Icons.person_outline),
-                                    label: const Text('登录 / 注册')))
+                                child: PressFeedback(
+                                    child: OutlinedButton.icon(
+                                        onPressed: onLogin,
+                                        icon: const Icon(Icons.person_outline),
+                                        label: const Text('登录 / 注册'))))
                           ]))))));
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../app/shared.dart';
+import '../../app/motion.dart';
 import '../../models.dart';
 import '../compliance/filing_footer.dart';
 import '../practice/practice_request.dart';
@@ -95,11 +96,13 @@ class TodayPage extends StatelessWidget {
         const SizedBox(height: 22),
         SizedBox(
             width: double.infinity,
-            child: FilledButton.icon(
-                onPressed: plan.total == 0 && !hasPlanDraft ? null : onPlan,
-                icon: const Icon(Icons.play_arrow_rounded),
-                label: Text(
-                    hasPlanDraft || plan.completed > 0 ? '继续今日计划' : '开始今日计划'))),
+            child: PressFeedback(
+                child: FilledButton.icon(
+                    onPressed: plan.total == 0 && !hasPlanDraft ? null : onPlan,
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    label: Text(hasPlanDraft || plan.completed > 0
+                        ? '继续今日计划'
+                        : '开始今日计划')))),
         const SizedBox(height: 10),
         Text(
             plan.remainingReviews.isNotEmpty
@@ -116,10 +119,11 @@ class TodayPage extends StatelessWidget {
             style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
       ])),
       const SizedBox(height: 12),
-      OutlinedButton.icon(
-          onPressed: onCustom,
-          icon: const Icon(Icons.tune),
-          label: const Text('自定义练习')),
+      PressFeedback(
+          child: OutlinedButton.icon(
+              onPressed: onCustom,
+              icon: const Icon(Icons.tune),
+              label: const Text('自定义练习'))),
       if (justWrong.isNotEmpty || repeated.isNotEmpty) ...[
         heading('优先订正', sub: '先把刚错和反复错的知识点补牢，再扩展新题'),
         box(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
