@@ -254,7 +254,10 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
       var qs = [...request.questions];
       final state = store.learning;
       if (request.draft == null) {
-        final allowed = store.catalog.learnable.map((q) => q.id).toSet();
+        final allowed = {
+          ...store.catalog.learnable.map((q) => q.id),
+          ...store.importedQuestionIds
+        };
         qs = qs
             .where((q) =>
                 allowed.contains(q.id) || state.states[q.id]?.lastDay != null)
@@ -409,7 +412,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                       1 => LibraryPage(onStart: _start),
                       2 => NotebooksPage(onStart: _start),
                       3 => StatisticsPage(onStart: _start),
-                      _ => ProfilePage(),
+                      _ => ProfilePage(onStart: _start),
                     })),
         bottomNavigationBar: _navigation(),
       );

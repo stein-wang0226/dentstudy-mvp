@@ -9,6 +9,18 @@ import 'models.dart';
 import 'features/library/catalog.dart';
 import 'app/theme_palette.dart';
 
+/// The validated, complete JSON sent to the private submission inbox.
+///
+/// The UI also accepts a smaller learner-friendly shape and expands it into
+/// this form before it is stored locally or sent to the server.
+class PreparedQuestionBank {
+  final String name;
+  final String content;
+  final List<Question> questions;
+  const PreparedQuestionBank(
+      {required this.name, required this.content, required this.questions});
+}
+
 class StudyStore extends ChangeNotifier {
   static const maxQuestionBankBytes = 12 * 1024 * 1024;
   late SharedPreferences prefs;
@@ -20,6 +32,8 @@ class StudyStore extends ChangeNotifier {
   Map<String, Map<String, dynamic>> drafts = {};
   List<Map<String, dynamic>> sessions = [];
   Map<String, dynamic>? dailyPlan;
+  Set<String> importedQuestionIds = <String>{};
+  String? lastImportedBankName;
   String? activeSessionId;
   Future<void> _writeQueue = Future.value();
   QuestionCatalog get catalog => QuestionCatalog(questions, mode);
@@ -50,6 +64,15 @@ class StudyStore extends ChangeNotifier {
 
   List<Question> get bank =>
       questions.where((q) => q.modes.contains(mode)).toList();
+  List<Question> get importedQuestions => questions
+      .where((question) => importedQuestionIds.contains(question.id))
+      .toList();
+  bool hasImportedQuestionBank(PreparedQuestionBank prepared) =>
+      prepared.questions.isNotEmpty &&
+      prepared.questions
+          .every((question) => importedQuestionIds.contains(question.id));
+  String get _importedQuestionIdsKey => 'importedQuestionIds:$userId';
+  String get _lastImportedBankNameKey => 'lastImportedBankName:$userId';
   // Review-first is account-wide, including questions from other exam tracks.
   List<Question> get due => learning.due(questions, DateTime.now());
   String get today => dayOf(DateTime.now());
@@ -166,6 +189,9 @@ class StudyStore extends ChangeNotifier {
     dailyReviewTarget = settings['dailyReviewTarget'] as int?;
     settingsUpdatedAt =
         settings['updatedAt'] as String? ?? '1970-01-01T00:00:00.000000Z';
+    importedQuestionIds =
+        (prefs.getStringList(_importedQuestionIdsKey) ?? <String>[]).toSet();
+    lastImportedBankName = prefs.getString(_lastImportedBankNameKey);
   }
 
   Future<void> _save() async {
@@ -485,11 +511,23 @@ class StudyStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<int> importQuestionBank(String content) async {
+  PreparedQuestionBank prepareQuestionBankImport(String content) {
     if (content.trim().isEmpty) throw Exception('题库文件为空');
     final bytes = utf8.encode(content).length;
     if (bytes > maxQuestionBankBytes) throw Exception('题库文件不能超过 12 MB');
-    final imported = _readImportedQuestions(content);
+    final normalized = _normalizeImportedBank(content);
+    final normalizedContent = jsonEncode(normalized);
+    if (utf8.encode(normalizedContent).length > maxQuestionBankBytes) {
+      throw Exception('题库补全后的文件超过 12 MB，请拆分后再上传');
+    }
+    return PreparedQuestionBank(
+        name: normalized['name'] as String,
+        content: normalizedContent,
+        questions: _readImportedQuestions(normalizedContent));
+  }
+
+  Future<int> importPreparedQuestionBank(PreparedQuestionBank prepared) async {
+    final imported = prepared.questions;
     final existing = questions.map((question) => question.id).toSet();
     final conflict = imported
         .map((question) => question.id)
@@ -510,9 +548,24 @@ class StudyStore extends ChangeNotifier {
       rethrow;
     }
     dailyPlan = null;
+    importedQuestionIds = {
+      ...importedQuestionIds,
+      ...imported.map((q) => q.id)
+    };
+    lastImportedBankName = prepared.name;
+    if (!await prefs.setStringList(
+        _importedQuestionIdsKey, importedQuestionIds.toList()..sort())) {
+      throw Exception('本机存储空间不足，未能记录导入题库');
+    }
+    if (!await prefs.setString(_lastImportedBankNameKey, prepared.name)) {
+      throw Exception('本机存储空间不足，未能记录导入题库');
+    }
     await _save();
     return imported.length;
   }
+
+  Future<int> importQuestionBank(String content) async =>
+      importPreparedQuestionBank(prepareQuestionBankImport(content));
 
   Future<Map<String, dynamic>> submitQuestionBank({
     required String filename,
@@ -672,4 +725,195 @@ List<Question> _readImportedQuestions(String content) {
     result.add(Question(question));
   }
   return result;
+}
+
+const _importRequiredFields = [
+  'id',
+  'subject',
+  'chapter',
+  'type',
+  'stem',
+  'options',
+  'answer',
+  'explanation',
+  'warning',
+  'reference',
+  'citation',
+  'tags',
+  'topics',
+  'modes',
+  'paperId',
+  'paperName',
+  'durationMinutes',
+  'order',
+  'points',
+  'isDemo',
+  'reviewStatus',
+  'sourceType',
+  'license'
+];
+
+Map<String, dynamic> _normalizeImportedBank(String content) {
+  dynamic decoded;
+  try {
+    decoded = jsonDecode(content.replaceFirst('\uFEFF', ''));
+  } on FormatException {
+    throw Exception('文件不是有效 JSON，请从模板复制后再填写');
+  }
+  final Map<String, dynamic> bank;
+  if (decoded is List) {
+    bank = {'name': '用户导入题库', 'questions': decoded};
+  } else if (decoded is Map) {
+    bank = Map<String, dynamic>.from(decoded);
+  } else {
+    throw Exception('题库顶层应为 questions 数组，或直接是题目数组');
+  }
+  if (bank['questions'] is! List) {
+    throw Exception('题库顶层必须包含 questions 数组');
+  }
+  final rawQuestions = bank['questions'] as List;
+  if (rawQuestions.isEmpty) throw Exception('题库至少需要 1 道题');
+  final suppliedName = bank['name'];
+  final name = suppliedName is String && suppliedName.trim().isNotEmpty
+      ? suppliedName.trim()
+      : '用户导入题库';
+  final normalized = <Map<String, dynamic>>[];
+  for (var index = 0; index < rawQuestions.length; index++) {
+    final raw = rawQuestions[index];
+    if (raw is! Map) throw Exception('第 ${index + 1} 题必须是 JSON 对象');
+    final question = Map<String, dynamic>.from(raw);
+    final canonical =
+        _importRequiredFields.every((field) => question.containsKey(field));
+    normalized.add(canonical
+        ? question
+        : _normalizeSimpleImportedQuestion(question, index + 1, name));
+  }
+  return {'version': 1, 'name': name, 'questions': normalized};
+}
+
+Map<String, dynamic> _normalizeSimpleImportedQuestion(
+    Map<String, dynamic> raw, int position, String bankName) {
+  String requiredText(String field, {String? fallback}) {
+    final value = raw[field];
+    if (value is String && value.trim().isNotEmpty) return value.trim();
+    if (fallback != null) return fallback;
+    throw Exception('第 $position 题的 $field 不能为空');
+  }
+
+  final subject = requiredText('subject');
+  if (!subjects.contains(subject)) {
+    throw Exception('第 $position 题的 subject 不在支持科目中，请按模板填写');
+  }
+  var type = raw['type'] is String ? (raw['type'] as String).trim() : 'A1';
+  if (type == '单选题') type = 'A1';
+  if (!const ['A1', 'A2'].contains(type)) {
+    throw Exception('简化模板暂只支持 A1 或 A2；共用题干请使用完整 JSON 格式');
+  }
+  final options = _simpleOptions(raw['options'], position);
+  final answer = requiredText('answer');
+  if (!options.containsKey(answer)) {
+    throw Exception('第 $position 题的 answer 必须与选项编号一致，例如 A');
+  }
+  final chapter = requiredText('chapter', fallback: '未分类章节');
+  final stem = requiredText('stem');
+  final id = raw['id'] is String && (raw['id'] as String).trim().isNotEmpty
+      ? (raw['id'] as String).trim()
+      : _generatedImportedId(raw, position);
+  final modes = _stringList(raw['modes'], fallback: const ['考研']);
+  if (modes.isEmpty ||
+      modes.any((mode) => !const ['考研', '本科期末', '执医'].contains(mode))) {
+    throw Exception('第 $position 题的 modes 仅可使用 考研、本科期末、执医');
+  }
+  final tags = _stringList(raw['tags'], fallback: const ['用户导入', '待医学审核']);
+  final topics = _stringList(raw['topics'], fallback: [chapter]);
+  final reference = requiredText('reference', fallback: '用户自有学习资料');
+  final explanation = requiredText('explanation', fallback: '导入资料未提供详细解析。');
+  final warning = requiredText('warning', fallback: '请结合教材、课程与专业教师意见核对。');
+  final citation = raw['citation'] is Map
+      ? Map<String, dynamic>.from(raw['citation'] as Map)
+      : <String, dynamic>{'verified': false, 'title': reference};
+  final duration = raw['durationMinutes'];
+  final order = raw['order'];
+  final points = raw['points'];
+  return {
+    'id': id,
+    'subject': subject,
+    'chapter': chapter,
+    'type': type,
+    'stem': stem,
+    'options': options,
+    'answer': answer,
+    'explanation': explanation,
+    'warning': warning,
+    'reference': reference,
+    'citation': citation,
+    'tags': tags,
+    'topics': topics,
+    'modes': modes,
+    'paperId':
+        raw['paperId'] is String && (raw['paperId'] as String).trim().isNotEmpty
+            ? (raw['paperId'] as String).trim()
+            : 'user-import-$subject-$chapter',
+    'paperName': raw['paperName'] is String &&
+            (raw['paperName'] as String).trim().isNotEmpty
+        ? (raw['paperName'] as String).trim()
+        : '$subject · $bankName（用户导入）',
+    'durationMinutes': duration is int && duration > 0 ? duration : 60,
+    'order': order is int && order > 0 ? order : position,
+    'points': points is int && points > 0 ? points : 1,
+    'isDemo': false,
+    'reviewStatus': 'draft',
+    'sourceType': 'user_material',
+    'license':
+        raw['license'] is String && (raw['license'] as String).trim().isNotEmpty
+            ? (raw['license'] as String).trim()
+            : '用户提供资料；仅供本地学习使用，公开前需核实授权与医学审核。',
+  };
+}
+
+Map<String, String> _simpleOptions(dynamic value, int position) {
+  if (value is Map) {
+    final options = <String, String>{};
+    for (final entry in value.entries) {
+      if (entry.key is! String ||
+          entry.value is! String ||
+          (entry.key as String).trim().isEmpty ||
+          (entry.value as String).trim().isEmpty) {
+        throw Exception('第 $position 题的 options 必须是非空文字选项');
+      }
+      options[(entry.key as String).trim()] = (entry.value as String).trim();
+    }
+    if (options.length >= 2) return options;
+  }
+  if (value is List &&
+      value.length >= 2 &&
+      value.every((item) => item is String && item.trim().isNotEmpty)) {
+    return {
+      for (var index = 0; index < value.length; index++)
+        String.fromCharCode(65 + index): (value[index] as String).trim()
+    };
+  }
+  throw Exception('第 $position 题至少需要 2 个 options，例如 {"A":"选项一","B":"选项二"}');
+}
+
+List<String> _stringList(dynamic value, {required List<String> fallback}) {
+  if (value == null) return List<String>.from(fallback);
+  if (value is! List || !value.every((item) => item is String)) {
+    throw Exception('tags、topics、modes 需要填写为文字数组');
+  }
+  return value
+      .cast<String>()
+      .map((item) => item.trim())
+      .where((item) => item.isNotEmpty)
+      .toSet()
+      .toList();
+}
+
+String _generatedImportedId(Map<String, dynamic> raw, int position) {
+  var hash = 0x811c9dc5;
+  for (final unit in jsonEncode(raw).codeUnits) {
+    hash ^= unit;
+    hash = (hash * 0x01000193) & 0xffffffff;
+  }
+  return 'user-${hash.toRadixString(16)}-$position';
 }
