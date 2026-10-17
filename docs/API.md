@@ -12,6 +12,7 @@ API 默认 `http://127.0.0.1:8787`，JSON UTF-8。私有接口使用 `Authorizat
 | POST | `/v1/sync` | `{events:[...]}`，最多 500 条；返回完整快照 |
 | GET | `/v1/state` | 返回当前账号快照 |
 | POST | `/v1/question-bank-submissions` | 登录后提交 `{filename,content}`；仅 `.json`，原文件最大 12 MB |
+| POST | `/v1/ai/question-bank/prepare` | 登录后提交 `{text,name,subject,chapter,mode}`，将 Word/TXT 已提取的文字整理为待审核 JSON；最多 6 万字、每账号每日 3 次 |
 | GET | `/v1/question-bank-submissions` | 登录后查看自己的投稿；配置的作者账号可查看全部投稿元数据 |
 | GET | `/v1/admin/question-bank-submissions/{id}` | 仅作者可下载一份投稿的原始 JSON；响应不缓存且不会经静态目录公开 |
 | GET / POST | `/v1/profile` | 当前账号资料；保存 `{nickname,avatar,university}`。头像兼容预设键或客户端裁剪的 PNG data URI（512 KB、512 像素以内） |
@@ -56,7 +57,9 @@ API 默认 `http://127.0.0.1:8787`，JSON UTF-8。私有接口使用 `Authorizat
 
 `kind` 还可为 `favorite`（value 为 bool）、`note`（字符串最多 10000 字）、`removeWrong`（null）。grade 为 wrong/guessed/mastered；mode 为 practice/review/exam。主观题 answer 为用户书写的文本。事件时间必须带时区，不得超过服务器当前时间 5 分钟。超时请求可按原事件 ID 原样重试。
 
-常规请求体限制 2 MB；题库投稿允许原文件最大 12 MB（为容纳 JSON 传输封装，请求上限 16 MB）。无认证返回 401，校验失败 400。同步批次原子提交，一条无效则整个批次回滚。不同账号的事件使用复合主键隔离。
+常规请求体限制 2 MB；题库投稿允许原文件最大 12 MB（为容纳 JSON 传输封装，请求上限 16 MB）；AI 整理请求上限 512 KB，原文字上限 6 万字。无认证返回 401，校验失败 400，AI 未配置、免费额度耗尽或服务器预算到顶返回 503。同步批次原子提交，一条无效则整个批次回滚。不同账号的事件使用复合主键隔离。
+
+AI 整理使用服务器受限环境变量中的阿里云百炼 API Key，客户端、Git 和响应中都不携带密钥。只有用户在导入对话框显式点击“AI 智能整理”时，当前文字才会发送给模型；服务端不持久化原文或模型原始输出，只保存账号标识、调用时间、token 计数与预算金额用于限流。模型仅可提取原文中已有的题干、2–8 个选项和与选项一致的答案；不完整或答案不明确的条目会被丢弃，结果统一标为用户导入、待医学审核，不能进入公开题库。
 
 题库投稿先在客户端本地校验、合并至该设备的离线题库；登录后才会把原始 JSON 副本提交至服务端。服务端再次执行 `backend/bank.py validate` 校验，保存到 `DENTSTUDY_SUBMISSIONS` 指向的私有目录，不经 Nginx 对外提供。投稿文件只用于人工审核，用户须确保拥有分享权限，不得上传个人隐私、受限或来源不明的内容。`DENTSTUDY_ADMIN_EMAIL` 对应的账号可在客户端投稿箱查看文件名、题数、大小、时间及投稿邮箱，并可通过仅作者可用的下载接口将原始 JSON 保存到本地；下载响应为 `no-store`，不会生成公开链接。
 
@@ -73,4 +76,4 @@ API 默认 `http://127.0.0.1:8787`，JSON UTF-8。私有接口使用 `Authorizat
 - `citation`：publisher/title/edition/chapter/page/verified；正式发布需核实。
 - `reviewStatus/reviewer/reviewedAt`：正式导入必须为 approved 并有审核记录。
 
-数据库当前含用户、会话、事件、学习设置和题库投稿元数据；运行题库仍为经校验的版本化 JSON。已有 Web 后端可保持此 API 契约，用数据库题库表替换 JSON，并以 PostgreSQL 持久化事件。
+数据库当前含用户、会话、事件、学习设置、题库投稿元数据与不含原文的 AI 调用计量；运行题库仍为经校验的版本化 JSON。已有 Web 后端可保持此 API 契约，用数据库题库表替换 JSON，并以 PostgreSQL 持久化事件。

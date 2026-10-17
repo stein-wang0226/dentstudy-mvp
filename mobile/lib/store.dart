@@ -752,6 +752,33 @@ class StudyStore extends ChangeNotifier {
         const Duration(seconds: 60));
   }
 
+  /// Sends source text only after the learner explicitly chooses AI
+  /// conversion in the import dialog. The returned JSON still goes through
+  /// [prepareQuestionBankImport] before it can reach local storage.
+  Future<Map<String, dynamic>> prepareQuestionBankWithAi({
+    required String text,
+    required String name,
+    required String subject,
+    required String chapter,
+    required String mode,
+  }) async {
+    if (token.isEmpty) throw Exception('请先登录后再使用 AI 整理');
+    final result = await request(
+        '/v1/ai/question-bank/prepare',
+        {
+          'text': text,
+          'name': name,
+          'subject': subject,
+          'chapter': chapter,
+          'mode': mode,
+        },
+        const Duration(seconds: 90));
+    if (result['filename'] is! String || result['content'] is! String) {
+      throw Exception('AI 返回内容不完整，请使用本地格式整理');
+    }
+    return result;
+  }
+
   Future<Map<String, dynamic>> questionBankSubmissions() async {
     if (token.isEmpty) throw Exception('请先登录');
     return request('/v1/question-bank-submissions');

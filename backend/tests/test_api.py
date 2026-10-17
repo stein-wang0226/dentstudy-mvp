@@ -5,6 +5,7 @@ import threading
 import unittest
 import urllib.request
 import urllib.error
+from unittest import mock
 from pathlib import Path
 from http.server import ThreadingHTTPServer
 import server
@@ -183,6 +184,58 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.request(download_path,token=contributor)[0],401)
         self.assertEqual(self.request('/v1/question-bank-submissions',
                                       {'filename':'bad.json','content':'{}'},contributor)[0],400)
+
+    def test_ai_question_bank_preparation_is_bounded_and_does_not_store_source(self):
+        token = self.register('ai-preparation')
+        payload = {
+            'name': '牙周整理', 'subject': '牙周病学', 'chapter': '牙周基础',
+            'mode': '考研', 'text': '仅用于本次请求的原文标记，不应写入数据库。'
+        }
+        model_result = {'questions': [{
+            'stem': '菌斑是牙周病的主要始动因子吗？',
+            'options': {'A': '是', 'B': '否'}, 'answer': 'A',
+            'explanation': '原文已有：是。'
+        }]}
+        with mock.patch.object(server, 'AI_API_KEY', 'test-key'), \
+                mock.patch.object(server, 'call_question_bank_ai',
+                                  return_value=(model_result, 120, 80)):
+            status, result = self.request('/v1/ai/question-bank/prepare', payload, token)
+        self.assertEqual(status, 200)
+        self.assertEqual(result['questionCount'], 1)
+        bank = json.loads(result['content'])
+        self.assertEqual(bank['questions'][0]['subject'], '牙周病学')
+        self.assertEqual(bank['questions'][0]['answer'], 'A')
+        with server.connect() as db:
+            row = db.execute('''SELECT status,input_tokens,output_tokens,actual_fen
+                    FROM ai_question_bank_requests''').fetchone()
+            columns = {item['name'] for item in db.execute(
+                'PRAGMA table_info(ai_question_bank_requests)')}
+        self.assertEqual(dict(row)['status'], 'completed')
+        self.assertEqual(dict(row)['input_tokens'], 120)
+        self.assertEqual(dict(row)['output_tokens'], 80)
+        self.assertNotIn('text', columns)
+        self.assertNotIn('source', columns)
+
+    def test_ai_question_bank_preparation_requires_config_and_obeys_daily_limit(self):
+        token = self.register('ai-limit')
+        payload = {
+            'name': '整理', 'subject': '口腔修复学', 'chapter': '固定修复',
+            'mode': '考研', 'text': '题干、选项和答案都在这里。'
+        }
+        with mock.patch.object(server, 'AI_API_KEY', ''):
+            self.assertEqual(
+                self.request('/v1/ai/question-bank/prepare', payload, token)[0], 503)
+        model_result = {'questions': [{
+            'stem': '测试题？', 'options': {'A': '甲', 'B': '乙'}, 'answer': 'A'
+        }]}
+        with mock.patch.object(server, 'AI_API_KEY', 'test-key'), \
+                mock.patch.object(server, 'AI_DAILY_LIMIT', 1), \
+                mock.patch.object(server, 'call_question_bank_ai',
+                                  return_value=(model_result, 1, 1)):
+            self.assertEqual(
+                self.request('/v1/ai/question-bank/prepare', payload, token)[0], 200)
+            self.assertEqual(
+                self.request('/v1/ai/question-bank/prepare', payload, token)[0], 400)
 
     def test_profile_comments_and_author_user_directory(self):
         learner=self.register('profile-learner')

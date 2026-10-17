@@ -4,6 +4,7 @@ import base64
 import hashlib
 import hmac
 import json
+import math
 import os
 import re
 import secrets
@@ -12,9 +13,11 @@ import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib import error as urlerror
+from urllib import request as urlrequest
 from urllib.parse import parse_qs, unquote, urlparse
 from core import reduce_events, plan
-from bank import validate as validate_bank
+from bank import SUBJECTS, validate as validate_bank
 
 ROOT = Path(__file__).resolve().parents[1]
 DB = Path(os.environ.get('DENTSTUDY_DB', str(ROOT / 'backend' / 'dentstudy.sqlite3')))
@@ -24,10 +27,174 @@ SUBMISSIONS = Path(os.environ.get(
 ADMIN_EMAIL = os.environ.get('DENTSTUDY_ADMIN_EMAIL', '').strip().lower()
 MAX_SUBMISSION_BYTES = 12 * 1024 * 1024
 MAX_SUBMISSION_REQUEST_BYTES = 16 * 1024 * 1024
+MAX_AI_REQUEST_BYTES = 512 * 1024
+MAX_AI_SOURCE_CHARS = 60_000
+MAX_AI_QUESTIONS = 50
+AI_OUTPUT_TOKEN_RESERVE = 16_000
+AI_API_KEY = os.environ.get('DENTSTUDY_AI_API_KEY', '').strip()
+AI_BASE_URL = os.environ.get(
+    'DENTSTUDY_AI_BASE_URL',
+    'https://ws-k2360sf19dbwaa6x.cn-beijing.maas.aliyuncs.com/compatible-mode/v1'
+).rstrip('/')
+AI_MODEL = os.environ.get('DENTSTUDY_AI_MODEL', 'qwen3.7-flash').strip()
+
+
+def positive_int_env(name, default):
+    try:
+        value = int(os.environ.get(name, default))
+        return value if value > 0 else default
+    except (TypeError, ValueError):
+        return default
+
+
+AI_DAILY_LIMIT = positive_int_env('DENTSTUDY_AI_DAILY_LIMIT', 3)
+AI_MONTHLY_BUDGET_FEN = positive_int_env('DENTSTUDY_AI_MONTHLY_BUDGET_FEN', 2_000)
 ALLOWED_ORIGINS = {
     origin.strip() for origin in os.environ.get('ALLOWED_ORIGINS', '*').split(',')
     if origin.strip()
 }
+
+
+class AiUnavailable(Exception):
+    """A provider or budget condition that should not reveal upstream details."""
+
+
+def ai_cost_fen(input_tokens, output_tokens):
+    """Qwen3.7-Flash Beijing standard tier: ¥0.2/M input, ¥0.8/M output."""
+    return max(1, math.ceil(
+        (max(0, input_tokens) * 0.2 + max(0, output_tokens) * 0.8) * 100 / 1_000_000))
+
+
+def clean_ai_text(value, field, maximum, fallback=None):
+    if not isinstance(value, str):
+        if fallback is not None:
+            return fallback
+        raise ValueError(f'{field}必须是文字')
+    value = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', value).strip()
+    if not value:
+        if fallback is not None:
+            return fallback
+        raise ValueError(f'{field}不能为空')
+    if len(value) > maximum:
+        raise ValueError(f'{field}不能超过 {maximum} 个字')
+    return value
+
+
+def ai_filename(name):
+    safe = re.sub(r'[^\w\u4e00-\u9fff-]+', '_', name).strip('_')
+    return f'{safe[:80] or "AI整理题库"}.json'
+
+
+def parse_ai_json(content):
+    if not isinstance(content, str) or not content.strip():
+        raise ValueError('AI 没有返回可用结果，请改用本地格式整理')
+    text = content.strip()
+    fence = re.fullmatch(r'```(?:json)?\s*(.*?)\s*```', text, re.S | re.I)
+    if fence:
+        text = fence.group(1).strip()
+    try:
+        parsed = json.loads(text)
+    except (TypeError, json.JSONDecodeError):
+        raise ValueError('AI 返回内容无法核对，请改用本地格式整理')
+    if not isinstance(parsed, dict):
+        raise ValueError('AI 返回内容格式不正确，请改用本地格式整理')
+    return parsed
+
+
+def normalize_ai_questions(result, name, subject, chapter, mode):
+    raw_questions = result.get('questions')
+    if not isinstance(raw_questions, list):
+        raise ValueError('AI 没有识别到可导入题目；每题需要明确题干、选项和答案')
+    accepted = []
+    for raw in raw_questions[:MAX_AI_QUESTIONS]:
+        if not isinstance(raw, dict):
+            continue
+        try:
+            stem = clean_ai_text(raw.get('stem'), '题干', 2_500)
+            answer = clean_ai_text(raw.get('answer'), '答案', 1).upper()
+            options_raw = raw.get('options')
+            if not isinstance(options_raw, dict):
+                continue
+            options = {}
+            for key, value in options_raw.items():
+                normalized_key = key.strip().upper() if isinstance(key, str) else ''
+                if not re.fullmatch(r'[A-H]', normalized_key):
+                    continue
+                if isinstance(value, str) and value.strip() and len(value.strip()) <= 1_500:
+                    options[normalized_key] = value.strip()
+            if not 2 <= len(options) <= 8 or answer not in options:
+                continue
+            explanation = clean_ai_text(
+                raw.get('explanation'), '解析', 3_000,
+                fallback='原资料未提供详细解析，请结合原资料与教材核对。')
+        except ValueError:
+            continue
+        accepted.append({
+            'subject': subject,
+            'chapter': chapter,
+            'type': 'A1',
+            'stem': stem,
+            'options': options,
+            'answer': answer,
+            'explanation': explanation,
+            'reference': f'用户原资料经 AI 整理：{name}；请以原资料与教材复核。',
+            'tags': ['用户导入', 'AI 整理', '待医学审核'],
+            'topics': [chapter],
+            'modes': [mode],
+        })
+    if not accepted:
+        raise ValueError('AI 未识别到可核对的题目；请确保每题含题干、至少两个选项和明确答案')
+    return accepted
+
+
+def call_question_bank_ai(source_text):
+    """Call the compatible endpoint without retaining source material locally."""
+    if not AI_API_KEY:
+        raise AiUnavailable('AI 整理暂未启用，请先使用本地格式整理')
+    system = (
+        '你是题库结构化助手。只从用户提供的原文中提取已有的客观单选题；'
+        '绝不补写题干、选项、答案、解析或医学事实，不能确定的条目直接忽略。'
+        '每题必须有明确题干、2–8 个 A-H 选项及与选项一致的单个答案。'
+        '仅输出 JSON 对象：{"questions":[{"stem":"...","options":{"A":"..."},'
+        '"answer":"A","explanation":"..."}]}。不要输出 Markdown、注释或额外字段。'
+        f'最多返回 {MAX_AI_QUESTIONS} 题。解析仅可转写原文已有内容；原文没有则输出空字符串。')
+    payload = json.dumps({
+        'model': AI_MODEL,
+        'temperature': 0,
+        # This is extraction, not clinical reasoning. Qwen3.7 defaults to
+        # thinking mode; disabling it keeps latency and free-quota use bounded.
+        'enable_thinking': False,
+        'max_tokens': AI_OUTPUT_TOKEN_RESERVE,
+        'response_format': {'type': 'json_object'},
+        'messages': [
+            {'role': 'system', 'content': system},
+            {'role': 'user', 'content': f'以下是待整理原文：\n---\n{source_text}\n---'},
+        ],
+    }).encode('utf-8')
+    request = urlrequest.Request(
+        f'{AI_BASE_URL}/chat/completions', data=payload,
+        headers={'Authorization': f'Bearer {AI_API_KEY}',
+                 'Content-Type': 'application/json'}, method='POST')
+    try:
+        with urlrequest.urlopen(request, timeout=75) as response:
+            raw = response.read(1_500_001)
+        if len(raw) > 1_500_000:
+            raise AiUnavailable('AI 返回内容过大，请拆分资料后再试')
+        response_data = json.loads(raw)
+        content = response_data['choices'][0]['message']['content']
+        usage = response_data.get('usage', {})
+        input_tokens = usage.get('prompt_tokens', 0)
+        output_tokens = usage.get('completion_tokens', 0)
+        if type(input_tokens) is not int or input_tokens < 0:
+            input_tokens = 0
+        if type(output_tokens) is not int or output_tokens < 0:
+            output_tokens = 0
+        return parse_ai_json(content), input_tokens, output_tokens
+    except AiUnavailable:
+        raise
+    except (urlerror.HTTPError, urlerror.URLError, TimeoutError,
+            KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError):
+        raise AiUnavailable('AI 整理暂时不可用，请稍后再试或使用本地格式整理')
 
 
 def connect():
@@ -81,6 +248,17 @@ def initialize():
           user_id TEXT NOT NULL REFERENCES users(id),
           value INTEGER NOT NULL CHECK(value IN (-1,1)),
           PRIMARY KEY(comment_id,user_id));
+        CREATE TABLE IF NOT EXISTS ai_question_bank_requests(
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES users(id),
+          requested_at TEXT NOT NULL,
+          reserved_fen INTEGER NOT NULL,
+          actual_fen INTEGER,
+          input_tokens INTEGER,
+          output_tokens INTEGER,
+          status TEXT NOT NULL);
+        CREATE INDEX IF NOT EXISTS ai_question_bank_requests_user_time
+          ON ai_question_bank_requests(user_id, requested_at);
         ''')
         if 'parent_id' not in {row['name'] for row in db.execute('PRAGMA table_info(question_comments)')}:
             db.execute('ALTER TABLE question_comments ADD COLUMN parent_id TEXT REFERENCES question_comments(id)')
@@ -463,6 +641,73 @@ class Handler(BaseHTTPRequestHandler):
             'id': submission_id, 'filename': filename, 'content_bytes': len(raw),
             'question_count': len(bank['questions']), 'submitted_at': submitted_at}}
 
+    def prepare_question_bank_with_ai(self, db, uid, payload):
+        """Turn source text into a deliberately small, unreviewed learner bank.
+
+        Source text is sent only to the configured provider for this request.
+        It is neither stored in SQLite nor written to application logs.
+        """
+        source = clean_ai_text(payload.get('text'), '待整理文字', MAX_AI_SOURCE_CHARS)
+        name = clean_ai_text(payload.get('name'), '题库名称', 100,
+                             fallback='AI 整理题库')
+        subject = clean_ai_text(payload.get('subject'), '科目', 40)
+        chapter = clean_ai_text(payload.get('chapter'), '章节', 100,
+                                fallback='未分类章节')
+        mode = clean_ai_text(payload.get('mode'), '学习方向', 10,
+                             fallback='考研')
+        if subject not in SUBJECTS:
+            raise ValueError('请选择支持的口腔学科')
+        if mode not in ('考研', '本科期末', '执医'):
+            raise ValueError('学习方向只能是考研、本科期末或执医')
+        if not AI_API_KEY:
+            raise AiUnavailable('AI 整理暂未启用，请先使用本地格式整理')
+
+        now = datetime.now(timezone.utc)
+        today = now.strftime('%Y-%m-%d')
+        month = now.strftime('%Y-%m')
+        used_today = db.execute('''SELECT COUNT(*) FROM ai_question_bank_requests
+                WHERE user_id=? AND substr(requested_at,1,10)=?''',
+                                (uid, today)).fetchone()[0]
+        if used_today >= AI_DAILY_LIMIT:
+            raise ValueError(f'AI 整理每个账号每天最多 {AI_DAILY_LIMIT} 次，请明天再试或使用本地格式整理')
+        estimated_input = max(1, math.ceil(len(source) * 1.5))
+        reserved_fen = ai_cost_fen(estimated_input, AI_OUTPUT_TOKEN_RESERVE)
+        used_this_month = db.execute('''SELECT COALESCE(SUM(
+                CASE WHEN status='completed' THEN COALESCE(actual_fen,reserved_fen)
+                     ELSE reserved_fen END),0)
+                FROM ai_question_bank_requests WHERE substr(requested_at,1,7)=?''',
+                                    (month,)).fetchone()[0]
+        if used_this_month + reserved_fen > AI_MONTHLY_BUDGET_FEN:
+            raise AiUnavailable('AI 整理本月额度已用完，请使用本地格式整理或稍后再试')
+
+        request_id = secrets.token_urlsafe(18)
+        requested_at = now.isoformat(timespec='seconds').replace('+00:00', 'Z')
+        db.execute('''INSERT INTO ai_question_bank_requests
+                (id,user_id,requested_at,reserved_fen,status)
+                VALUES(?,?,?,?,?)''',
+                   (request_id, uid, requested_at, reserved_fen, 'reserved'))
+        db.commit()
+        try:
+            model_result, input_tokens, output_tokens = call_question_bank_ai(source)
+            questions = normalize_ai_questions(
+                model_result, name, subject, chapter, mode)
+        except Exception as error:
+            db.execute('DELETE FROM ai_question_bank_requests WHERE id=?', (request_id,))
+            db.commit()
+            if isinstance(error, (AiUnavailable, ValueError)):
+                raise
+            raise AiUnavailable('AI 整理暂时不可用，请稍后再试或使用本地格式整理') from error
+        actual_fen = ai_cost_fen(input_tokens, output_tokens)
+        db.execute('''UPDATE ai_question_bank_requests
+                SET actual_fen=?,input_tokens=?,output_tokens=?,status='completed'
+                WHERE id=?''',
+                   (actual_fen, input_tokens, output_tokens, request_id))
+        db.commit()
+        content = json.dumps({'name': name, 'questions': questions},
+                             ensure_ascii=False, indent=2)
+        return {'filename': ai_filename(name), 'content': content,
+                'questionCount': len(questions)}
+
     def do_GET(self):
         try:
             path = urlparse(self.path).path
@@ -527,6 +772,7 @@ class Handler(BaseHTTPRequestHandler):
             path = urlparse(self.path).path
             data = self.body(
                 MAX_SUBMISSION_REQUEST_BYTES if path == '/v1/question-bank-submissions'
+                else MAX_AI_REQUEST_BYTES if path == '/v1/ai/question-bank/prepare'
                 else 2_000_000)
             with connect() as db:
                 if path in ('/v1/auth/register', '/v1/auth/login'):
@@ -600,6 +846,9 @@ class Handler(BaseHTTPRequestHandler):
                     return self.respond(200, self.snapshot(db, uid))
                 if path == '/v1/question-bank-submissions':
                     return self.respond(200, self.submit_question_bank(db, uid, data))
+                if path == '/v1/ai/question-bank/prepare':
+                    return self.respond(
+                        200, self.prepare_question_bank_with_ai(db, uid, data))
                 if path == '/v1/profile':
                     return self.respond(200, self.update_profile(db, uid, data))
                 question_id = self.comments_question_id(path)
@@ -609,6 +858,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.respond(404, {'error': '接口不存在'})
         except PermissionError as e:
             self.respond(401, {'error': str(e)})
+        except AiUnavailable as e:
+            self.respond(503, {'error': str(e)})
         except (ValueError, TypeError, KeyError, sqlite3.IntegrityError) as e:
             self.respond(400, {'error': str(e)})
 

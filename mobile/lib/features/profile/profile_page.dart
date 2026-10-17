@@ -144,29 +144,29 @@ class _ProfilePageState extends State<ProfilePage> {
     final imported = alreadyImported
         ? prepared.questions.length
         : await store.importPreparedQuestionBank(prepared);
-    updateImportProgress(QuestionBankImportStage.syncing, '正在同步到作者私密审核箱…');
+    updateImportProgress(QuestionBankImportStage.syncing, '正在完成导入保存…');
     try {
       final submitted = await store.submitQuestionBank(
           filename: filename, content: prepared.content);
       updateImportProgress(
           QuestionBankImportStage.complete,
           submitted['duplicate'] == true
-              ? '已恢复 $imported 道题；这份题库此前已同步。'
+              ? '已恢复 $imported 道题；这份题库此前已保存。'
               : '已导入 $imported 道题，现在可以开始练习。');
       if (mounted) {
         message(
             context,
             submitted['duplicate'] == true
-                ? '已导入 $imported 道题；这份题库此前已同步。'
-                : '已导入 $imported 道题，已同步至私密审核箱。');
+                ? '已导入 $imported 道题；这份题库此前已保存。'
+                : '已导入 $imported 道题，现在可以开始练习。');
       }
       await refreshSubmissionInbox();
     } catch (error) {
       updateImportProgress(
-          QuestionBankImportStage.partial, '已导入 $imported 道题，但私密同步暂未完成。');
+          QuestionBankImportStage.partial, '已导入 $imported 道题，但云端保存暂未完成。');
       if (mounted) {
         message(
-            context, '已导入 $imported 道题；私密同步未完成：${readableImportError(error)}');
+            context, '已导入 $imported 道题；云端保存未完成：${readableImportError(error)}');
       }
     }
   }
@@ -274,13 +274,26 @@ class _ProfilePageState extends State<ProfilePage> {
       }
       updateImportProgress(
           QuestionBankImportStage.validating, '已读取内容，请确认题目格式…');
-      final converted = await showTextBankConverter(context,
-          initialText: sourceText, initialName: sourceName);
-      if (converted == null || !mounted) {
+      if (!await ensureUploadAccount()) {
         clearImportProgress();
         return;
       }
-      if (!await ensureUploadAccount()) {
+      final converted = await showTextBankConverter(context,
+          initialText: sourceText,
+          initialName: sourceName, aiConvert: (request) async {
+        updateImportProgress(
+            QuestionBankImportStage.validating, 'AI 正在核对原文中的题干、选项与答案…');
+        final result = await store.prepareQuestionBankWithAi(
+            text: request.text,
+            name: request.name,
+            subject: request.subject,
+            chapter: request.chapter,
+            mode: request.mode);
+        return TextBankConversion(
+            filename: result['filename'] as String,
+            content: result['content'] as String);
+      });
+      if (converted == null || !mounted) {
         clearImportProgress();
         return;
       }

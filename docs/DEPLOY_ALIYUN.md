@@ -1,32 +1,36 @@
 # DentStudy 阿里云 ECS 部署
 
-## 当前线上部署（2026-10-16）
+## 当前线上部署（2026-10-17）
 
 实际服务器使用宿主机 Nginx + `dentstudy.service`，不是下面的 Docker 方案。
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
-- 客户端版本：`0.2.36`（自定义图片背景设置面板在开启玻璃质感时也会透出、折射背景；图片缩放和透明度控制不变）；综合题库仍为 3650 道，本次未修改题目或学习数据。
-- 后端：`/opt/dentstudy-current` 仍指向 `20261016-author-download-v0232`；只为作者下载投稿增加受认证保护的读取接口，未修改既有同步契约。本版仅更新前端。
+- 客户端版本：`0.2.37`（Word/TXT 转换页新增可选的 AI 智能整理；综合题库仍为 3650 道，本次未修改题目或学习数据）。
+- 后端：`/opt/dentstudy-current` 指向 `20261017-ai-import-v0237`；在不改变既有事件同步契约的前提下增加受登录保护的 AI 整理接口。
 - 前端：`/var/www/dentstudy-current` 指向本次发布目录；发布后将旧目录保留以便无损回退。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
 - 用户投稿：`/var/lib/dentstudy/question-bank-submissions/`，仅服务端进程可读写，不能映射到 Nginx 静态目录；备份时须与 SQLite 一起保留。
+- AI 密钥：`/etc/dentstudy/dentstudy-ai.env`（root-only，绝不提交到 Git）；`20-ai-import.conf` 只声明 `qwen3.7-flash`、服务器侧每日 3 次/账号与每月 ¥20 等值预算保护。模型调用关闭思考模式以减少延迟和 token 消耗；用户原文不写入 SQLite 或应用日志。
 - 旧代码 `/opt/dentstudy`、旧网页 `/var/www/dentstudy` 均保留。
 - 更新前的数据库与配置备份：`/opt/backups/dentstudy-20261013`，数据库已验证完整性。
 - 0.2.18 发布前另以 SQLite 在线 backup API 备份至 `/opt/backups/dentstudy-open-practice-v0218/dentstudy.sqlite3`，完整性检查通过，备份仅 root 可读；未替换线上数据库或用户投稿。
+- 0.2.37 发布前已备份至 `/opt/backups/dentstudy-ai-import-v0237/dentstudy.sqlite3`，`PRAGMA integrity_check` 返回 `ok`；本次迁移只增加无原文的 AI 调用计量表。
 - HTTPS 使用 Let's Encrypt，`dentstudy-certbot.timer` 每天检查两次续期，续期成功后检查并重载 Nginx。
 - `/.well-known/acme-challenge/` 继续使用 `/var/www/dentstudy`，不要随发布删除此目录。
 
-配置模板：`deploy/nginx.ecs-https.conf`、`deploy/dentstudy-ecs-override.conf`、
+配置模板：`deploy/nginx.ecs-https.conf`、`deploy/dentstudy-ecs-override.conf`、`deploy/dentstudy-ai-ecs.conf`、
 `deploy/dentstudy-certbot.service` 和 `deploy/dentstudy-certbot.timer`。
 构建 Web 时使用 `--no-web-resources-cdn --dart-define=API_URL=/api`
 及 `--dart-define=QUESTION_BANK_ASSET=assets/all_questions.json`。
-发布时同时传入 `--dart-define=APP_VERSION=0.2.36` 和
+发布时同时传入 `--dart-define=APP_VERSION=0.2.37` 和
 `--dart-define=BUILD_TIME=实际北京时间`，在“我的”显示版本与更新时间。
 当前 GitHub workflow 只做检查，不会自动部署；代码推送后仍需单独构建和上传。
 
 微信网站所有权验证文件保存在 `mobile/web/b1f6d159694b4f3909e0affdfcfefd6e.txt`，
 Flutter Web 构建时随根目录静态资源发布。HTTP 和 HTTPS 的同名路径均需直接返回 200 和原始 TXT 内容；
 HTTP 仅此验证文件与证书验证路径不跳转，其余页面仍强制 HTTPS。不要误删验证文件。
+
+0.2.37 验收：我的 → 导入题库 → 我只有 Word / 纯文字 → 登录 → 填题库名称、科目、章节和方向。已有规范格式时点“按格式生成”；格式较乱但每题已有明确答案时可点“AI 智能整理”。后者才会把这一次文字发送至阿里云百炼，最多 6 万字/50 题/每天 3 次；服务端不保存原文或模型原始输出，只计量调用额度。AI 只提取原文已有的题干、2–8 个选项和对应答案，不补题、不猜答案；返回的题库再次经过客户端 JSON 校验后才保存到本机，并保持 `draft`/待医学审核，绝不自动加入公共题库。服务端健康检查、受认证接口路由、密钥环境加载及线上静态资源哈希已验证；后端 35 项、客户端静态检查和 51 项测试通过。
 
 0.2.36 验收：我的 → 主题与外观 → 打开玻璃质感 → 自定义图片背景；整块设置卡片会和页面其余玻璃卡片一样透出并折射当前背景图片，而不是使用实色底。关闭玻璃质感时恢复普通卡片。背景图片本地保存、缩放和透明度控制均不变。测试：静态检查和 51 项客户端测试通过；仅发布前端，不修改题库、学习记录、后端或同步协议。
 

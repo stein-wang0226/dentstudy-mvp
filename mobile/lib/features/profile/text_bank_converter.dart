@@ -14,6 +14,28 @@ class TextBankConversion {
   const TextBankConversion({required this.filename, required this.content});
 }
 
+/// The four basic choices stay with the learner rather than being guessed by
+/// the model. The server only receives this text after the learner taps the
+/// explicit AI action in the converter.
+class AiTextBankRequest {
+  final String text;
+  final String name;
+  final String subject;
+  final String chapter;
+  final String mode;
+
+  const AiTextBankRequest({
+    required this.text,
+    required this.name,
+    required this.subject,
+    required this.chapter,
+    required this.mode,
+  });
+}
+
+typedef AiTextBankConverter = Future<TextBankConversion> Function(
+    AiTextBankRequest request);
+
 class TextBankSourceRequirements extends StatelessWidget {
   final bool initiallyExpanded;
   const TextBankSourceRequirements({
@@ -37,7 +59,8 @@ class TextBankSourceRequirements extends StatelessWidget {
                     '• 不支持旧版 .doc、PDF、图片/扫描件、加密文档；表格、复杂排版可能无法完整识别。\n'
                     '• 每题按行写：题干：…… → A. …… / B. ……（至少两项）→ 答案：A；“解析：”可不填。\n'
                     '• 可用“科目：口腔修复学”“章节：固定义齿”切换分类；科目须为站内已有名称。\n'
-                    '• 只转换已有答案的 A1/A2 单选题，不会从讲义、散文或无答案材料中猜题或猜答案。'))
+                    '• 本地整理只转换已有答案的 A1/A2 单选题，不会从讲义、散文或无答案材料中猜题或猜答案。\n'
+                    '• AI 智能整理可辅助识别格式较乱的 Word/TXT：每次最多 6 万字、每账号每天 3 次；点击后才会将文字发送至阿里云百炼，服务器不保存原文。AI 只提取已有题干、选项和答案，导入后仍须结合原资料与教材复核。'))
           ]);
 }
 
@@ -214,13 +237,16 @@ String convertStructuredTextToJson({
 }
 
 Future<TextBankConversion?> showTextBankConverter(BuildContext context,
-    {String initialText = '', String initialName = '文字转换题库'}) async {
+    {String initialText = '',
+    String initialName = '文字转换题库',
+    AiTextBankConverter? aiConvert}) async {
   final name = TextEditingController(text: initialName);
   final chapter = TextEditingController(text: '未分类章节');
   final text = TextEditingController(text: initialText);
   var subject = '口腔修复学';
   var mode = '考研';
   String? error;
+  var aiWorking = false;
   final result = await showDialog<TextBankConversion>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -238,7 +264,14 @@ Future<TextBankConversion?> showTextBankConverter(BuildContext context,
                                 color: Colors.blueGrey.withAlpha(10),
                                 borderRadius: BorderRadius.circular(12)),
                             child: const Text(
-                                '仅转换已整理的客观单选题。每题至少要有：题干、A./B. 选项与“答案：A”。解析可选；不会从讲义或散文中猜答案。')),
+                                '本地整理适合已有明确格式的题目。AI 整理可识别较乱的 Word/TXT，但只提取原文已有的题干、选项和答案；不会猜答案、补题或替代教材核对。')),
+                        if (aiConvert != null) ...[
+                          const SizedBox(height: 8),
+                          const Text(
+                              '点击“AI 智能整理”才会将当前文字发送至阿里云百炼完成一次整理；服务器不保存原文。请勿提交隐私或无权使用的内容。',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.blueGrey)),
+                        ],
                         const SizedBox(height: 12),
                         TextField(
                             controller: name,
@@ -289,30 +322,79 @@ Future<TextBankConversion?> showTextBankConverter(BuildContext context,
                       ]))),
                   actions: [
                     TextButton(
-                        onPressed: () => Navigator.pop(dialogContext),
+                        onPressed: aiWorking
+                            ? null
+                            : () => Navigator.pop(dialogContext),
                         child: const Text('取消')),
+                    if (aiConvert != null)
+                      OutlinedButton.icon(
+                          onPressed: aiWorking
+                              ? null
+                              : () async {
+                                  if (text.text.trim().isEmpty) {
+                                    set(() => error = '请先粘贴或选择需要整理的题目文字');
+                                    return;
+                                  }
+                                  set(() {
+                                    error = null;
+                                    aiWorking = true;
+                                  });
+                                  try {
+                                    final converted = await aiConvert(
+                                        AiTextBankRequest(
+                                            text: text.text,
+                                            name: name.text,
+                                            subject: subject,
+                                            chapter: chapter.text,
+                                            mode: mode));
+                                    if (dialogContext.mounted) {
+                                      Navigator.pop(dialogContext, converted);
+                                    }
+                                  } catch (exception) {
+                                    if (dialogContext.mounted) {
+                                      set(() => error = exception
+                                          .toString()
+                                          .replaceFirst(
+                                              RegExp(r'^Exception:\s*'), ''));
+                                    }
+                                  } finally {
+                                    if (dialogContext.mounted) {
+                                      set(() => aiWorking = false);
+                                    }
+                                  }
+                                },
+                          icon: aiWorking
+                              ? const SizedBox(
+                                  height: 16,
+                                  width: 16,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.auto_awesome_outlined),
+                          label: Text(aiWorking ? 'AI 正在核对原文…' : 'AI 智能整理')),
                     FilledButton(
-                        onPressed: () {
-                          try {
-                            final content = convertStructuredTextToJson(
-                                text: text.text,
-                                name: name.text,
-                                subject: subject,
-                                chapter: chapter.text,
-                                mode: mode);
-                            final base = name.text.trim().replaceAll(
-                                RegExp(r'[^\w\u4e00-\u9fff-]+'), '_');
-                            Navigator.pop(
-                                dialogContext,
-                                TextBankConversion(
-                                    filename:
-                                        '${base.isEmpty ? '文字转换题库' : base}.json',
-                                    content: content));
-                          } catch (exception) {
-                            set(() => error = exception.toString());
-                          }
-                        },
-                        child: const Text('生成并上传'))
+                        onPressed: aiWorking
+                            ? null
+                            : () {
+                                try {
+                                  final content = convertStructuredTextToJson(
+                                      text: text.text,
+                                      name: name.text,
+                                      subject: subject,
+                                      chapter: chapter.text,
+                                      mode: mode);
+                                  final base = name.text.trim().replaceAll(
+                                      RegExp(r'[^\w\u4e00-\u9fff-]+'), '_');
+                                  Navigator.pop(
+                                      dialogContext,
+                                      TextBankConversion(
+                                          filename:
+                                              '${base.isEmpty ? '文字转换题库' : base}.json',
+                                          content: content));
+                                } catch (exception) {
+                                  set(() => error = exception.toString());
+                                }
+                              },
+                        child: const Text('按格式生成'))
                   ])));
   name.dispose();
   chapter.dispose();
