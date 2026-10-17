@@ -55,7 +55,10 @@ def positive_int_env(name, default):
 
 AI_DAILY_LIMIT = positive_int_env('DENTSTUDY_AI_DAILY_LIMIT', 3)
 AI_MONTHLY_BUDGET_FEN = positive_int_env('DENTSTUDY_AI_MONTHLY_BUDGET_FEN', 2_000)
-ASSISTANT_DAILY_LIMIT = positive_int_env('DENTSTUDY_ASSISTANT_DAILY_LIMIT', 12)
+# Casual conversation is intentionally small, while substantive oral-medicine
+# and exam-study questions remain available to signed-in learners.
+ASSISTANT_CASUAL_DAILY_LIMIT = positive_int_env(
+    'DENTSTUDY_ASSISTANT_CASUAL_DAILY_LIMIT', 10)
 ASSISTANT_GLOBAL_DAILY_LIMIT = positive_int_env(
     'DENTSTUDY_ASSISTANT_GLOBAL_DAILY_LIMIT', 300)
 ASSISTANT_MONTHLY_BUDGET_FEN = positive_int_env(
@@ -234,6 +237,25 @@ def clean_assistant_history(value):
     return history
 
 
+# This is deliberately a generous allow-list: a false positive merely lets a
+# study-adjacent message avoid the casual quota, whereas a false negative would
+# unfairly block an oral-medicine question. The model still enforces the
+# conversation's human oral-medicine scope in its system instruction.
+ORAL_STUDY_HINTS = (
+    '口腔', '牙', '龈', '颌', '唾液', '龋', '根管', '牙周', '牙髓', '牙体',
+    '修复', '义齿', '正畸', '种植', '黏膜', '颌面', '咬合', '麻醉', '拔牙',
+    '颞下颌', '口外', '口内', '口病', '口组', '口预', '解剖', '病理', '生理',
+    '考研', '执医', '复习', '刷题', '学习计划', '真题', '教材', '章节',
+    'a1', 'a2', 'a3', 'a4', 'b型', 'b 型', '选择题', '错题',
+)
+
+
+def assistant_chat_kind(message):
+    """Classify the quota only; no prompt, history, or reply is retained."""
+    text = message.lower().replace('　', ' ').strip()
+    return 'professional' if any(hint in text for hint in ORAL_STUDY_HINTS) else 'casual'
+
+
 def call_xiaochi_assistant(message, history):
     """Return one bounded reply from 小齿 without retaining a transcript."""
     if not AI_API_KEY:
@@ -360,6 +382,8 @@ def initialize():
         CREATE TABLE IF NOT EXISTS assistant_chat_requests(
           id TEXT PRIMARY KEY,
           requester_hash TEXT NOT NULL,
+          user_id TEXT REFERENCES users(id),
+          chat_kind TEXT NOT NULL DEFAULT 'casual',
           requested_at TEXT NOT NULL,
           reserved_fen INTEGER NOT NULL,
           actual_fen INTEGER,
@@ -368,6 +392,8 @@ def initialize():
           status TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS assistant_chat_requests_requester_time
           ON assistant_chat_requests(requester_hash, requested_at);
+        CREATE INDEX IF NOT EXISTS assistant_chat_requests_user_kind_time
+          ON assistant_chat_requests(user_id, chat_kind, requested_at);
         CREATE INDEX IF NOT EXISTS assistant_chat_requests_time
           ON assistant_chat_requests(requested_at);
         ''')
@@ -375,6 +401,15 @@ def initialize():
             db.execute('ALTER TABLE question_comments ADD COLUMN parent_id TEXT REFERENCES question_comments(id)')
         if 'deleted_at' not in {row['name'] for row in db.execute('PRAGMA table_info(question_comments)')}:
             db.execute('ALTER TABLE question_comments ADD COLUMN deleted_at TEXT')
+        assistant_columns = {
+            row['name'] for row in db.execute('PRAGMA table_info(assistant_chat_requests)')}
+        if 'user_id' not in assistant_columns:
+            db.execute('ALTER TABLE assistant_chat_requests ADD COLUMN user_id TEXT')
+        if 'chat_kind' not in assistant_columns:
+            db.execute("ALTER TABLE assistant_chat_requests "
+                       "ADD COLUMN chat_kind TEXT NOT NULL DEFAULT 'casual'")
+        db.execute('''CREATE INDEX IF NOT EXISTS assistant_chat_requests_user_kind_time
+                      ON assistant_chat_requests(user_id, chat_kind, requested_at)''')
 
 
 def password_hash(password, salt):
@@ -839,10 +874,10 @@ class Handler(BaseHTTPRequestHandler):
         return {'filename': ai_filename(name), 'content': content,
                 'questionCount': len(questions)}
 
-    def chat_with_xiaochi(self, db, payload):
-        """A small, anonymous, rate-limited chat endpoint.
+    def chat_with_xiaochi(self, db, uid, payload):
+        """A signed-in, privacy-bounded oral-medicine study companion.
 
-        Only a keyed requester fingerprint and billing counters enter SQLite;
+        Only the account identifier, quota kind and billing counters enter SQLite;
         neither the prompt, history nor reply is written to disk or logs.
         """
         message = clean_ai_text(payload.get('message'), '消息',
@@ -854,11 +889,16 @@ class Handler(BaseHTTPRequestHandler):
         today = now.strftime('%Y-%m-%d')
         month = now.strftime('%Y-%m')
         requester_hash = self.assistant_requester_hash()
-        requester_count = db.execute('''SELECT COUNT(*) FROM assistant_chat_requests
-                WHERE requester_hash=? AND substr(requested_at,1,10)=?''',
-                                     (requester_hash, today)).fetchone()[0]
-        if requester_count >= ASSISTANT_DAILY_LIMIT:
-            raise AiUnavailable('小齿今天已经陪你聊了不少，明天再继续吧～')
+        chat_kind = assistant_chat_kind(message)
+        if chat_kind == 'casual':
+            casual_count = db.execute('''SELECT COUNT(*) FROM assistant_chat_requests
+                    WHERE user_id=? AND chat_kind='casual'
+                    AND substr(requested_at,1,10)=?''',
+                                      (uid, today)).fetchone()[0]
+            if casual_count >= ASSISTANT_CASUAL_DAILY_LIMIT:
+                raise AiUnavailable(
+                    f'今天的 {ASSISTANT_CASUAL_DAILY_LIMIT} 句闲聊已用完啦；'
+                    '口腔医学知识和备考问题仍然可以继续问小齿。')
         global_count = db.execute('''SELECT COUNT(*) FROM assistant_chat_requests
                 WHERE substr(requested_at,1,10)=?''', (today,)).fetchone()[0]
         if global_count >= ASSISTANT_GLOBAL_DAILY_LIMIT:
@@ -877,10 +917,10 @@ class Handler(BaseHTTPRequestHandler):
         request_id = secrets.token_urlsafe(18)
         requested_at = now.isoformat(timespec='seconds').replace('+00:00', 'Z')
         db.execute('''INSERT INTO assistant_chat_requests
-                (id,requester_hash,requested_at,reserved_fen,status)
-                VALUES(?,?,?,?,?)''',
-                   (request_id, requester_hash, requested_at, reserved_fen,
-                    'reserved'))
+                (id,requester_hash,user_id,chat_kind,requested_at,reserved_fen,status)
+                VALUES(?,?,?,?,?,?,?)''',
+                   (request_id, requester_hash, uid, chat_kind, requested_at,
+                    reserved_fen, 'reserved'))
         db.commit()
         try:
             reply, input_tokens, output_tokens = call_xiaochi_assistant(
@@ -995,7 +1035,8 @@ class Handler(BaseHTTPRequestHandler):
                     db.commit()
                     return self.respond(200, dict(token=token, userId=uid, email=email))
                 if path == '/v1/assistant/chat':
-                    return self.respond(200, self.chat_with_xiaochi(db, data))
+                    uid = self.user(db)
+                    return self.respond(200, self.chat_with_xiaochi(db, uid, data))
                 uid = self.user(db)
                 if path.startswith('/v1/comments/') and path.endswith('/delete'):
                     comment_id = path[len('/v1/comments/'):-len('/delete')]

@@ -74,7 +74,8 @@ class _XiaochiAssistantState extends State<XiaochiAssistant>
     // One quiet, local greeting at most once every three days: useful enough
     // to feel companionable without constantly interrupting study.
     await Future<void>.delayed(const Duration(seconds: 16));
-    if (!mounted || !store.xiaochiEnabled || _open) return;
+    if (!mounted || !store.xiaochiEnabled || store.token.isEmpty || _open)
+      return;
     if (!await store.claimXiaochiGreeting() || !mounted) return;
     setState(() {
       _showCare = true;
@@ -99,6 +100,10 @@ class _XiaochiAssistantState extends State<XiaochiAssistant>
   void _openChat() {
     _holdTimer?.cancel();
     if (_holding) return;
+    if (store.token.isEmpty) {
+      message(context, '登录后才能和小齿聊天，请前往「我的」登录或注册。');
+      return;
+    }
     _careTimer?.cancel();
     setState(() {
       _open = true;
@@ -639,7 +644,7 @@ class _ChatPanel extends StatelessWidget {
                                             style: TextStyle(
                                                 fontWeight: FontWeight.w800,
                                                 fontSize: 16)),
-                                        Text('口腔备考搭子 · 仅聊天陪伴',
+                                        Text('口腔医学/备考不限 · 闲聊每日 10 句',
                                             style: TextStyle(
                                                 color: Colors.blueGrey,
                                                 fontSize: 11))

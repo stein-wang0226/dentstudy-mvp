@@ -830,6 +830,7 @@ class StudyStore extends ChangeNotifier {
     required String message,
     required List<Map<String, String>> history,
   }) async {
+    if (token.isEmpty) throw Exception('请先登录后再和小齿聊天');
     final text = message.trim();
     if (text.isEmpty || text.length > 1000) {
       throw Exception('消息长度为 1–1000 个字');

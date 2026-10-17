@@ -59,6 +59,7 @@ void main() {
     final store = StudyStore();
     await store.init();
     store.baseUrl = 'https://xiaochi-test.invalid';
+    store.token = 'xiaochi-test-token';
     final history = List.generate(
         8,
         (index) => {
@@ -72,6 +73,8 @@ void main() {
     },
         () => MockClient((request) async {
               expect(request.url.path, '/v1/assistant/chat');
+              expect(request.headers['authorization'],
+                  'Bearer xiaochi-test-token');
               final payload = jsonDecode(request.body) as Map<String, dynamic>;
               expect(payload['message'], '我该怎么复习？');
               expect((payload['history'] as List).length, 6);
