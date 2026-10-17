@@ -6,6 +6,10 @@ import 'package:flutter/material.dart';
 /// All regions sample the actual backdrop, with no tint, blur or dark bands.
 /// Matrix backdrop filters work in CanvasKit without Impeller-only shaders.
 class GlassRefraction extends StatelessWidget {
+  /// The current optical displacement is deliberately 80% stronger than the
+  /// first clear-glass pass. This only moves backdrop pixels; it does not add
+  /// a tint, absorption layer or colored edge.
+  static const refractionScale = 1.8;
   final double radius;
   const GlassRefraction({super.key, required this.radius});
 
@@ -51,9 +55,10 @@ class GlassRefraction extends StatelessWidget {
         // Non-overlapping regions avoid repeatedly filtering the same pixels.
         // Curvature is approximated with stepped magnification, not dark strokes.
         return Stack(children: [
-          region(0, shoulder * .4, shoulder * 1.6),
-          region(shoulder * .4, shoulder * .6, shoulder * 1.08),
-          region(shoulder, null, shoulder * .52),
+          region(0, shoulder * .4, shoulder * 1.6 * refractionScale),
+          region(
+              shoulder * .4, shoulder * .6, shoulder * 1.08 * refractionScale),
+          region(shoulder, null, shoulder * .52 * refractionScale),
         ]);
       })));
 }

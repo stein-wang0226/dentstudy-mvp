@@ -252,6 +252,7 @@ void main() {
   testWidgets(
       'clear glass has full-pane refraction without blur or color overlays',
       (tester) async {
+    expect(GlassRefraction.refractionScale, 1.8);
     await tester.pumpWidget(const MaterialApp(
         home: Scaffold(
             body: FrostedChrome(
@@ -383,7 +384,10 @@ void main() {
       }
     }
     expect(displacedCenterPixels, greaterThan(1000));
-    expect(displacedShoulderPixels, greaterThan(100));
+    // With the stronger lens, the outer four-pixel shoulder sends more of
+    // this fixed stripe sample beyond the original narrow probe. It must
+    // still visibly bend the backdrop rather than become a painted border.
+    expect(displacedShoulderPixels, greaterThan(50));
     expect(sharpPixels, greaterThan(3500));
     final white = await capture(true, striped: false);
     for (final x in [2, 7, 10, 120, 230]) {

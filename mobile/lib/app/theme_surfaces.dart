@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'glass_refraction.dart';
 
@@ -175,8 +176,14 @@ class StudyBackdrop extends StatelessWidget {
         Positioned.fill(
             child: ColoredBox(
                 color: background,
-                child:
-                    glass ? CustomPaint(painter: _GlassBackdrop(tint)) : null)),
+                // Soften only the distant wallpaper. Glass panes remain clear:
+                // GlassRefraction still applies matrix displacement without blur.
+                child: glass
+                    ? ImageFiltered(
+                        imageFilter:
+                            ui.ImageFilter.blur(sigmaX: 1.5, sigmaY: 1.5),
+                        child: CustomPaint(painter: _GlassBackdrop(tint)))
+                    : null)),
         child
       ]);
 }
