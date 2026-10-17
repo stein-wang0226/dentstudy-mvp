@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
 import 'features/library/catalog.dart';
+import 'features/profile/background_image.dart';
 import 'app/theme_palette.dart';
 
 /// The validated, complete JSON sent to the private submission inbox.
@@ -41,6 +42,10 @@ class StudyStore extends ChangeNotifier {
   String mode = '考研', email = '', userId = 'guest', baseUrl = '', token = '';
   String themeColorKey = 'teal';
   String customPrimaryKey = 'teal', customBackgroundKey = 'teal';
+  String? customBackgroundImage;
+  Uint8List? customBackgroundImageBytes;
+  double customBackgroundScale = 1;
+  double customBackgroundOpacity = .42;
   bool glassEnabled = false;
   int dailyNewLimit = 10;
   int? dailyReviewTarget;
@@ -65,6 +70,7 @@ class StudyStore extends ChangeNotifier {
 
   List<Question> get bank =>
       questions.where((q) => q.modes.contains(mode)).toList();
+  bool get hasCustomBackground => customBackgroundImageBytes != null;
   List<Question> get importedQuestions => questions
       .where((question) => importedQuestionIds.contains(question.id))
       .toList();
@@ -136,6 +142,23 @@ class StudyStore extends ChangeNotifier {
     if (!themeColors.containsKey(customPrimaryKey)) customPrimaryKey = 'teal';
     if (!themeColors.containsKey(customBackgroundKey))
       customBackgroundKey = 'teal';
+    final savedBackground = prefs.getString('customBackgroundImage');
+    if (isStoredBackgroundDataUri(savedBackground)) {
+      customBackgroundImage = savedBackground;
+      customBackgroundImageBytes = Uint8List.fromList(base64Decode(
+          savedBackground!.substring(savedBackground.indexOf(',') + 1)));
+      customBackgroundScale = (prefs.getDouble('customBackgroundScale') ?? 1)
+          .clamp(.8, 2.4)
+          .toDouble();
+      customBackgroundOpacity =
+          (prefs.getDouble('customBackgroundOpacity') ?? .42)
+              .clamp(0, 1)
+              .toDouble();
+    } else if (savedBackground != null) {
+      await prefs.remove('customBackgroundImage');
+      await prefs.remove('customBackgroundScale');
+      await prefs.remove('customBackgroundOpacity');
+    }
     glassEnabled = prefs.getBool('glassEnabled') ?? false;
     const bankAsset = String.fromEnvironment('QUESTION_BANK_ASSET',
         defaultValue: 'assets/all_questions.json');
@@ -393,6 +416,58 @@ class StudyStore extends ChangeNotifier {
   Future<void> setGlassEnabled(bool value) async {
     glassEnabled = value;
     await prefs.setBool('glassEnabled', value);
+    notifyListeners();
+  }
+
+  Future<void> setCustomBackground(PreparedBackgroundImage prepared) async {
+    if (!themeColors.containsKey(prepared.suggestedThemeKey) ||
+        !isStoredBackgroundDataUri(prepared.dataUri)) {
+      throw Exception('背景图片格式无效，请重新选择');
+    }
+    final bytes = Uint8List.fromList(base64Decode(
+        prepared.dataUri.substring(prepared.dataUri.indexOf(',') + 1)));
+    try {
+      await prefs.setString('customBackgroundImage', prepared.dataUri);
+      await prefs.setDouble('customBackgroundScale', 1);
+      await prefs.setDouble('customBackgroundOpacity', .42);
+      await prefs.setString('customPrimaryKey', prepared.suggestedThemeKey);
+      await prefs.setString('customBackgroundKey', prepared.suggestedThemeKey);
+      await prefs.setString('themeColorKey', 'custom');
+    } catch (_) {
+      throw Exception('背景保存失败，请换一张更小的图片后重试');
+    }
+    customBackgroundImage = prepared.dataUri;
+    customBackgroundImageBytes = bytes;
+    customBackgroundScale = 1;
+    customBackgroundOpacity = .42;
+    customPrimaryKey = prepared.suggestedThemeKey;
+    customBackgroundKey = prepared.suggestedThemeKey;
+    themeColorKey = 'custom';
+    notifyListeners();
+  }
+
+  void previewCustomBackground({double? scale, double? opacity}) {
+    if (!hasCustomBackground) return;
+    if (scale != null) customBackgroundScale = scale.clamp(.8, 2.4).toDouble();
+    if (opacity != null)
+      customBackgroundOpacity = opacity.clamp(0, 1).toDouble();
+    notifyListeners();
+  }
+
+  Future<void> saveCustomBackgroundPresentation() async {
+    if (!hasCustomBackground) return;
+    await prefs.setDouble('customBackgroundScale', customBackgroundScale);
+    await prefs.setDouble('customBackgroundOpacity', customBackgroundOpacity);
+  }
+
+  Future<void> clearCustomBackground() async {
+    customBackgroundImage = null;
+    customBackgroundImageBytes = null;
+    customBackgroundScale = 1;
+    customBackgroundOpacity = .42;
+    await prefs.remove('customBackgroundImage');
+    await prefs.remove('customBackgroundScale');
+    await prefs.remove('customBackgroundOpacity');
     notifyListeners();
   }
 

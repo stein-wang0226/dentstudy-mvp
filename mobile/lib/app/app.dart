@@ -27,6 +27,8 @@ class DentStudy extends StatelessWidget {
   Widget build(BuildContext context) => ListenableBuilder(
       listenable: store,
       builder: (context, _) {
+        final hasCustomBackground = store.hasCustomBackground;
+        final transparentChrome = store.glassEnabled || hasCustomBackground;
         final scheme =
             ColorScheme.fromSeed(seedColor: teal, surface: Colors.white)
                 .copyWith(primary: teal, onPrimary: Colors.white);
@@ -38,6 +40,11 @@ class DentStudy extends StatelessWidget {
                 glass: store.glassEnabled,
                 background: paper,
                 tint: backgroundTint,
+                image: hasCustomBackground
+                    ? MemoryImage(store.customBackgroundImageBytes!)
+                    : null,
+                imageScale: store.customBackgroundScale,
+                imageOpacity: store.customBackgroundOpacity,
                 child: child ?? const SizedBox.shrink()),
             theme: ThemeData(
                 pageTransitionsTheme: const PageTransitionsTheme(builders: {
@@ -61,16 +68,16 @@ class DentStudy extends StatelessWidget {
                 ],
                 colorScheme: scheme,
                 scaffoldBackgroundColor:
-                    store.glassEnabled ? Colors.transparent : paper,
+                    transparentChrome ? Colors.transparent : paper,
                 appBarTheme: AppBarTheme(
                     backgroundColor:
-                        store.glassEnabled ? Colors.transparent : paper,
+                        transparentChrome ? Colors.transparent : paper,
                     surfaceTintColor: Colors.transparent,
                     foregroundColor: ink,
                     elevation: 0,
                     scrolledUnderElevation: 0),
                 navigationBarTheme: NavigationBarThemeData(
-                    backgroundColor: store.glassEnabled
+                    backgroundColor: transparentChrome
                         ? Colors.transparent
                         : Color.lerp(Colors.white, backgroundTint, .07),
                     surfaceTintColor: Colors.transparent,

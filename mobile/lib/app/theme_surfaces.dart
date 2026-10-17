@@ -165,25 +165,38 @@ class StudyBackdrop extends StatelessWidget {
   final bool glass;
   // Deliberately no primary/accent input: the backdrop only uses its own hue.
   final Color background, tint;
+  final ImageProvider? image;
+  final double imageScale, imageOpacity;
   const StudyBackdrop(
       {super.key,
       required this.child,
       required this.glass,
       required this.background,
-      required this.tint});
+      required this.tint,
+      this.image,
+      this.imageScale = 1,
+      this.imageOpacity = 0});
   @override
   Widget build(BuildContext context) => Stack(children: [
-        Positioned.fill(
-            child: ColoredBox(
-                color: background,
-                // Soften only the distant wallpaper. Glass panes remain clear:
-                // GlassRefraction still applies matrix displacement without blur.
-                child: glass
-                    ? ImageFiltered(
-                        imageFilter:
-                            ui.ImageFilter.blur(sigmaX: 1.5, sigmaY: 1.5),
-                        child: CustomPaint(painter: _GlassBackdrop(tint)))
-                    : null)),
+        Positioned.fill(child: ColoredBox(color: background)),
+        if (image != null && imageOpacity > 0)
+          Positioned.fill(
+              child: IgnorePointer(
+                  child: Opacity(
+                      opacity: imageOpacity.clamp(0, 1),
+                      child: ClipRect(
+                          child: Transform.scale(
+                              scale: imageScale.clamp(.8, 2.4),
+                              child: SizedBox.expand(
+                                  child: Image(
+                                      image: image!, fit: BoxFit.cover))))))),
+        if (glass)
+          Positioned.fill(
+              // Soften only the distant wallpaper. Glass panes remain clear:
+              // GlassRefraction still applies matrix displacement without blur.
+              child: ImageFiltered(
+                  imageFilter: ui.ImageFilter.blur(sigmaX: 1.5, sigmaY: 1.5),
+                  child: CustomPaint(painter: _GlassBackdrop(tint)))),
         child
       ]);
 }

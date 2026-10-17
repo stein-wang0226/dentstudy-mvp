@@ -1,8 +1,18 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../app/shared.dart';
+import '../../app/theme_surfaces.dart';
+import 'background_image.dart';
 
-class AppearanceSettings extends StatelessWidget {
+class AppearanceSettings extends StatefulWidget {
   const AppearanceSettings({super.key});
+  @override
+  State<AppearanceSettings> createState() => _AppearanceSettingsState();
+}
+
+class _AppearanceSettingsState extends State<AppearanceSettings> {
+  bool choosingImage = false;
+  String? imageError;
 
   Widget _swatch(String key, {double size = 20, bool pale = false}) =>
       Container(
@@ -38,15 +48,167 @@ class AppearanceSettings extends StatelessWidget {
                         ])))
                     .toList(),
                 onChanged: (key) {
-                  if (key != null)
+                  if (key != null) {
                     safely(
                         context,
                         () => store.setCustomTheme(
                             primary: background ? store.customPrimaryKey : key,
                             background:
                                 background ? key : store.customBackgroundKey));
+                  }
                 })));
   }
+
+  Future<void> pickBackground(BuildContext context) async {
+    setState(() {
+      choosingImage = true;
+      imageError = null;
+    });
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
+          withData: true);
+      if (picked == null) return;
+      final file = picked.files.single;
+      if (file.bytes == null ||
+          !const ['jpg', 'jpeg', 'png', 'webp']
+              .contains(file.extension?.toLowerCase())) {
+        throw Exception('请选择 JPG、PNG 或 WebP 格式的图片');
+      }
+      final prepared = await prepareBackgroundImage(file.bytes!);
+      await store.setCustomBackground(prepared);
+      if (mounted) {
+        message(context,
+            '背景已保存，并按图片主色匹配为${themeNames[prepared.suggestedThemeKey]}主题');
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() =>
+            imageError = error.toString().replaceFirst('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) setState(() => choosingImage = false);
+    }
+  }
+
+  Widget backgroundPreview() {
+    final bytes = store.customBackgroundImageBytes;
+    if (bytes == null) return const SizedBox.shrink();
+    return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: SizedBox(
+            height: 170,
+            child: Stack(children: [
+              Positioned.fill(child: ColoredBox(color: paper)),
+              Positioned.fill(
+                  child: Opacity(
+                      opacity: store.customBackgroundOpacity,
+                      child: ClipRect(
+                          child: Transform.scale(
+                              scale: store.customBackgroundScale,
+                              child: Image.memory(bytes, fit: BoxFit.cover))))),
+              Positioned.fill(
+                  child: Padding(
+                      padding: const EdgeInsets.all(28),
+                      child: StudySurface(
+                          glass: true,
+                          radius: 18,
+                          tint: backgroundTint,
+                          borderColor: Colors.transparent,
+                          padding: const EdgeInsets.all(16),
+                          child: const Center(
+                              child: Text('玻璃预览',
+                                  style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w700))))))
+            ])));
+  }
+
+  Widget customBackground(BuildContext context) => Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+          color: paper,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: teal.withAlpha(32))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Row(children: [
+          Icon(Icons.wallpaper_outlined),
+          SizedBox(width: 10),
+          Text('自定义图片背景',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16))
+        ]),
+        const SizedBox(height: 8),
+        const Text(
+            '仅保存在本设备，不上传服务器、不参与账号同步。支持 JPG / PNG / WebP；原图不超过 8 MB，建议 16:9 或 9:16 图片。系统会压缩为适合网页本机保存的背景，暂不支持 HEIC、GIF、PDF 或截图文件夹。',
+            style:
+                TextStyle(fontSize: 12, height: 1.5, color: Colors.blueGrey)),
+        const SizedBox(height: 14),
+        if (store.hasCustomBackground) ...[
+          backgroundPreview(),
+          const SizedBox(height: 12),
+          Text('图片主色已自动匹配为${themeNames[store.customPrimaryKey]}；可继续调整。',
+              style: TextStyle(fontSize: 12, color: teal)),
+          const SizedBox(height: 10),
+          Row(children: [
+            const Icon(Icons.zoom_out, size: 18),
+            Expanded(
+                child: Slider(
+                    key: const ValueKey('background-scale'),
+                    value: store.customBackgroundScale,
+                    min: .8,
+                    max: 2.4,
+                    divisions: 32,
+                    label: '${store.customBackgroundScale.toStringAsFixed(2)}×',
+                    onChanged: (value) =>
+                        store.previewCustomBackground(scale: value),
+                    onChangeEnd: (_) => safely(
+                        context, store.saveCustomBackgroundPresentation))),
+            const Icon(Icons.zoom_in, size: 18)
+          ]),
+          Text('缩放 ${store.customBackgroundScale.toStringAsFixed(2)}×',
+              style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
+          const SizedBox(height: 4),
+          Slider(
+              key: const ValueKey('background-opacity'),
+              value: store.customBackgroundOpacity,
+              min: 0,
+              max: 1,
+              divisions: 100,
+              label: '${(store.customBackgroundOpacity * 100).round()}%',
+              onChanged: (value) =>
+                  store.previewCustomBackground(opacity: value),
+              onChangeEnd: (_) =>
+                  safely(context, store.saveCustomBackgroundPresentation)),
+          Text(
+              '背景图片透明度 ${(store.customBackgroundOpacity * 100).round()}%（0% 完全透明，100% 完整显示）',
+              style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
+          const SizedBox(height: 10),
+        ],
+        Wrap(spacing: 10, runSpacing: 8, children: [
+          FilledButton.icon(
+              onPressed: choosingImage ? null : () => pickBackground(context),
+              icon: Icon(choosingImage
+                  ? Icons.hourglass_top_outlined
+                  : Icons.photo_library_outlined),
+              label: Text(choosingImage
+                  ? '正在处理图片…'
+                  : store.hasCustomBackground
+                      ? '更换背景图片'
+                      : '选择背景图片')),
+          if (store.hasCustomBackground)
+            OutlinedButton.icon(
+                onPressed: () => safely(context, store.clearCustomBackground),
+                icon: const Icon(Icons.hide_image_outlined),
+                label: const Text('移除图片背景'))
+        ]),
+        if (imageError != null) ...[
+          const SizedBox(height: 8),
+          Text(imageError!,
+              style: const TextStyle(fontSize: 12, color: Colors.deepOrange))
+        ]
+      ]));
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -137,11 +299,13 @@ class AppearanceSettings extends StatelessWidget {
                             style: TextStyle(color: ink)))
                   ])),
             ],
+            const SizedBox(height: 16),
+            customBackground(context),
             const Divider(height: 32),
             SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('玻璃质感'),
-                subtitle: const Text('透出背景的磨砂卡片、玻璃高光与半透明导航'),
+                subtitle: const Text('透出背景的清澈折射卡片与半透明导航'),
                 secondary: const Icon(Icons.blur_on),
                 value: store.glassEnabled,
                 onChanged: (value) =>

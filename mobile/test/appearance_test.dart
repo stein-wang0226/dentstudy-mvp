@@ -10,6 +10,7 @@ import 'package:dentstudy/app/app.dart';
 import 'package:dentstudy/app/shared.dart' as app;
 import 'package:dentstudy/app/theme_surfaces.dart';
 import 'package:dentstudy/app/glass_refraction.dart';
+import 'package:dentstudy/features/profile/background_image.dart';
 import 'package:dentstudy/features/profile/profile_editor.dart';
 
 void main() {
@@ -83,6 +84,55 @@ void main() {
   },
       skip:
           kIsWeb); // Restart/asset loading is covered by the native test runner.
+
+  test('custom picture background stays device-local with its presentation',
+      () async {
+    final store = StudyStore();
+    await store.init();
+    const prepared = PreparedBackgroundImage(
+        dataUri: 'data:image/jpeg;base64,AQID',
+        suggestedThemeKey: 'cocoa',
+        bytes: 3,
+        width: 1,
+        height: 1);
+    await store.setCustomBackground(prepared);
+    store.previewCustomBackground(scale: 1.65, opacity: .58);
+    await store.saveCustomBackgroundPresentation();
+
+    expect(store.hasCustomBackground, isTrue);
+    expect(store.themeColorKey, 'custom');
+    expect(store.customPrimaryKey, 'cocoa');
+    expect(store.customBackgroundKey, 'cocoa');
+    expect(store.customBackgroundScale, 1.65);
+    expect(store.customBackgroundOpacity, .58);
+    expect(store.events, isEmpty,
+        reason: 'appearance changes must never become study events');
+
+    final restored = StudyStore();
+    await restored.init();
+    expect(restored.hasCustomBackground, isTrue);
+    expect(restored.customBackgroundScale, 1.65);
+    expect(restored.customBackgroundOpacity, .58);
+    await restored.clearCustomBackground();
+    expect(restored.hasCustomBackground, isFalse);
+  }, skip: kIsWeb);
+
+  test('background image preparation produces a compact valid local wallpaper',
+      () async {
+    final recorder = ui.PictureRecorder();
+    Canvas(recorder).drawRect(const Rect.fromLTWH(0, 0, 40, 24),
+        Paint()..color = const Color(0xFF7B5A45));
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(40, 24);
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    picture.dispose();
+
+    final prepared = await prepareBackgroundImage(data!.buffer.asUint8List());
+    expect(isStoredBackgroundDataUri(prepared.dataUri), isTrue);
+    expect(prepared.bytes, lessThanOrEqualTo(maxStoredBackgroundBytes));
+    expect(prepared.suggestedThemeKey, 'cocoa');
+  });
 
   testWidgets(
       'independent colors and glass apply across tabs without layout errors',

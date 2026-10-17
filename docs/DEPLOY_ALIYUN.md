@@ -5,7 +5,7 @@
 实际服务器使用宿主机 Nginx + `dentstudy.service`，不是下面的 Docker 方案。
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
-- 客户端版本：`0.2.34`（清澈玻璃的画面折射形变增强 80%，背景光带轻微柔化；不增加颜色、暗边或玻璃磨砂）；综合题库仍为 3650 道，本次未修改题目或学习数据。
+- 客户端版本：`0.2.35`（可在主题设置中选择设备本地图片背景、缩放和透明度，自动协调主题色）；综合题库仍为 3650 道，本次未修改题目或学习数据。
 - 后端：`/opt/dentstudy-current` 仍指向 `20261016-author-download-v0232`；只为作者下载投稿增加受认证保护的读取接口，未修改既有同步契约。本版仅更新前端。
 - 前端：`/var/www/dentstudy-current` 指向本次发布目录；发布后将旧目录保留以便无损回退。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
@@ -20,13 +20,15 @@
 `deploy/dentstudy-certbot.service` 和 `deploy/dentstudy-certbot.timer`。
 构建 Web 时使用 `--no-web-resources-cdn --dart-define=API_URL=/api`
 及 `--dart-define=QUESTION_BANK_ASSET=assets/all_questions.json`。
-发布时同时传入 `--dart-define=APP_VERSION=0.2.34` 和
+发布时同时传入 `--dart-define=APP_VERSION=0.2.35` 和
 `--dart-define=BUILD_TIME=实际北京时间`，在“我的”显示版本与更新时间。
 当前 GitHub workflow 只做检查，不会自动部署；代码推送后仍需单独构建和上传。
 
 微信网站所有权验证文件保存在 `mobile/web/b1f6d159694b4f3909e0affdfcfefd6e.txt`，
 Flutter Web 构建时随根目录静态资源发布。HTTP 和 HTTPS 的同名路径均需直接返回 200 和原始 TXT 内容；
 HTTP 仅此验证文件与证书验证路径不跳转，其余页面仍强制 HTTPS。不要误删验证文件。
+
+0.2.35 验收：我的 → 主题与外观 → 自定义图片背景 → 选择背景图片，支持 JPG / PNG / WebP、原图 8 MB 内；客户端将长边缩至 1280 像素并压缩到不超过约 1.2 MB 后仅保存本机，不上传服务器、不参与账号同步。选择后自动从图片取主色并同步设置主色与淡背景色；预览区和整站背景即时更新，可拖动 0–100% 透明度与 0.8–2.4× 缩放，松手后保存。移除图片只删除本机背景，不动主题、题库或学习记录。玻璃折射强度和背景光带的 1.5px 柔化均保持不变。测试：静态检查和 50 项客户端测试通过；仅发布前端，不修改题库、学习记录、后端或同步协议。
 
 0.2.34 验收：我的 → 主题与外观 → 开启玻璃质感，今日卡片、顶部栏和底部栏的真实背景折射幅度为上一版的 1.8 倍；最底层背景光带额外以 1.5px 轻微柔化，玻璃镜片仍是无 blur 的纯矩阵折射，因此不会变成磨砂、染色或出现暗边。关闭玻璃质感时不绘制背景模糊。测试：静态检查和 49 项客户端测试通过；仅发布前端，不修改题库、学习记录、后端或同步协议。
 
