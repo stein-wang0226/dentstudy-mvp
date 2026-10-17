@@ -437,6 +437,15 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
         heading('学习设置'),
         box(Column(children: [
+          SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: Icon(Icons.smart_toy_outlined, color: teal),
+              title: const Text('小齿 · 备考搭子'),
+              subtitle: const Text('右下角聊天陪伴与偶尔问候；聊天不保存记录'),
+              value: store.xiaochiEnabled,
+              onChanged: (value) =>
+                  safely(context, () => store.setXiaochiEnabled(value))),
+          const Divider(),
           ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Icon(Icons.flag_outlined),

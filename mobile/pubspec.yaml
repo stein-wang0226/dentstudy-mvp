@@ -1,7 +1,7 @@
 name: dentstudy
 description: 口腔医学间隔复习与题库学习应用
 publish_to: none
-version: 0.2.37+39
+version: 0.2.38+40
 environment:
   sdk: '>=3.6.0 <4.0.0'
 dependencies:
@@ -37,3 +37,4 @@ flutter:
     - assets/periodontology_questions.json
     - assets/all_questions.json
     - assets/contact_wechat.jpg
+    - assets/xiaochi/avatar.png

@@ -47,6 +47,8 @@ class StudyStore extends ChangeNotifier {
   double customBackgroundScale = 1;
   double customBackgroundOpacity = .42;
   bool glassEnabled = false;
+  bool xiaochiEnabled = true;
+  double? xiaochiPositionX, xiaochiPositionY;
   int dailyNewLimit = 10;
   int? dailyReviewTarget;
   String settingsUpdatedAt = '1970-01-01T00:00:00.000000Z';
@@ -83,6 +85,10 @@ class StudyStore extends ChangeNotifier {
   String get _importedQuestionIdsKey => 'importedQuestionIds:$userId';
   String get _lastImportedBankNameKey => 'lastImportedBankName:$userId';
   String get _importedQuestionBankKey => 'importedQuestionBank:$userId';
+  String get _xiaochiEnabledKey => 'xiaochiEnabled:$userId';
+  String get _xiaochiPositionXKey => 'xiaochiPositionX:$userId';
+  String get _xiaochiPositionYKey => 'xiaochiPositionY:$userId';
+  String get _xiaochiGreetingDateKey => 'xiaochiGreetingDate:$userId';
   static const _questionOverridesKey = 'questionOverrides';
   // Review-first is account-wide, including questions from other exam tracks.
   List<Question> get due => learning.due(questions, DateTime.now());
@@ -287,6 +293,13 @@ class StudyStore extends ChangeNotifier {
     importedQuestionIds =
         (prefs.getStringList(_importedQuestionIdsKey) ?? <String>[]).toSet();
     lastImportedBankName = prefs.getString(_lastImportedBankNameKey);
+    xiaochiEnabled = prefs.getBool(_xiaochiEnabledKey) ?? true;
+    final savedX = prefs.getDouble(_xiaochiPositionXKey);
+    final savedY = prefs.getDouble(_xiaochiPositionYKey);
+    xiaochiPositionX =
+        savedX != null && savedX >= 0 && savedX <= 1 ? savedX : null;
+    xiaochiPositionY =
+        savedY != null && savedY >= 0 && savedY <= 1 ? savedY : null;
   }
 
   Future<void> _save() async {
@@ -417,6 +430,35 @@ class StudyStore extends ChangeNotifier {
     glassEnabled = value;
     await prefs.setBool('glassEnabled', value);
     notifyListeners();
+  }
+
+  /// 小齿的展示偏好、位置和问候频率仅留在当前设备与当前账号下，
+  /// 不参与学习事件同步，也不会影响题库或历史作答。
+  Future<void> setXiaochiEnabled(bool value) async {
+    xiaochiEnabled = value;
+    await prefs.setBool(_xiaochiEnabledKey, value);
+    notifyListeners();
+  }
+
+  Future<void> setXiaochiPosition(double x, double y) async {
+    xiaochiPositionX = x.clamp(0, 1).toDouble();
+    xiaochiPositionY = y.clamp(0, 1).toDouble();
+    await prefs.setDouble(_xiaochiPositionXKey, xiaochiPositionX!);
+    await prefs.setDouble(_xiaochiPositionYKey, xiaochiPositionY!);
+  }
+
+  Future<bool> claimXiaochiGreeting() async {
+    final now = DateTime.now();
+    final today = '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+    final previous = prefs.getString(_xiaochiGreetingDateKey);
+    if (previous != null) {
+      final parsed = DateTime.tryParse(previous);
+      if (parsed != null && now.difference(parsed).inDays < 3) return false;
+    }
+    await prefs.setString(_xiaochiGreetingDateKey, today);
+    return true;
   }
 
   Future<void> setCustomBackground(PreparedBackgroundImage prepared) async {
@@ -777,6 +819,36 @@ class StudyStore extends ChangeNotifier {
       throw Exception('AI 返回内容不完整，请使用本地格式整理');
     }
     return result;
+  }
+
+  /// Sends only the current message and a tiny in-memory conversation window.
+  /// Neither the app nor the API saves the transcript as a learning record.
+  Future<String> chatWithXiaochi({
+    required String message,
+    required List<Map<String, String>> history,
+  }) async {
+    final text = message.trim();
+    if (text.isEmpty || text.length > 1000) {
+      throw Exception('消息长度为 1–1000 个字');
+    }
+    final result = await request(
+        '/v1/assistant/chat',
+        {
+          'message': text,
+          'history': history
+              .take(6)
+              .map((item) => {
+                    'role': item['role'] ?? '',
+                    'content': item['content'] ?? '',
+                  })
+              .toList(),
+        },
+        const Duration(seconds: 45));
+    final reply = result['reply'];
+    if (reply is! String || reply.trim().isEmpty) {
+      throw Exception('小齿没有返回可用回复，请稍后再试');
+    }
+    return reply.trim();
   }
 
   Future<Map<String, dynamic>> questionBankSubmissions() async {

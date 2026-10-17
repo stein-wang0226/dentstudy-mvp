@@ -12,6 +12,7 @@ import '../features/library/library_page.dart';
 import '../features/notebooks/notebooks_page.dart';
 import '../features/statistics/statistics_page.dart';
 import '../features/profile/profile_page.dart';
+import '../features/assistant/xiaochi_assistant.dart';
 import '../features/profile/policy_page.dart';
 import '../features/practice/practice_request.dart';
 import '../features/practice/custom_practice.dart';
@@ -378,51 +379,54 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        extendBody: store.glassEnabled,
-        extendBodyBehindAppBar: store.glassEnabled,
-        appBar: AppBar(
-            flexibleSpace: store.glassEnabled
-                ? const FrostedChrome(enabled: true, child: SizedBox.expand())
-                : null,
-            title: Row(children: [
-              Icon(Icons.auto_stories_rounded, color: teal),
-              const SizedBox(width: 9),
-              const Text('齿间', style: TextStyle(fontWeight: FontWeight.w800)),
-              const SizedBox(width: 9),
-              const Flexible(
-                  child: Text('DENTSTUDY',
-                      style: TextStyle(fontSize: 10, letterSpacing: 2)))
-            ]),
-            actions: [
-              TextButton.icon(
-                  onPressed: () => _showContactAuthor(context),
-                  icon: const Icon(Icons.mail_outline, size: 19),
-                  label: const Text('联系作者')),
-              const SizedBox(width: 8)
-            ]),
-        body: GlassContentViewport(
-            enabled: store.glassEnabled,
-            child: ListenableBuilder(
-                listenable: store,
-                builder: (c, _) => switch (tab) {
-                      0 => TodayPage(
-                          plan: plan,
-                          onPlan: _today,
-                          onCustom: _custom,
-                          onResume: _resume,
-                          onModeChanged: (mode) async {
-                            await store.setMode(mode);
-                            await _ensurePlan();
-                          },
-                          onStart: _start),
-                      1 => LibraryPage(onStart: _start),
-                      2 => NotebooksPage(onStart: _start),
-                      3 => StatisticsPage(onStart: _start),
-                      _ => ProfilePage(onStart: _start),
-                    })),
-        bottomNavigationBar: _navigation(),
-      );
+  Widget build(BuildContext context) => Stack(fit: StackFit.expand, children: [
+        Scaffold(
+          extendBody: store.glassEnabled,
+          extendBodyBehindAppBar: store.glassEnabled,
+          appBar: AppBar(
+              flexibleSpace: store.glassEnabled
+                  ? const FrostedChrome(enabled: true, child: SizedBox.expand())
+                  : null,
+              title: Row(children: [
+                Icon(Icons.auto_stories_rounded, color: teal),
+                const SizedBox(width: 9),
+                const Text('齿间', style: TextStyle(fontWeight: FontWeight.w800)),
+                const SizedBox(width: 9),
+                const Flexible(
+                    child: Text('DENTSTUDY',
+                        style: TextStyle(fontSize: 10, letterSpacing: 2)))
+              ]),
+              actions: [
+                TextButton.icon(
+                    onPressed: () => _showContactAuthor(context),
+                    icon: const Icon(Icons.mail_outline, size: 19),
+                    label: const Text('联系作者')),
+                const SizedBox(width: 8)
+              ]),
+          body: GlassContentViewport(
+              enabled: store.glassEnabled,
+              child: ListenableBuilder(
+                  listenable: store,
+                  builder: (c, _) => switch (tab) {
+                        0 => TodayPage(
+                            plan: plan,
+                            onPlan: _today,
+                            onCustom: _custom,
+                            onResume: _resume,
+                            onModeChanged: (mode) async {
+                              await store.setMode(mode);
+                              await _ensurePlan();
+                            },
+                            onStart: _start),
+                        1 => LibraryPage(onStart: _start),
+                        2 => NotebooksPage(onStart: _start),
+                        3 => StatisticsPage(onStart: _start),
+                        _ => ProfilePage(onStart: _start),
+                      })),
+          bottomNavigationBar: _navigation(),
+        ),
+        const XiaochiAssistant(),
+      ]);
 
   Widget _navigation() {
     final navigation = NavigationBar(
