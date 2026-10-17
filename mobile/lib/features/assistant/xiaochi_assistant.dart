@@ -397,7 +397,7 @@ class _AvatarArt extends StatelessWidget {
                       // character-shaped mask removes that rectangular field
                       // without changing the face or the illustrated pixels.
                       clipper: const _AvatarSilhouetteClipper(),
-                      child: const _ThemeTintedAvatar())),
+                      child: const _AvatarImage())),
               if (mood == _AvatarMood.speaking)
                 Positioned(
                     left: 39,
@@ -419,9 +419,6 @@ class _AvatarArt extends StatelessWidget {
       });
 }
 
-/// The art itself stays untouched. Two clipped colour layers sit over the
-/// character mask: only hair and clothing are recoloured, while the face
-/// remains the original illustration regardless of the selected theme.
 class _AvatarSilhouetteClipper extends CustomClipper<Path> {
   const _AvatarSilhouetteClipper();
 
@@ -458,86 +455,17 @@ class _AvatarSilhouetteClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant _AvatarSilhouetteClipper oldClipper) => false;
 }
 
-class _ThemeTintedAvatar extends StatelessWidget {
-  const _ThemeTintedAvatar();
-
-  static Widget _source({String? semanticLabel}) =>
-      Image.asset('assets/xiaochi/avatar.png',
-          fit: BoxFit.contain,
-          filterQuality: FilterQuality.high,
-          semanticLabel: semanticLabel,
-          excludeFromSemantics: semanticLabel == null);
+/// Uses the original supplied illustration without any colour overlays.
+/// This avoids introducing visible clip edges around hair or clothing when a
+/// theme changes.
+class _AvatarImage extends StatelessWidget {
+  const _AvatarImage();
 
   @override
-  Widget build(BuildContext context) {
-    final tint = teal.withAlpha(188);
-    return Stack(fit: StackFit.expand, children: [
-      _source(semanticLabel: '小齿，口腔备考搭子'),
-      ClipPath(
-          clipper: const _HairTintClipper(),
-          child: ColorFiltered(
-              colorFilter: ColorFilter.mode(tint, BlendMode.color),
-              child: _source())),
-      ClipPath(
-          clipper: const _ClothingTintClipper(),
-          child: ColorFiltered(
-              colorFilter: ColorFilter.mode(tint, BlendMode.color),
-              child: _source())),
-    ]);
-  }
-}
-
-class _HairTintClipper extends CustomClipper<Path> {
-  const _HairTintClipper();
-
-  @override
-  Path getClip(Size size) {
-    final w = size.width;
-    final h = size.height;
-    final path = Path()
-      ..moveTo(0, 0)
-      ..lineTo(w, 0)
-      ..lineTo(w, h * .27)
-      ..cubicTo(w * .86, h * .31, w * .78, h * .25, w * .69, h * .22)
-      ..cubicTo(w * .61, h * .17, w * .54, h * .19, w * .49, h * .25)
-      ..cubicTo(w * .43, h * .19, w * .33, h * .18, w * .24, h * .23)
-      ..cubicTo(w * .14, h * .30, w * .08, h * .29, 0, h * .26)
-      ..close()
-      // The long side locks are outside the central face region.
-      ..addRRect(RRect.fromRectAndRadius(
-          Rect.fromLTWH(0, h * .23, w * .22, h * .38),
-          Radius.circular(w * .13)))
-      ..addRRect(RRect.fromRectAndRadius(
-          Rect.fromLTWH(w * .78, h * .21, w * .22, h * .40),
-          Radius.circular(w * .13)));
-    return path;
-  }
-
-  @override
-  bool shouldReclip(covariant _HairTintClipper oldClipper) => false;
-}
-
-class _ClothingTintClipper extends CustomClipper<Path> {
-  const _ClothingTintClipper();
-
-  @override
-  Path getClip(Size size) {
-    final w = size.width;
-    final h = size.height;
-    return Path()
-      ..moveTo(0, h * .57)
-      ..lineTo(w * .19, h * .53)
-      ..lineTo(w * .35, h * .63)
-      ..quadraticBezierTo(w * .5, h * .68, w * .65, h * .63)
-      ..lineTo(w * .81, h * .53)
-      ..lineTo(w, h * .57)
-      ..lineTo(w, h)
-      ..lineTo(0, h)
-      ..close();
-  }
-
-  @override
-  bool shouldReclip(covariant _ClothingTintClipper oldClipper) => false;
+  Widget build(BuildContext context) => Image.asset('assets/xiaochi/avatar.png',
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
+      semanticLabel: '小齿，口腔备考搭子');
 }
 
 class _OrbitDots extends StatelessWidget {
