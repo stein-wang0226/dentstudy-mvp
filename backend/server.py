@@ -392,8 +392,6 @@ def initialize():
           status TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS assistant_chat_requests_requester_time
           ON assistant_chat_requests(requester_hash, requested_at);
-        CREATE INDEX IF NOT EXISTS assistant_chat_requests_user_kind_time
-          ON assistant_chat_requests(user_id, chat_kind, requested_at);
         CREATE INDEX IF NOT EXISTS assistant_chat_requests_time
           ON assistant_chat_requests(requested_at);
         ''')
