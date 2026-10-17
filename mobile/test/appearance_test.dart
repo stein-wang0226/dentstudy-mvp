@@ -173,6 +173,13 @@ void main() {
     await tester.tap(find.text('玻璃质感'));
     await tester.pumpAndSettle();
     expect(app.store.glassEnabled, isTrue);
+    expect(
+        tester
+            .widget<StudySurface>(
+                find.byKey(const ValueKey('custom-background-panel')))
+            .glass,
+        isTrue,
+        reason: 'the local background settings panel must refract too');
     expect(find.byType(BackdropFilter), findsWidgets);
     expect(find.byType(FrostedChrome), findsNWidgets(2));
     expect(

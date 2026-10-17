@@ -125,13 +125,14 @@ class _AppearanceSettingsState extends State<AppearanceSettings> {
             ])));
   }
 
-  Widget customBackground(BuildContext context) => Container(
-      width: double.infinity,
+  Widget customBackground(BuildContext context) => StudySurface(
+      key: const ValueKey('custom-background-panel'),
+      glass: store.glassEnabled,
+      tint: backgroundTint,
+      borderColor: teal.withAlpha(32),
+      color: paper,
+      radius: 16,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-          color: paper,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: teal.withAlpha(32))),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Row(children: [
           Icon(Icons.wallpaper_outlined),
