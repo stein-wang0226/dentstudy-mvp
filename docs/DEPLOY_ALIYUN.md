@@ -5,7 +5,7 @@
 实际服务器使用宿主机 Nginx + `dentstudy.service`，不是下面的 Docker 方案。
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
-- 客户端版本：`0.2.37`（Word/TXT 转换页新增可选的 AI 智能整理；综合题库仍为 3650 道，本次未修改题目或学习数据）。
+- 客户端版本：`0.2.42`（小齿聊天当前仅作者账号可用，其余用户点击提示正在升级；综合题库仍为 3650 道，本次未修改题目或学习数据）。
 - 后端：`/opt/dentstudy-current` 指向 `20261017-ai-import-v0237`；在不改变既有事件同步契约的前提下增加受登录保护的 AI 整理接口。
 - 前端：`/var/www/dentstudy-current` 指向本次发布目录；发布后将旧目录保留以便无损回退。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。

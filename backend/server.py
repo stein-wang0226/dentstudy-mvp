@@ -1034,6 +1034,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self.respond(200, dict(token=token, userId=uid, email=email))
                 if path == '/v1/assistant/chat':
                     uid = self.user(db)
+                    # The companion is being opened gradually. Keep the
+                    # restriction on the API as well as in the Flutter UI so
+                    # a copied request cannot spend the shared AI budget.
+                    if not self.is_admin(db, uid):
+                        raise PermissionError('小齿正在升级中···')
                     return self.respond(200, self.chat_with_xiaochi(db, uid, data))
                 uid = self.user(db)
                 if path.startswith('/v1/comments/') and path.endswith('/delete'):

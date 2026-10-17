@@ -246,7 +246,11 @@ class ApiTests(unittest.TestCase):
             ],
         }
         self.assertEqual(self.request('/v1/assistant/chat', payload)[0], 401)
-        token = self.register('xiaochi-learner')
+        learner = self.register('xiaochi-learner')
+        status, result = self.request('/v1/assistant/chat', payload, learner)
+        self.assertEqual(status, 401)
+        self.assertEqual(result['error'], '小齿正在升级中···')
+        token = self.author()
         with mock.patch.object(server, 'AI_API_KEY', 'test-key'), \
                 mock.patch.object(server, 'call_xiaochi_assistant',
                                   return_value=('先做 5 道新题热热身吧。', 90, 32)):
@@ -269,7 +273,7 @@ class ApiTests(unittest.TestCase):
             400)
 
     def test_xiaochi_allows_oral_study_after_casual_quota(self):
-        token = self.register('xiaochi-quota')
+        token = self.author()
         with mock.patch.object(server, 'AI_API_KEY', 'test-key'), \
                 mock.patch.object(server, 'ASSISTANT_CASUAL_DAILY_LIMIT', 1), \
                 mock.patch.object(server, 'call_xiaochi_assistant',

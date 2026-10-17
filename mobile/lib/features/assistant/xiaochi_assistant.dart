@@ -22,6 +22,10 @@ class _ChatLine {
 
 class _XiaochiAssistantState extends State<XiaochiAssistant>
     with TickerProviderStateMixin {
+  // Keep the client affordance aligned with the server-side author check.
+  // The server remains the authority, so editing a Web build cannot unlock
+  // the chat endpoint for another account.
+  static const _authorEmail = 'dentstudy1126@aka.yeah.net';
   static const _avatarWidth = 86.0;
   static const _avatarHeight = 129.0;
   final _composer = TextEditingController();
@@ -39,6 +43,8 @@ class _XiaochiAssistantState extends State<XiaochiAssistant>
   bool _sending = false;
   bool _showCare = false;
   _AvatarMood _mood = _AvatarMood.idle;
+
+  bool get _isAuthor => store.email.trim().toLowerCase() == _authorEmail;
 
   bool get _isWidgetTest => WidgetsBinding.instance.runtimeType
       .toString()
@@ -74,8 +80,11 @@ class _XiaochiAssistantState extends State<XiaochiAssistant>
     // One quiet, local greeting at most once every three days: useful enough
     // to feel companionable without constantly interrupting study.
     await Future<void>.delayed(const Duration(seconds: 16));
-    if (!mounted || !store.xiaochiEnabled || store.token.isEmpty || _open)
-      return;
+    if (!mounted ||
+        !store.xiaochiEnabled ||
+        !_isAuthor ||
+        store.token.isEmpty ||
+        _open) return;
     if (!await store.claimXiaochiGreeting() || !mounted) return;
     setState(() {
       _showCare = true;
@@ -100,6 +109,10 @@ class _XiaochiAssistantState extends State<XiaochiAssistant>
   void _openChat() {
     _holdTimer?.cancel();
     if (_holding) return;
+    if (!_isAuthor) {
+      message(context, '小齿正在升级中···');
+      return;
+    }
     if (store.token.isEmpty) {
       message(context, '登录后才能和小齿聊天，请前往「我的」登录或注册。');
       return;
@@ -378,7 +391,13 @@ class _AvatarArt extends StatelessWidget {
                     ..translateByDouble(0.0, lift, 0.0, 1.0)
                     ..rotateZ(turn)
                     ..scaleByDouble(scaleX, scaleY, 1.0, 1.0),
-                  child: const _ThemeTintedAvatar()),
+                  child: ClipPath(
+                      // The supplied illustration has a faint opaque studio
+                      // vignette despite its PNG alpha channel. A soft
+                      // character-shaped mask removes that rectangular field
+                      // without changing the face or the illustrated pixels.
+                      clipper: const _AvatarSilhouetteClipper(),
+                      child: const _ThemeTintedAvatar())),
               if (mood == _AvatarMood.speaking)
                 Positioned(
                     left: 39,
@@ -401,8 +420,44 @@ class _AvatarArt extends StatelessWidget {
 }
 
 /// The art itself stays untouched. Two clipped colour layers sit over the
-/// transparent PNG: only hair and clothing are recoloured, while the face
+/// character mask: only hair and clothing are recoloured, while the face
 /// remains the original illustration regardless of the selected theme.
+class _AvatarSilhouetteClipper extends CustomClipper<Path> {
+  const _AvatarSilhouetteClipper();
+
+  @override
+  Path getClip(Size size) {
+    final w = size.width;
+    final h = size.height;
+    // This deliberately follows the broad outline instead of making a card
+    // or a circle. At the on-screen avatar size it leaves room for hair tips,
+    // sleeves and shoes while excluding the source artwork's backdrop.
+    return Path()
+      ..moveTo(w * .49, 0)
+      ..cubicTo(w * .35, h * .02, w * .24, h * .08, w * .17, h * .16)
+      ..cubicTo(w * .10, h * .10, w * .03, h * .16, w * .07, h * .24)
+      ..cubicTo(0, h * .29, w * .07, h * .36, w * .14, h * .39)
+      ..cubicTo(w * .08, h * .44, w * .13, h * .50, w * .21, h * .52)
+      ..cubicTo(w * .16, h * .59, w * .10, h * .66, w * .12, h * .73)
+      ..cubicTo(w * .16, h * .78, w * .21, h * .75, w * .24, h * .70)
+      ..cubicTo(w * .23, h * .80, w * .30, h * .85, w * .38, h * .87)
+      ..cubicTo(w * .34, h * .94, w * .29, h * .98, w * .29, h)
+      ..lineTo(w * .71, h)
+      ..cubicTo(w * .71, h * .98, w * .66, h * .94, w * .62, h * .87)
+      ..cubicTo(w * .70, h * .85, w * .77, h * .80, w * .76, h * .70)
+      ..cubicTo(w * .79, h * .75, w * .84, h * .78, w * .88, h * .73)
+      ..cubicTo(w * .90, h * .66, w * .84, h * .59, w * .79, h * .52)
+      ..cubicTo(w * .87, h * .50, w * .92, h * .44, w * .86, h * .39)
+      ..cubicTo(w * .93, h * .36, w, h * .29, w * .93, h * .24)
+      ..cubicTo(w * .97, h * .16, w * .90, h * .10, w * .83, h * .16)
+      ..cubicTo(w * .76, h * .08, w * .65, h * .02, w * .49, 0)
+      ..close();
+  }
+
+  @override
+  bool shouldReclip(covariant _AvatarSilhouetteClipper oldClipper) => false;
+}
+
 class _ThemeTintedAvatar extends StatelessWidget {
   const _ThemeTintedAvatar();
 
