@@ -33,8 +33,6 @@ flutter:
       fonts:
         - asset: assets/fonts/DentStudyMath-Regular.ttf
   assets:
-    - assets/questions.json
-    - assets/periodontology_questions.json
     - assets/all_questions.json
     - assets/contact_wechat.jpg
     - assets/xiaochi/avatar.png

@@ -106,12 +106,17 @@ void main() {
     expect(QuestionCatalog(qs, '执医').learnable, isEmpty);
     expect(QuestionCatalog.reviewLabel(q(0)), '待审核');
   });
-  test('downloaded cache survives default composite bank initialization',
+  test('legacy public cache is discarded when the bundled bank is empty',
       () async {
     SharedPreferences.setMockInitialValues({
       'bank': jsonEncode({
         'questions': [q(9999).data]
-      })
+      }),
+      'importedQuestionIds:guest': ['q10000'],
+      'importedQuestionBank:guest': jsonEncode({
+        'questions': [q(10000).data]
+      }),
+      'lastImportedBankName:guest': '本地导入测试题库',
     });
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
@@ -119,10 +124,14 @@ void main() {
             (_) async => null);
     final store = StudyStore();
     await store.init();
-    expect(store.questions.any((q) => q.id == 'q9999'), isTrue);
+    expect(store.questions, isEmpty);
+    expect(store.prefs.getString('bank'), isNull);
+    expect(store.prefs.getString('importedQuestionBank:guest'), isNull);
+    expect(store.prefs.getStringList('importedQuestionIds:guest'), isNull);
+    expect(store.prefs.getString('lastImportedBankName:guest'), isNull);
     final bundled =
         jsonDecode(await rootBundle.loadString('assets/all_questions.json'));
-    expect(store.questions.length, (bundled['questions'] as List).length + 1);
+    expect(bundled['questions'], isEmpty);
   });
   test('daily plan is bounded, stable and review-first', () async {
     final store = await freshStore();

@@ -54,24 +54,14 @@ void main() {
     app.store.mode = '执医';
   }
 
-  testWidgets('actual counts, fifth options and year isolation remain truthful',
+  testWidgets('runtime bundle contains no embedded study questions',
       (tester) async {
     await prepare(tester, bundled: true);
-    expect(questions.length, 3650);
+    expect(questions, isEmpty);
     final catalog = QuestionCatalog(questions, '执医');
-    expect(catalog.material('牙体牙髓病学').length, 50);
-    expect(catalog.material('口腔修复学').length, 50);
-    expect(catalog.material('口腔颌面外科学').length, 1210);
-    expect(catalog.learnable.length, 1310);
-    expect(catalog.available('牙周病学'), isFalse);
-    expect(catalog.material('牙周病学').length, 10);
-    expect(QuestionCatalog(questions, '考研').learnable.length, 3504);
+    expect(catalog.learnable, isEmpty);
+    expect(catalog.subjects, isEmpty);
     expect(ExamYearCatalog(questions, '执医').years, isEmpty);
-    final q = questions.firstWhere((q) => q.id.startsWith('cmb-train-'));
-    expect(q.options.length, 5);
-    expect(QuestionCatalog.sourceLabel(q), '开放数据练习题');
-    expect(QuestionCatalog.reviewLabel(q), '待审核');
-    expect(ExamYearCatalog.yearLabel(q), isNull);
   }, skip: kIsWeb); // The browser widget runner does not serve bundled assets.
 
   testWidgets('source details distinguish dataset and added explanations',

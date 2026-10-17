@@ -79,18 +79,9 @@ class CmbImportTests(unittest.TestCase):
         self.assertFalse(selected)
         self.assertEqual(len(skipped), 1)
 
-    def test_runtime_subset_matches_all_subject_exports(self):
+    def test_runtime_bank_is_empty_after_content_withdrawal(self):
         bank = json.loads((ROOT / 'mobile/assets/all_questions.json').read_text())
-        qs = [q for q in bank['questions'] if q['id'].startswith('cmb-train-')]
-        self.assertEqual(len(qs), 130)
-        exports = []
-        for path in (ROOT / 'question-bank/open-practice').glob('*.json'):
-            exports.extend(json.loads(path.read_text())['questions'])
-        self.assertEqual({q['id']: q for q in qs}, {q['id']: q for q in exports})
-        self.assertEqual(len(exports), len(qs))
-        self.assertTrue(all(len(q['options']) == 5 and q['year'] is None
-                            and q['reviewStatus'] == 'draft' for q in qs))
-        self.assertTrue(all(q['answer'] in q['options'] for q in qs))
+        self.assertEqual(bank['questions'], [])
 
 
 if __name__ == '__main__':

@@ -52,6 +52,15 @@ class _LibraryPageState extends State<LibraryPage> {
             heading('${store.mode}题库', sub: catalog.countLabel),
             _searchEntry(),
             const SizedBox(height: 12),
+            if (catalog.all.isEmpty)
+              box(const Row(children: [
+                Icon(Icons.inventory_2_outlined),
+                SizedBox(width: 12),
+                Expanded(
+                    child:
+                        Text('当前未收录内置题目。你仍可在“我的”导入自己的 JSON、Word 或 TXT 题库后练习。')),
+              ])),
+            if (catalog.all.isEmpty) const SizedBox(height: 12),
             if (store.mode == '执医') ...[
               _yearsEntry(),
               heading('按学科练习'),
@@ -90,7 +99,7 @@ class _LibraryPageState extends State<LibraryPage> {
                           child: const Text('查看已收录'))),
             const SizedBox(height: 16),
             OutlinedButton.icon(
-                onPressed: _papers,
+                onPressed: catalog.learnable.isEmpty ? null : _papers,
                 icon: const Icon(Icons.timer_outlined),
                 label: const Text('套卷练习'))
           ]);

@@ -202,23 +202,45 @@ class StudyStore extends ChangeNotifier {
   /// the bundled asset is always restored from the app package on startup.
   Future<void> _restoreQuestionCache() async {
     final legacy = prefs.getString('bank');
-    final savedImported =
-        _readQuestionCache(prefs.getString(_importedQuestionBankKey));
-    final savedOverrides =
-        _readQuestionCache(prefs.getString(_questionOverridesKey));
+    // The current build intentionally ships no public questions. Old builds
+    // kept a full bundled bank in browser storage; it must not be restored as
+    // an override after the public bank has been withdrawn. The withdrawal
+    // also applies to previously imported local question content.
+    final noBundledBank = _bundledQuestions.isEmpty;
+    final savedImported = noBundledBank
+        ? const <Question>[]
+        : _readQuestionCache(prefs.getString(_importedQuestionBankKey));
+    final savedOverrides = noBundledBank
+        ? const <Question>[]
+        : _readQuestionCache(prefs.getString(_questionOverridesKey));
     final legacyQuestions = _readQuestionCache(legacy);
-    final legacyImported = legacyQuestions
-        .where((question) => importedQuestionIds.contains(question.id))
-        .toList();
-    final legacyOverrides = legacyQuestions
-        .where((question) =>
-            !importedQuestionIds.contains(question.id) &&
-            !_isBundledQuestion(question))
-        .toList();
+    final legacyImported = noBundledBank
+        ? const <Question>[]
+        : legacyQuestions
+            .where((question) => importedQuestionIds.contains(question.id))
+            .toList();
+    final legacyOverrides = noBundledBank
+        ? const <Question>[]
+        : legacyQuestions
+            .where((question) =>
+                !importedQuestionIds.contains(question.id) &&
+                !_isBundledQuestion(question))
+            .toList();
 
     // Clear the legacy full-bank cache first. It is reproducible from the
     // bundled asset and freeing that space makes migration possible in Safari.
     if (legacy != null) await prefs.remove('bank');
+    if (noBundledBank) {
+      // Content withdrawal is deliberately comprehensive: previously imported
+      // local banks are question content too, so remove their payload and
+      // labels along with public cache entries. Account/profile data remains.
+      await prefs.remove(_questionOverridesKey);
+      await prefs.remove(_importedQuestionBankKey);
+      await prefs.remove(_importedQuestionIdsKey);
+      await prefs.remove(_lastImportedBankNameKey);
+      importedQuestionIds = <String>{};
+      lastImportedBankName = null;
+    }
 
     var imported = savedImported.isNotEmpty ? savedImported : legacyImported;
     var overrides =
@@ -704,9 +726,17 @@ class StudyStore extends ChangeNotifier {
     final updated = (result['questions'] as List)
         .map((q) => Question(Map<String, dynamic>.from(q)))
         .toList();
-    // Never discard questions referenced by unsynced or historical events.
+    // A withdrawn bundled bank must not be resurrected from a previous local
+    // download. Keep only personal imports in that state.
+    final existing = _bundledQuestions.isEmpty
+        ? questions
+            .where((question) => importedQuestionIds.contains(question.id))
+            .toList()
+        : questions;
+    // Never discard questions referenced by unsynced or historical events
+    // while a bundled bank is active.
     final byId = {
-      for (final q in questions) q.id: q,
+      for (final q in existing) q.id: q,
       for (final q in updated) q.id: q
     };
     questions = byId.values.toList();
