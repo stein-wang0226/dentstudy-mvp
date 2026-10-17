@@ -435,9 +435,12 @@ class StudyStore extends ChangeNotifier {
   /// 小齿的展示偏好、位置和问候频率仅留在当前设备与当前账号下，
   /// 不参与学习事件同步，也不会影响题库或历史作答。
   Future<void> setXiaochiEnabled(bool value) async {
+    if (xiaochiEnabled == value) return;
     xiaochiEnabled = value;
-    await prefs.setBool(_xiaochiEnabledKey, value);
+    // Repaint first. A preference write can take a visible moment in Safari,
+    // and the companion should respond to the switch instantly.
     notifyListeners();
+    await prefs.setBool(_xiaochiEnabledKey, value);
   }
 
   Future<void> setXiaochiPosition(double x, double y) async {

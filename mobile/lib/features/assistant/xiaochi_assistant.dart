@@ -32,6 +32,7 @@ class _XiaochiAssistantState extends State<XiaochiAssistant>
   late final AnimationController _motion;
   Timer? _moodTimer;
   Timer? _careTimer;
+  Timer? _holdTimer;
   Offset? _position;
   bool _open = false;
   bool _holding = false;
@@ -62,6 +63,7 @@ class _XiaochiAssistantState extends State<XiaochiAssistant>
   void dispose() {
     _moodTimer?.cancel();
     _careTimer?.cancel();
+    _holdTimer?.cancel();
     _motion.dispose();
     _composer.dispose();
     _scroll.dispose();
@@ -95,6 +97,7 @@ class _XiaochiAssistantState extends State<XiaochiAssistant>
   }
 
   void _openChat() {
+    _holdTimer?.cancel();
     if (_holding) return;
     _careTimer?.cancel();
     setState(() {
@@ -180,7 +183,17 @@ class _XiaochiAssistantState extends State<XiaochiAssistant>
         proposed.dy.clamp(72.0, maxY).toDouble());
   }
 
-  void _startHolding(LongPressStartDetails _) {
+  void _armDrag() {
+    _holdTimer?.cancel();
+    // Flutter's default long-press delay is intentionally conservative.
+    // 小齿 is a floating control, so a short hold makes its drag affordance
+    // feel immediate without turning an ordinary tap into a drag.
+    _holdTimer = Timer(const Duration(milliseconds: 120), _startHolding);
+  }
+
+  void _startHolding() {
+    if (_holding) return;
+    _holdTimer?.cancel();
     _careTimer?.cancel();
     setState(() {
       _holding = true;
@@ -188,14 +201,16 @@ class _XiaochiAssistantState extends State<XiaochiAssistant>
     });
   }
 
-  void _moveHolding(
-      LongPressMoveUpdateDetails details, Size size, EdgeInsets padding) {
+  void _moveHolding(DragUpdateDetails details, Size size, EdgeInsets padding) {
+    _startHolding();
     final proposed = Offset(details.globalPosition.dx - _avatarWidth / 2,
         details.globalPosition.dy - _avatarHeight / 2);
     setState(() => _position = _clampPosition(proposed, size, padding));
   }
 
   Future<void> _endHolding(Size size, EdgeInsets padding) async {
+    _holdTimer?.cancel();
+    if (!_holding) return;
     final position = _position;
     if (position != null) {
       final maxX = math.max(8.0, size.width - _avatarWidth - 8);
@@ -207,11 +222,22 @@ class _XiaochiAssistantState extends State<XiaochiAssistant>
               padding.bottom);
       await store.setXiaochiPosition(position.dx / maxX, position.dy / maxY);
     }
+    // Keep the drag state through this event turn so the tap recognizer cannot
+    // also open the chat when someone simply holds the avatar in place.
+    await Future<void>.delayed(Duration.zero);
     if (mounted) setState(() => _holding = false);
   }
 
+  void _cancelHolding() {
+    _holdTimer?.cancel();
+    if (mounted && _holding) setState(() => _holding = false);
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+      listenable: store, builder: (context, _) => _buildOverlay(context));
+
+  Widget _buildOverlay(BuildContext context) {
     if (!store.xiaochiEnabled) return const SizedBox.shrink();
     final media = MediaQuery.of(context);
     final size = media.size;
@@ -250,13 +276,19 @@ class _XiaochiAssistantState extends State<XiaochiAssistant>
           child: GestureDetector(
               behavior: HitTestBehavior.translucent,
               onTap: _openChat,
-              onLongPressStart: _startHolding,
-              onLongPressMoveUpdate: (details) =>
-                  _moveHolding(details, size, padding),
-              onLongPressEnd: (_) => _endHolding(size, padding),
-              onLongPressCancel: () {
-                if (mounted) setState(() => _holding = false);
+              onTapDown: (_) => _armDrag(),
+              onTapUp: (_) {
+                if (_holding) {
+                  unawaited(_endHolding(size, padding));
+                } else {
+                  _holdTimer?.cancel();
+                }
               },
+              onTapCancel: _cancelHolding,
+              onPanStart: (_) => _startHolding(),
+              onPanUpdate: (details) => _moveHolding(details, size, padding),
+              onPanEnd: (_) => unawaited(_endHolding(size, padding)),
+              onPanCancel: _cancelHolding,
               child: SizedBox(
                   width: _avatarWidth,
                   height: _avatarHeight,
@@ -341,10 +373,7 @@ class _AvatarArt extends StatelessWidget {
                     ..translateByDouble(0.0, lift, 0.0, 1.0)
                     ..rotateZ(turn)
                     ..scaleByDouble(scaleX, scaleY, 1.0, 1.0),
-                  child: Image.asset('assets/xiaochi/avatar.png',
-                      fit: BoxFit.contain,
-                      filterQuality: FilterQuality.high,
-                      semanticLabel: '小齿，口腔备考搭子')),
+                  child: const _ThemeTintedAvatar()),
               if (mood == _AvatarMood.speaking)
                 Positioned(
                     left: 39,
@@ -364,6 +393,91 @@ class _AvatarArt extends StatelessWidget {
               if (mood == _AvatarMood.thanks) _Sparkles(progress: motion.value),
             ]));
       });
+}
+
+/// The art itself stays untouched. Two clipped colour layers sit over the
+/// transparent PNG: only hair and clothing are recoloured, while the face
+/// remains the original illustration regardless of the selected theme.
+class _ThemeTintedAvatar extends StatelessWidget {
+  const _ThemeTintedAvatar();
+
+  static Widget _source({String? semanticLabel}) =>
+      Image.asset('assets/xiaochi/avatar.png',
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+          semanticLabel: semanticLabel,
+          excludeFromSemantics: semanticLabel == null);
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = teal.withAlpha(188);
+    return Stack(fit: StackFit.expand, children: [
+      _source(semanticLabel: '小齿，口腔备考搭子'),
+      ClipPath(
+          clipper: const _HairTintClipper(),
+          child: ColorFiltered(
+              colorFilter: ColorFilter.mode(tint, BlendMode.color),
+              child: _source())),
+      ClipPath(
+          clipper: const _ClothingTintClipper(),
+          child: ColorFiltered(
+              colorFilter: ColorFilter.mode(tint, BlendMode.color),
+              child: _source())),
+    ]);
+  }
+}
+
+class _HairTintClipper extends CustomClipper<Path> {
+  const _HairTintClipper();
+
+  @override
+  Path getClip(Size size) {
+    final w = size.width;
+    final h = size.height;
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(w, 0)
+      ..lineTo(w, h * .27)
+      ..cubicTo(w * .86, h * .31, w * .78, h * .25, w * .69, h * .22)
+      ..cubicTo(w * .61, h * .17, w * .54, h * .19, w * .49, h * .25)
+      ..cubicTo(w * .43, h * .19, w * .33, h * .18, w * .24, h * .23)
+      ..cubicTo(w * .14, h * .30, w * .08, h * .29, 0, h * .26)
+      ..close()
+      // The long side locks are outside the central face region.
+      ..addRRect(RRect.fromRectAndRadius(
+          Rect.fromLTWH(0, h * .23, w * .22, h * .38),
+          Radius.circular(w * .13)))
+      ..addRRect(RRect.fromRectAndRadius(
+          Rect.fromLTWH(w * .78, h * .21, w * .22, h * .40),
+          Radius.circular(w * .13)));
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant _HairTintClipper oldClipper) => false;
+}
+
+class _ClothingTintClipper extends CustomClipper<Path> {
+  const _ClothingTintClipper();
+
+  @override
+  Path getClip(Size size) {
+    final w = size.width;
+    final h = size.height;
+    return Path()
+      ..moveTo(0, h * .57)
+      ..lineTo(w * .19, h * .53)
+      ..lineTo(w * .35, h * .63)
+      ..quadraticBezierTo(w * .5, h * .68, w * .65, h * .63)
+      ..lineTo(w * .81, h * .53)
+      ..lineTo(w, h * .57)
+      ..lineTo(w, h)
+      ..lineTo(0, h)
+      ..close();
+  }
+
+  @override
+  bool shouldReclip(covariant _ClothingTintClipper oldClipper) => false;
 }
 
 class _OrbitDots extends StatelessWidget {

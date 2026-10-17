@@ -39,6 +39,22 @@ void main() {
     expect(restored.events, isEmpty);
   });
 
+  test('小齿开关先通知界面，再写入本机偏好', () async {
+    final store = StudyStore();
+    await store.init();
+    var notifications = 0;
+    store.addListener(() => notifications++);
+
+    final saving = store.setXiaochiEnabled(false);
+
+    // The profile switch and floating companion must update in the same frame,
+    // rather than waiting for the browser preference write to settle.
+    expect(store.xiaochiEnabled, isFalse);
+    expect(notifications, 1);
+    await saving;
+    expect(store.events, isEmpty);
+  });
+
   test('小齿只发送当前消息与有限上下文', () async {
     final store = StudyStore();
     await store.init();
