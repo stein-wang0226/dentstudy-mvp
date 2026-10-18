@@ -274,6 +274,14 @@ class ApiTests(unittest.TestCase):
                          token)[0],
             400)
 
+    def test_xiaochi_has_read_only_navigation_guide_without_opening_access(self):
+        guide = server.xiaochi_system_instruction()
+        self.assertIn('今日、题库、题本、学情、我的', guide)
+        self.assertIn('上传 JSON 题库', guide)
+        self.assertIn('不能代替点击', guide)
+        # The author-only endpoint assertion above remains intentional:
+        # navigation knowledge must never expose AI access to learners.
+
     def test_xiaochi_allows_oral_study_after_casual_quota(self):
         token = self.author()
         with mock.patch.object(server, 'AI_API_KEY', 'test-key'), \

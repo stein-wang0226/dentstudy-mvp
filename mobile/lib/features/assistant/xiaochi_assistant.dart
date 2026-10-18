@@ -31,7 +31,8 @@ class _XiaochiAssistantState extends State<XiaochiAssistant>
   final _composer = TextEditingController();
   final _scroll = ScrollController();
   final List<_ChatLine> _lines = [
-    const _ChatLine('assistant', '嗨，我是小齿～今天想从哪一章开始？')
+    const _ChatLine('assistant',
+        '嗨，我是小齿～除了口腔备考，也可以问我“今日计划怎么开始”“题库怎么按章节练”或“题本在哪里”。')
   ];
   late final AnimationController _motion;
   Timer? _moodTimer;
