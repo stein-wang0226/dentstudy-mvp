@@ -90,6 +90,8 @@ class StudyStore extends ChangeNotifier {
   String get _xiaochiPositionYKey => 'xiaochiPositionY:$userId';
   String get _xiaochiGreetingDateKey => 'xiaochiGreetingDate:$userId';
   static const _questionOverridesKey = 'questionOverrides';
+  static const _publicBankRevisionKey = 'publicBankRevision';
+  static const _publicBankRevision = '20261018-omfs-v1';
   // Review-first is account-wide, including questions from other exam tracks.
   List<Question> get due => learning.due(questions, DateTime.now());
   String get today => dayOf(DateTime.now());
@@ -176,7 +178,24 @@ class StudyStore extends ChangeNotifier {
       for (final question in questions) question.id: question
     };
     _loadAccount();
+    await _migrateQuestionContentForBundledRevision();
     await _restoreQuestionCache();
+  }
+
+  /// A learner may skip the short-lived empty-bank release. In that case an
+  /// older Web build can still have the withdrawn public bank in local storage.
+  /// Clear only question content once before loading this new bundled release;
+  /// profile, settings, authentication and other account data are untouched.
+  Future<void> _migrateQuestionContentForBundledRevision() async {
+    if (prefs.getString(_publicBankRevisionKey) == _publicBankRevision) return;
+    await prefs.remove('bank');
+    await prefs.remove(_questionOverridesKey);
+    await prefs.remove(_importedQuestionBankKey);
+    await prefs.remove(_importedQuestionIdsKey);
+    await prefs.remove(_lastImportedBankNameKey);
+    importedQuestionIds = <String>{};
+    lastImportedBankName = null;
+    await prefs.setString(_publicBankRevisionKey, _publicBankRevision);
   }
 
   List<Question> _readQuestionCache(String? content) {

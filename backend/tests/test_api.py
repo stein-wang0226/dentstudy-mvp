@@ -62,7 +62,9 @@ class ApiTests(unittest.TestCase):
 
     def test_full_offline_retry_and_account_isolation(self):
         token=self.register('alice')
-        event=dict(id='unique-event-1234567890',at='2026-01-01T04:00:00Z',questionId='demo-001',kind='review',value={'answer':'A','grade':'mastered'})
+        question=server.questions()[0]
+        wrong_answer=next(option for option in question['options'] if option != question['answer'])
+        event=dict(id='unique-event-1234567890',at='2026-01-01T04:00:00Z',questionId=question['id'],kind='review',value={'answer':wrong_answer,'grade':'mastered'})
         for _ in range(2):
             status,data=self.request('/v1/sync',{'events':[event]},token)
             self.assertEqual(status,200)
@@ -76,14 +78,14 @@ class ApiTests(unittest.TestCase):
 
     def test_conflicting_id_is_rejected(self):
         token=self.register('conflict')
-        e=dict(id='unique-note-1234567890',at='2026-01-01T04:00:00Z',questionId='demo-001',kind='note',value='First')
+        e=dict(id='unique-note-1234567890',at='2026-01-01T04:00:00Z',questionId=server.questions()[0]['id'],kind='note',value='First')
         self.assertEqual(self.request('/v1/sync',{'events':[e]},token)[0],200)
         e['value']='Changed'
         self.assertEqual(self.request('/v1/sync',{'events':[e]},token)[0],400)
 
     def test_atomic_invalid_batch_and_future_time(self):
         token=self.register('atomic')
-        valid=dict(id='valid-note-1234567890',at='2026-01-01T04:00:00Z',questionId='demo-001',kind='note',value='Kept?')
+        valid=dict(id='valid-note-1234567890',at='2026-01-01T04:00:00Z',questionId=server.questions()[0]['id'],kind='note',value='Kept?')
         invalid={**valid,'id':'invalid-note-1234567890','at':'2999-01-01T00:00:00Z'}
         self.assertEqual(self.request('/v1/sync',{'events':[valid,invalid]},token)[0],400)
         self.assertEqual(self.request('/v1/state',token=token)[1]['events'],[])
@@ -101,13 +103,12 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(validate(bank),[])
         self.assertTrue(validate(bank,production=True))
 
-    def test_open_practice_fifth_option_sync_and_comments(self):
+    def test_public_bank_question_sync_and_comments(self):
         token = self.register('open-practice')
-        q = next(q for q in server.questions()
-                 if q['id'].startswith('cmb-train-') and q['answer'] == 'E')
+        q = next(q for q in server.questions() if q['type'] == 'A1')
         event = dict(id='cmb-review-test-1234567890', at='2026-01-01T04:00:00Z',
                      questionId=q['id'], kind='review',
-                     value={'answer': 'E', 'grade': 'mastered', 'mode': 'practice'})
+                     value={'answer': q['answer'], 'grade': 'mastered', 'mode': 'practice'})
         status, data = self.request('/v1/sync', {'events': [event]}, token)
         self.assertEqual(status, 200)
         self.assertEqual(data['attempts'][0]['grade'], 'mastered')
@@ -135,12 +136,13 @@ class ApiTests(unittest.TestCase):
 
     def test_speed_modes_sync(self):
         token=self.register('speed-modes')
+        question=server.questions()[0]
         events=[]
         for index,mode in enumerate(('speed','speed-review')):
             events.append(dict(
                 id=f'speed-event-{index:020d}',
                 at=f'2026-01-0{index + 1}T04:00:00Z',
-                questionId='demo-001',kind='review',
+                questionId=question['id'],kind='review',
                 value={'answer':'A','grade':'wrong','mode':mode}))
         status,data=self.request('/v1/sync',{'events':events},token)
         self.assertEqual(status,200)
@@ -291,6 +293,7 @@ class ApiTests(unittest.TestCase):
 
     def test_profile_comments_and_author_user_directory(self):
         learner=self.register('profile-learner')
+        question_id=server.questions()[0]['id']
         status,profile=self.request('/v1/profile',token=learner)
         self.assertEqual(status,200)
         self.assertEqual(profile['nickname'],'齿间同学')
@@ -298,16 +301,16 @@ class ApiTests(unittest.TestCase):
             'nickname':'小齿同学','avatar':'tooth','university':'齿间大学'},learner)
         self.assertEqual(status,200)
         self.assertEqual(profile['university'],'齿间大学')
-        self.assertEqual(self.request('/v1/questions/demo-001/comments')[1]['comments'],[])
-        status,result=self.request('/v1/questions/demo-001/comments',
+        self.assertEqual(self.request(f'/v1/questions/{question_id}/comments')[1]['comments'],[])
+        status,result=self.request(f'/v1/questions/{question_id}/comments',
                                    {'body':'这题的解析很清楚。'},learner)
         self.assertEqual(status,200)
         self.assertEqual(result['comment']['nickname'],'小齿同学')
         self.assertEqual(result['comment']['university'],'齿间大学')
         self.assertNotIn('email',result['comment'])
-        comments=self.request('/v1/questions/demo-001/comments')[1]['comments']
+        comments=self.request(f'/v1/questions/{question_id}/comments')[1]['comments']
         self.assertEqual(comments[0]['body'],'这题的解析很清楚。')
-        self.assertEqual(self.request('/v1/questions/demo-001/comments',
+        self.assertEqual(self.request(f'/v1/questions/{question_id}/comments',
                                       {'body':'未登录评论'})[0],401)
         author=self.author()
         status,directory=self.request('/v1/admin/users',token=author)

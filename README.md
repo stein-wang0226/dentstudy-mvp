@@ -6,9 +6,10 @@
 
 ## 当前题库与统计口径
 
-- 默认客户端与后端读取 `mobile/assets/all_questions.json`；当前内置题目为 **0 道**。原有运行题库、分库、草稿、审阅稿和样稿均已从当前工作树移除。
-- 题库首页会如实显示“题库建设中”。用户仍可在“我的”导入自己拥有使用权的 JSON、Word 或 TXT 资料，并仅在本地练习。
-- 本次内容下架会清除旧版浏览器缓存中的内置题目、离线覆盖题和用户曾导入的本地题库，避免更新后旧题重新出现；账号、学习记录和评论不受影响。
+- 默认客户端与后端读取 `mobile/assets/all_questions.json`；当前内置 **2,110 道考研方向的口腔颌面外科学题目，共 14 章**。
+- 其中 2,094 道为基于用户提供讲义的资料整理单选题，16 道为来源待核验的回忆题/简答题。所有题目均显示为“待审核”，不应宣传为已审核真题库。
+- 题库页按“口腔颌面外科学 → 章节”展开；本科期末、执医方向当前会如实显示“题库建设中”。用户仍可在“我的”导入自己拥有使用权的 JSON、Word 或 TXT 资料，并仅在本地练习。
+- 本次新题库首次启动时会清除旧版浏览器中的已下架题库缓存、离线覆盖题和本地导入题库，避免旧题重新出现；账号、头像、主题、学习记录和评论不受影响。之后用户新导入的题库不受该一次性迁移影响。
 - Git 历史中的旧提交不在本次修改范围内；若需处理已公开的历史提交或线上部署版本，请另行执行相应的仓库与服务器操作。
 
 ## 学习闭环与本机记录
@@ -104,7 +105,7 @@ Git 远程仓库为 `stein-wang0226/dentstudy-mvp`。`.github/workflows/check.ym
 ## 导入题库
 
 ```bash
-python3 backend/bank.py validate mobile/assets/questions.json
+python3 backend/bank.py validate mobile/assets/all_questions.json
 # 正式库必须通过完整审核字段校验；演示库会被此模式拒绝
 python3 backend/bank.py validate /path/to/reviewed-bank.json --production
 python3 backend/bank.py import /path/to/reviewed-bank.json --production

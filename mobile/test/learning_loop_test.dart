@@ -106,7 +106,7 @@ void main() {
     expect(QuestionCatalog(qs, '执医').learnable, isEmpty);
     expect(QuestionCatalog.reviewLabel(q(0)), '待审核');
   });
-  test('legacy public cache is discarded when the bundled bank is empty',
+  test('withdrawn question caches are discarded before the new bundled bank',
       () async {
     SharedPreferences.setMockInitialValues({
       'bank': jsonEncode({
@@ -124,14 +124,20 @@ void main() {
             (_) async => null);
     final store = StudyStore();
     await store.init();
-    expect(store.questions, isEmpty);
+    expect(store.questions, hasLength(2110));
     expect(store.prefs.getString('bank'), isNull);
+    expect(store.prefs.getString('questionOverrides'), isNull);
     expect(store.prefs.getString('importedQuestionBank:guest'), isNull);
     expect(store.prefs.getStringList('importedQuestionIds:guest'), isNull);
     expect(store.prefs.getString('lastImportedBankName:guest'), isNull);
+    expect(store.prefs.getString('publicBankRevision'), '20261018-omfs-v1');
     final bundled =
         jsonDecode(await rootBundle.loadString('assets/all_questions.json'));
-    expect(bundled['questions'], isEmpty);
+    expect(bundled['questions'], hasLength(2110));
+    expect(
+        (bundled['questions'] as List)
+            .every((question) => question['chapter'] is String),
+        isTrue);
   });
   test('daily plan is bounded, stable and review-first', () async {
     final store = await freshStore();

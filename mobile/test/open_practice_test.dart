@@ -51,16 +51,19 @@ void main() {
     app.store.questions = questions;
     app.store.events = [];
     app.store.pending = [];
-    app.store.mode = '执医';
+    app.store.mode = bundled ? '考研' : '执医';
   }
 
-  testWidgets('runtime bundle contains no embedded study questions',
+  testWidgets(
+      'runtime bundle exposes the chapter-organized OMFS postgraduate bank',
       (tester) async {
     await prepare(tester, bundled: true);
-    expect(questions, isEmpty);
-    final catalog = QuestionCatalog(questions, '执医');
-    expect(catalog.learnable, isEmpty);
-    expect(catalog.subjects, isEmpty);
+    expect(questions, hasLength(2110));
+    final catalog = QuestionCatalog(questions, '考研');
+    expect(catalog.learnable, hasLength(2110));
+    expect(catalog.subjects, ['口腔颌面外科学']);
+    expect(questions.map((q) => q.chapter).toSet(), hasLength(14));
+    expect(questions.where((q) => q.type == '简答题'), hasLength(16));
     expect(ExamYearCatalog(questions, '执医').years, isEmpty);
   }, skip: kIsWeb); // The browser widget runner does not serve bundled assets.
 

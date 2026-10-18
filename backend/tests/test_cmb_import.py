@@ -79,9 +79,14 @@ class CmbImportTests(unittest.TestCase):
         self.assertFalse(selected)
         self.assertEqual(len(skipped), 1)
 
-    def test_runtime_bank_is_empty_after_content_withdrawal(self):
+    def test_runtime_bank_is_the_current_chapter_organized_omfs_bank(self):
         bank = json.loads((ROOT / 'mobile/assets/all_questions.json').read_text())
-        self.assertEqual(bank['questions'], [])
+        self.assertEqual(len(bank['questions']), 2110)
+        self.assertEqual(
+            {question['subject'] for question in bank['questions']},
+            {'口腔颌面外科学'},
+        )
+        self.assertEqual(len({question['chapter'] for question in bank['questions']}), 14)
 
 
 if __name__ == '__main__':
