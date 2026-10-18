@@ -58,4 +58,6 @@ def plan(states, questions, day=None):
            and states[q['id']]['due'] <= day]
     due.sort(key=lambda qid: (states[qid]['grade'] != 'wrong', states[qid]['due'], qid))
     new = [q['id'] for q in questions if not states.get(q['id'], {}).get('lastDay')]
-    return dict(day=day, due=due, new=new if not due else [], newLocked=bool(due))
+    # Due questions remain prominently available, but they must not block a
+    # learner from opening a fresh-question session.
+    return dict(day=day, due=due, new=new, newLocked=False)

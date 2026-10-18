@@ -9,7 +9,7 @@ import 'today_plan.dart';
 
 class TodayPage extends StatelessWidget {
   final TodayPlan plan;
-  final VoidCallback onPlan, onCustom;
+  final VoidCallback onPlan, onReviewYesterday, onCustom;
   final void Function(Map<String, dynamic>) onResume;
   final Future<void> Function(String mode) onModeChanged;
   final StartPractice onStart;
@@ -17,6 +17,7 @@ class TodayPage extends StatelessWidget {
       {super.key,
       required this.plan,
       required this.onPlan,
+      required this.onReviewYesterday,
       required this.onCustom,
       required this.onResume,
       required this.onModeChanged,
@@ -35,11 +36,16 @@ class TodayPage extends StatelessWidget {
     final drafts = store.drafts.values.toList()
       ..sort((a, b) => (b['savedAt'] as String? ?? '')
           .compareTo(a['savedAt'] as String? ?? ''));
-    final hasPlanDraft = drafts.any((d) => d['kind'] == 'today');
-    final completedToday = store.answeredToday.length;
-    final todayTotal = completedToday +
-        plan.remainingReviews.length +
-        plan.remainingNew.length;
+    final planDraft = drafts.where((d) => d['kind'] == 'today').firstOrNull;
+    final yesterdayDraft =
+        drafts.where((d) => d['kind'] == 'yesterdayReview').firstOrNull;
+    final planDraftRemaining = planDraft == null ? 0 : _remaining(planDraft);
+    final yesterdayDraftRemaining =
+        yesterdayDraft == null ? 0 : _remaining(yesterdayDraft);
+    final yesterday = _yesterdayQuestions();
+    final yesterdayWrong = _yesterdayQuestions(wrongOnly: true);
+    final completedPlan = plan.completed;
+    final todayTotal = plan.total;
     return PageBody(children: [
       heading('今天，学一点，记牢一点。', sub: store.catalog.countLabel),
       Container(
@@ -81,16 +87,16 @@ class TodayPage extends StatelessWidget {
                       if (mode != null) onModeChanged(mode);
                     }))),
         const SizedBox(height: 22),
-        Text(
-            '待复习 ${plan.remainingReviews.length} 题 · 新题 ${plan.remainingNew.length} 题',
+        Text('待复习 ${store.due.length} 题 · 新题 ${plan.remainingNew.length} 题',
             style: const TextStyle(fontSize: 23, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
-        Text('今日已完成 $completedToday / $todayTotal 题 · 预计还需 ${plan.minutes} 分钟'),
+        Text(
+            '今日计划已完成 $completedPlan / $todayTotal 题 · 预计还需 ${plan.minutes} 分钟'),
         const SizedBox(height: 14),
         Semantics(
             container: true,
             child: LinearProgressIndicator(
-                value: todayTotal == 0 ? 0 : completedToday / todayTotal,
+                value: todayTotal == 0 ? 0 : completedPlan / todayTotal,
                 minHeight: 6,
                 borderRadius: BorderRadius.circular(4))),
         const SizedBox(height: 22),
@@ -99,27 +105,44 @@ class TodayPage extends StatelessWidget {
             child: PressFeedback(
                 child: FilledButton.icon(
                     key: const ValueKey('today-plan-action'),
-                    onPressed: plan.total == 0 && !hasPlanDraft ? null : onPlan,
+                    onPressed:
+                        plan.total == 0 && planDraft == null ? null : onPlan,
                     icon: const Icon(Icons.play_arrow_rounded),
-                    label: Text(hasPlanDraft || plan.completed > 0
-                        ? '继续今日计划'
-                        : '开始今日计划')))),
+                    label: Text(planDraft != null
+                        ? '继续今日计划 · 剩余 $planDraftRemaining 题'
+                        : plan.completed > 0
+                            ? '继续今日计划 · 剩余 ${plan.remainingNew.length} 题'
+                            : '开始今日计划 · ${plan.remainingNew.length} 题')))),
         const SizedBox(height: 10),
         Text(
-            plan.remainingReviews.isNotEmpty
-                ? '先复习，再进入新题。'
-                : plan.remainingNew.isNotEmpty
-                    ? '开始学习 ${plan.remainingNew.length} 道新题'
-                    : plan.total > 0
-                        ? '本轮计划已完成，可继续下一轮。'
-                        : store.remainingPractice == 0
-                            ? '今日练习额度已用完。'
-                            : store.catalog.learnable.isEmpty
-                                ? '当前方向题库建设中，可切换学习方向。'
-                                : '今日新题目标已完成。',
+            plan.remainingNew.isNotEmpty
+                ? '开始学习 ${plan.remainingNew.length} 道新题；复习可单独进行。'
+                : plan.total > 0
+                    ? '本轮计划已完成，可继续下一轮。'
+                    : store.remainingPractice == 0
+                        ? '今日练习额度已用完。'
+                        : store.catalog.learnable.isEmpty
+                            ? '当前方向题库建设中，可切换学习方向。'
+                            : '今日新题目标已完成。',
             style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
       ])),
       const SizedBox(height: 12),
+      PressFeedback(
+          child: OutlinedButton.icon(
+              onPressed: yesterday.isEmpty && yesterdayDraft == null
+                  ? null
+                  : onReviewYesterday,
+              icon: const Icon(Icons.replay_outlined),
+              label: Text(yesterdayDraft != null
+                  ? '继续昨日复习 · 剩余 $yesterdayDraftRemaining 题'
+                  : '复习昨日题目 · ${yesterday.length} 题'))),
+      if (yesterdayDraft == null && yesterday.isNotEmpty)
+        Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+                '可选择复习昨日全部 ${yesterday.length} 题或昨日错题 ${yesterdayWrong.length} 题。',
+                style: const TextStyle(fontSize: 12, color: Colors.blueGrey))),
+      const SizedBox(height: 8),
       PressFeedback(
           child: OutlinedButton.icon(
               onPressed: onCustom,
@@ -165,7 +188,7 @@ class TodayPage extends StatelessWidget {
       heading('待复习提醒'),
       Text(store.due.isEmpty
           ? '今天没有到期题，按计划学习新题即可。'
-          : '共 ${store.due.length} 道到期题，本轮安排 ${plan.remainingReviews.length} 道。完成后继续下一轮。'),
+          : '共 ${store.due.length} 道到期题。可优先复习，也可以先继续今日新题。'),
       heading('最近错题'),
       if (recentWrong.isEmpty)
         const Text('暂无错题。完成练习后会自动归集。')
@@ -191,7 +214,28 @@ class TodayPage extends StatelessWidget {
   int _remaining(Map<String, dynamic> d) {
     final ids = Set<String>.from(d['questionIds'] ?? []);
     ids.removeAll(List<String>.from(d['saved'] ?? []));
-    return ids.length;
+    return store.resolveQuestions(ids).length;
+  }
+
+  List<Question> _yesterdayQuestions({bool wrongOnly = false}) {
+    final yesterday = dayOf(DateTime.now().subtract(const Duration(days: 1)));
+    final ids = <String>{};
+    for (final event in store.events) {
+      final at = event['at'];
+      if (event['kind'] != 'review' || at is! String) continue;
+      try {
+        if (dayOf(DateTime.parse(at)) == yesterday &&
+            event['questionId'] is String) {
+          ids.add(event['questionId'] as String);
+        }
+      } catch (_) {}
+    }
+    final questions = store.resolveQuestions(ids);
+    return wrongOnly
+        ? questions
+            .where((q) => store.learning.states[q.id]?.wrong == true)
+            .toList()
+        : questions;
   }
 
   Widget _suggestion(List<Question> qs, LearningMetrics m) {

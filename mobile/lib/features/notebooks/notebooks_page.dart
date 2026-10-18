@@ -66,7 +66,7 @@ class _NotebooksPageState extends State<NotebooksPage> {
             (year == '全部' || q.data['year'].toString() == year) &&
             (matches == null || matches.contains(q.id)))
         .toList();
-    var newSlots = store.due.isEmpty ? store.remainingNew : 0;
+    var newSlots = store.remainingNew;
     final learnable = store.catalog.learnable.map((q) => q.id).toSet();
     final practice = qs
         .where((q) {

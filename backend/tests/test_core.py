@@ -48,10 +48,10 @@ class SchedulingTests(unittest.TestCase):
         _,attempts=reduce_events([event(1,'2026-01-01',qid='q2',answer='我的分析')],QUESTIONS)
         self.assertIsNone(attempts[0]['correct'])
 
-    def test_review_first_lock_and_release(self):
+    def test_due_reviews_do_not_lock_new_questions(self):
         states,_=reduce_events([event(1,'2026-01-01','wrong')],QUESTIONS)
         p=plan(states,QUESTIONS,date(2026,1,2))
-        self.assertTrue(p['newLocked']); self.assertEqual(p['new'],[])
+        self.assertFalse(p['newLocked']); self.assertEqual(p['new'],['q2'])
         states,_=reduce_events([event(1,'2026-01-01','wrong'),event(2,'2026-01-02')],QUESTIONS)
         p=plan(states,QUESTIONS,date(2026,1,2))
         self.assertFalse(p['newLocked']);self.assertEqual(p['new'],['q2'])

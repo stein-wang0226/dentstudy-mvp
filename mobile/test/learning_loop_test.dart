@@ -139,16 +139,17 @@ void main() {
             .every((question) => question['chapter'] is String),
         isTrue);
   });
-  test('daily plan is bounded, stable and review-first', () async {
+  test('daily plan defaults to fresh questions and does not lock on reviews',
+      () async {
     final store = await freshStore();
     store.dailyNewLimit = 1999;
     final plan = TodayPlan(store);
     await plan.ensure();
-    expect(plan.fresh.length, 10);
+    expect(plan.fresh.length, 60);
     await store.add('q0', 'review',
         {'answer': 'A', 'grade': 'mastered', 'mode': 'practice'});
     await plan.ensure();
-    expect(plan.total, 10);
+    expect(plan.total, 60);
     expect(plan.completed, 1);
     final past = DateTime.now()
         .subtract(const Duration(days: 10))
@@ -165,8 +166,15 @@ void main() {
         }
     ];
     await plan.ensure(next: true);
-    expect(plan.reviews.length, 20);
-    expect(plan.fresh, isEmpty);
+    expect(plan.reviews, isEmpty);
+    expect(plan.fresh.length, 35);
+  });
+  test('fresh daily plan defaults to twenty questions', () async {
+    final store = await freshStore();
+    final plan = TodayPlan(store);
+    await plan.ensure();
+    expect(store.dailyNewLimit, 20);
+    expect(plan.fresh.length, 20);
   });
   test(
       'learning insights prioritize today and repeated mistakes conservatively',

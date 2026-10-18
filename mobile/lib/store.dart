@@ -49,7 +49,7 @@ class StudyStore extends ChangeNotifier {
   bool glassEnabled = false;
   bool xiaochiEnabled = true;
   double? xiaochiPositionX, xiaochiPositionY;
-  int dailyNewLimit = 10;
+  int dailyNewLimit = 20;
   int? dailyReviewTarget;
   String settingsUpdatedAt = '1970-01-01T00:00:00.000000Z';
   bool syncing = false;
@@ -327,10 +327,18 @@ class StudyStore extends ChangeNotifier {
       continuation = null;
     }
     final settings = Map<String, dynamic>.from(data['settings'] ?? {});
-    dailyNewLimit = settings['dailyNewLimit'] as int? ?? 10;
+    dailyNewLimit = settings['dailyNewLimit'] as int? ?? 20;
     dailyReviewTarget = settings['dailyReviewTarget'] as int?;
     settingsUpdatedAt =
         settings['updatedAt'] as String? ?? '1970-01-01T00:00:00.000000Z';
+    // Builds before 0.2.49 stored their untouched default as 10 with the
+    // epoch timestamp. Preserve intentional choices, but migrate that old
+    // implicit default to the new 20-question daily plan.
+    if (dailyNewLimit == 10 &&
+        settingsUpdatedAt == '1970-01-01T00:00:00.000000Z') {
+      dailyNewLimit = 20;
+      settingsUpdatedAt = DateTime.now().toUtc().toIso8601String();
+    }
     importedQuestionIds =
         (prefs.getStringList(_importedQuestionIdsKey) ?? <String>[]).toSet();
     lastImportedBankName = prefs.getString(_lastImportedBankNameKey);
@@ -371,6 +379,10 @@ class StudyStore extends ChangeNotifier {
   Future<void> saveDraft(Map<String, dynamic> value) async {
     drafts[value['id'] as String] = value;
     await _save();
+  }
+
+  Future<void> discardDraft(String id) async {
+    if (drafts.remove(id) != null) await _save();
   }
 
   Future<void> finishSession(String id, Map<String, dynamic> summary) async {
@@ -572,8 +584,6 @@ class StudyStore extends ChangeNotifier {
               learning.states[a['questionId']]?.lastDay == null)
           .map((a) => a['questionId'])
           .toSet();
-      if (freshIds.isNotEmpty && due.isNotEmpty)
-        throw Exception('有到期复习题，请返回今日先完成复习；当前作答已保留。');
       if (freshIds.length > remainingNew) throw Exception('今日新题目标已完成，当前作答已保留。');
     }
     final reviewCount =

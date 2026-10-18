@@ -21,6 +21,7 @@ import '../features/practice/session_summary.dart';
 import '../features/practice/deep_session.dart';
 import '../features/practice/batch_session.dart';
 import '../features/practice/speed_session.dart';
+import '../models.dart';
 
 class DentStudy extends StatelessWidget {
   const DentStudy({super.key});
@@ -178,16 +179,12 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     if (!mounted) return;
     final drafts =
         store.drafts.values.where((d) => d['kind'] == 'today').toList();
-    if (drafts.isNotEmpty &&
-        (store.due.isEmpty || drafts.first['review'] == true)) {
+    if (drafts.isNotEmpty) {
       await _resume(drafts.first);
       return;
     }
-    if (plan.remainingReviews.isEmpty && plan.remainingNew.isEmpty ||
-        plan.remainingReviews.isEmpty && store.due.isNotEmpty)
-      await _ensurePlan(next: true);
-    final review = plan.remainingReviews.isNotEmpty;
-    final qs = review ? plan.remainingReviews : plan.remainingNew;
+    if (plan.remainingNew.isEmpty) await _ensurePlan(next: true);
+    final qs = plan.remainingNew;
     if (qs.isEmpty) {
       if (mounted) message(context, '本轮计划已完成，暂时没有新的学习任务。');
       return;
@@ -196,31 +193,151 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     choosingMode = true;
     String? mode;
     try {
-      mode = await chooseStudyMode(context, review: review, count: qs.length);
+      mode = await chooseStudyMode(context,
+          review: false,
+          count: qs.length,
+          helpText: '想调整每日新题数：打开「我的」→「每日学习目标」，修改“每日新题上限”即可。');
     } finally {
       choosingMode = false;
     }
     if (mode == null || !mounted) return;
     await _start(PracticeRequest(qs,
-        mode: mode,
-        review: review,
-        kind: 'today',
-        label: review ? '今日计划 · 到期复习' : '今日计划 · 新题'));
+        mode: mode, review: false, kind: 'today', label: '今日计划 · 新题'));
   }
 
   Future<void> _resume(Map<String, dynamic> draft) async {
-    final qs = store.resolveQuestions(draft['questionIds'] as List? ?? []);
-    if (qs.isEmpty || qs.length != (draft['questionIds'] as List).length) {
-      message(context, '部分题目暂不可用，已保留续练记录，请先更新题库。');
+    final originalIds = List<String>.from(draft['questionIds'] as List? ?? []);
+    final qs = store.resolveQuestions(originalIds);
+    if (qs.isEmpty) {
+      await store.discardDraft(draft['id'] as String);
+      if (mounted) message(context, '上次练习中的题目已不在当前题库，旧续练记录已自动清理。');
       return;
     }
+    var usableDraft = draft;
+    if (qs.length != originalIds.length) {
+      final available = qs.map((q) => q.id).toSet();
+      final oldIndex = (draft['index'] as num? ?? 0)
+          .toInt()
+          .clamp(0, originalIds.length)
+          .toInt();
+      Map<String, dynamic> retainedMap(String key) {
+        final raw = draft[key];
+        if (raw is! Map) return <String, dynamic>{};
+        final copy = Map<String, dynamic>.from(raw);
+        copy.removeWhere((id, _) => !available.contains(id));
+        return copy;
+      }
+
+      usableDraft = {
+        ...draft,
+        'questionIds': qs.map((q) => q.id).toList(),
+        'saved': List<String>.from(draft['saved'] as List? ?? [])
+            .where(available.contains)
+            .toList(),
+        'answers': retainedMap('answers'),
+        'grades': retainedMap('grades'),
+        'index': originalIds
+            .take(oldIndex)
+            .where(available.contains)
+            .length
+            .clamp(0, qs.length - 1)
+            .toInt(),
+      };
+      if (mounted) {
+        message(context,
+            '已跳过 ${originalIds.length - qs.length} 道不再提供的旧题，继续剩余 ${qs.length} 题。');
+      }
+    }
     await _start(PracticeRequest(qs,
-        mode: draft['practiceMode'] as String? ?? 'deep',
-        review: draft['review'] == true,
-        exam: draft['exam'] == true,
-        kind: draft['kind'] as String? ?? 'custom',
-        label: draft['label'] as String? ?? '上次练习',
-        draft: draft));
+        mode: usableDraft['practiceMode'] as String? ?? 'deep',
+        review: usableDraft['review'] == true,
+        exam: usableDraft['exam'] == true,
+        kind: usableDraft['kind'] as String? ?? 'custom',
+        label: usableDraft['label'] as String? ?? '上次练习',
+        draft: usableDraft));
+  }
+
+  List<Question> _yesterdayQuestions({bool wrongOnly = false}) {
+    final yesterday = dayOf(DateTime.now().subtract(const Duration(days: 1)));
+    final ids = <String>{};
+    for (final event in store.events) {
+      final at = event['at'];
+      if (event['kind'] != 'review' || at is! String) continue;
+      try {
+        if (dayOf(DateTime.parse(at)) == yesterday &&
+            event['questionId'] is String) {
+          ids.add(event['questionId'] as String);
+        }
+      } catch (_) {}
+    }
+    final questions = store.resolveQuestions(ids);
+    return wrongOnly
+        ? questions
+            .where((q) => store.learning.states[q.id]?.wrong == true)
+            .toList()
+        : questions;
+  }
+
+  Future<void> _reviewYesterday() async {
+    if (opening || choosingMode) return;
+    final drafts = store.drafts.values
+        .where((draft) => draft['kind'] == 'yesterdayReview')
+        .toList();
+    if (drafts.isNotEmpty) {
+      await _resume(drafts.first);
+      return;
+    }
+    final all = _yesterdayQuestions();
+    final wrong = _yesterdayQuestions(wrongOnly: true);
+    if (all.isEmpty) {
+      if (mounted) message(context, '昨天没有可复习的作答记录。');
+      return;
+    }
+    final choice = await showModalBottomSheet<String>(
+        context: context,
+        showDragHandle: true,
+        builder: (sheetContext) => SafeArea(
+            child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 22),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('复习昨日题目',
+                          style: TextStyle(
+                              fontSize: 21, fontWeight: FontWeight.bold))),
+                  const SizedBox(height: 8),
+                  ListTile(
+                      leading: const Icon(Icons.history_edu_outlined),
+                      title: Text('昨日全部题目 · ${all.length} 题'),
+                      subtitle: const Text('重新巩固昨天完成的题目'),
+                      onTap: () => Navigator.pop(sheetContext, 'all')),
+                  ListTile(
+                      enabled: wrong.isNotEmpty,
+                      leading: const Icon(Icons.error_outline),
+                      title: Text('昨日错题 · ${wrong.length} 题'),
+                      subtitle: Text(wrong.isEmpty ? '昨天没有错题' : '优先订正昨天做错的题目'),
+                      onTap: wrong.isEmpty
+                          ? null
+                          : () => Navigator.pop(sheetContext, 'wrong')),
+                ]))));
+    if (choice == null) return;
+    final questions = choice == 'wrong' ? wrong : all;
+    choosingMode = true;
+    String? mode;
+    try {
+      mode = await chooseStudyMode(context,
+          review: true,
+          count: questions.length,
+          helpText: '这是额外复习，不会占用今日新题名额。');
+    } finally {
+      choosingMode = false;
+    }
+    if (mode == null || !mounted) return;
+    await _start(PracticeRequest(questions,
+        mode: mode,
+        review: true,
+        kind: 'yesterdayReview',
+        label: choice == 'wrong' ? '昨日错题复习' : '昨日全部题目复习'));
   }
 
   Future<void> _custom() async {
@@ -270,12 +387,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
             .where((q) =>
                 allowed.contains(q.id) || state.states[q.id]?.lastDay != null)
             .toList();
-      }
-      if (store.due.isNotEmpty &&
-          qs.any((q) =>
-              !saved.contains(q.id) && state.states[q.id]?.lastDay == null)) {
-        message(context, '先完成今日计划中的到期复习，再继续新题。');
-        return;
       }
       final remaining = store.remainingPractice;
       if (remaining == 0 && qs.any((q) => !saved.contains(q.id))) {
@@ -411,6 +522,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
                         0 => TodayPage(
                             plan: plan,
                             onPlan: _today,
+                            onReviewYesterday: _reviewYesterday,
                             onCustom: _custom,
                             onResume: _resume,
                             onModeChanged: (mode) async {

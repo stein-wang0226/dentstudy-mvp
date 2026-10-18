@@ -3,6 +3,7 @@ import '../../store.dart';
 import '../../models.dart';
 
 class TodayPlan {
+  static const _strategy = 'independent-new-v1';
   final StudyStore store;
   TodayPlan(this.store);
   Future<void> ensure({bool next = false}) async {
@@ -11,27 +12,24 @@ class TodayPlan {
         current?['day'] == store.today &&
         current?['mode'] == store.mode &&
         current?['bankSize'] == store.questions.length &&
-        current?['settingsAt'] == store.settingsUpdatedAt) return;
+        current?['settingsAt'] == store.settingsUpdatedAt &&
+        current?['strategy'] == _strategy) return;
     final state = store.learning;
-    final quota = store.remainingPractice;
-    final due = store.due;
-    final reviewLimit =
-        store.dailyReviewTarget == null || store.dailyReviewTarget == 0
-            ? 20
-            : store.dailyReviewTarget!;
-    final reviews = due.take(min(quota, min(reviewLimit, 20))).toList();
-    final newCount =
-        min(10, min(store.remainingNew, max(0, quota - reviews.length)));
+    // New study and review are deliberately independent: a due review is a
+    // strong reminder, never a lock that prevents the learner from opening
+    // today's fresh-question plan.
+    final newCount = min(store.remainingNew, store.remainingPractice);
     final fresh = store.catalog.learnable
         .where((q) => state.states[q.id]?.lastDay == null)
-        .take(due.length > reviews.length ? 0 : newCount)
+        .take(newCount)
         .toList();
     await store.savePlan({
       'day': store.today,
       'mode': store.mode,
       'bankSize': store.questions.length,
       'settingsAt': store.settingsUpdatedAt,
-      'reviewIds': reviews.map((q) => q.id).toList(),
+      'strategy': _strategy,
+      'reviewIds': const <String>[],
       'newIds': fresh.map((q) => q.id).toList()
     });
   }

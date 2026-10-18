@@ -103,7 +103,7 @@ void main() {
       await prepare();
       await tester.pumpWidget(const MaterialApp(home: Home()));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('开始今日计划'));
+      await tester.tap(find.byKey(const ValueKey('today-plan-action')));
       await tester.pumpAndSettle();
       expect(find.text('选择练习模式'), findsOneWidget);
       expect(find.textContaining('逐题查看解析'), findsOneWidget);
@@ -123,7 +123,7 @@ void main() {
       Navigator.of(tester.element(find.byType(type))).pop();
       await tester.pumpAndSettle();
       final id = app.store.drafts.keys.single;
-      await tester.tap(find.text('继续今日计划'));
+      await tester.tap(find.byKey(const ValueKey('today-plan-action')));
       await tester.pumpAndSettle();
       expect(find.text('选择练习模式'), findsNothing);
       expect(find.byType(type), findsOneWidget);

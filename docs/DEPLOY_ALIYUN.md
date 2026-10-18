@@ -5,9 +5,9 @@
 实际服务器使用宿主机 Nginx + `dentstudy.service`，不是下面的 Docker 方案。
 正式入口为 `https://dentstudy.uno`，HTTP 自动跳转 HTTPS。`www` DNS 仍暂停。
 
-- 客户端版本：`0.2.48`。内置题库为 4,210 道考研方向题目：口腔颌面外科学 2,110 道（14 章）与口腔修复学 2,100 道（8 章）。其中“总论”显示为“总论（绪论与第一、二、三章）”。资料整理题、模拟练习题与回忆题均待医学审核，不等同于已审核真题库。
-- 后端：`/opt/dentstudy-current` 指向 `20261018-prostho-v0248`；保留既有事件同步契约与受登录保护的 AI 整理接口。
-- 前端：`/var/www/dentstudy-current` 指向 `20261018-prostho-v0248`；前一版本目录保留，可回退。
+- 客户端版本：`0.2.49`。内置题库为 4,210 道考研方向题目：口腔颌面外科学 2,110 道（14 章）与口腔修复学 2,100 道（8 章）。其中“总论”显示为“总论（绪论与第一、二、三章）”。资料整理题、模拟练习题与回忆题均待医学审核，不等同于已审核真题库。
+- 后端：`/opt/dentstudy-current` 指向 `20261018-today-flex-v0249`；保留既有事件同步契约与受登录保护的 AI 整理接口。
+- 前端：`/var/www/dentstudy-current` 指向 `20261018-today-flex-v0249`；前一版本目录保留，可回退。
 - 数据库：`/var/lib/dentstudy/dentstudy.sqlite3`，更新程序不能替换此文件。
 - 用户投稿：`/var/lib/dentstudy/question-bank-submissions/`，仅服务端进程可读写，不能映射到 Nginx 静态目录；备份时须与 SQLite 一起保留。
 - AI 密钥：`/etc/dentstudy/dentstudy-ai.env`（root-only，绝不提交到 Git）；`20-ai-import.conf` 只声明 `qwen3.7-flash`、服务器侧每日 3 次/账号与每月 ¥20 等值预算保护。模型调用关闭思考模式以减少延迟和 token 消耗；用户原文不写入 SQLite 或应用日志。
@@ -22,9 +22,11 @@
 `deploy/dentstudy-certbot.service` 和 `deploy/dentstudy-certbot.timer`。
 构建 Web 时使用 `--no-web-resources-cdn --dart-define=API_URL=/api`
 及 `--dart-define=QUESTION_BANK_ASSET=assets/all_questions.json`。
-发布时同时传入 `--dart-define=APP_VERSION=0.2.37` 和
+发布时同时传入 `--dart-define=APP_VERSION=0.2.49` 和
 `--dart-define=BUILD_TIME=实际北京时间`，在“我的”显示版本与更新时间。
 当前 GitHub workflow 只做检查，不会自动部署；代码推送后仍需单独构建和上传。
+
+0.2.49 验收：今日计划默认 20 道新题，点击可先选择深度、批量或速刷；模式弹窗底部明确说明可在“我的 → 每日学习目标”修改数量。到期复习不再锁住新题，今日页新增“复习昨日题目”，可选昨日全部题目或昨日错题；按钮显示待练数量。旧题库清空/替换后留下的续练记录会自动跳过当前题库已不存在的题目；若整份续练均失效则仅清理该本机续练记录，不触碰作答历史。测试：静态检查、55 项客户端测试和 40 项后端测试通过；事件同步字段、题目内容和历史作答不变。
 
 微信网站所有权验证文件保存在 `mobile/web/b1f6d159694b4f3909e0affdfcfefd6e.txt`，
 Flutter Web 构建时随根目录静态资源发布。HTTP 和 HTTPS 的同名路径均需直接返回 200 和原始 TXT 内容；

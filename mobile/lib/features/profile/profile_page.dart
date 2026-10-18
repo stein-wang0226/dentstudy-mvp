@@ -530,7 +530,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             decoration:
                                 InputDecoration(labelText: '每日复习题目标（0–200）')),
                       SizedBox(height: 8),
-                      Text('到期复习仍需全部完成，才能解锁新题。',
+                      Text('复习与学习新题可自主安排；新题上限只限制当天新增题数。',
                           style:
                               TextStyle(fontSize: 12, color: Colors.blueGrey)),
                     ]),

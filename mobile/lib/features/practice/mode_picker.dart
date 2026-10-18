@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../app/motion.dart';
 
 Future<String?> chooseStudyMode(BuildContext context,
-    {required bool review, required int count}) {
+    {required bool review, required int count, String? helpText}) {
   var resolved = false;
   void finish(BuildContext dialogContext, [String? value]) {
     if (resolved || ModalRoute.of(dialogContext)?.isCurrent != true) return;
@@ -100,7 +100,7 @@ Future<String?> chooseStudyMode(BuildContext context,
                                                   onTap: () => finish(context, mode.$1)))),
                                       const SizedBox(height: 10),
                                     ],
-                                    const Text('已有未完成练习会按原模式继续，保留作答进度。',
+                                    Text(helpText ?? '已有未完成练习会按原模式继续，保留作答进度。',
                                         style: TextStyle(fontSize: 12)),
                                   ]))))))));
 }

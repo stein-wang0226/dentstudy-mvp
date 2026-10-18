@@ -28,7 +28,7 @@ class _CustomPracticeState extends State<CustomPractice> {
             (chapter == '全部' || q.chapter == chapter))
         .toList();
     final state = store.learning;
-    var newSlots = store.due.isEmpty ? store.remainingNew : 0;
+    var newSlots = store.remainingNew;
     final eligible =
         qs.where((q) => (mode != 'speed' || q.answer != null)).where((q) {
       if (state.states[q.id]?.lastDay != null) return true;
@@ -94,9 +94,8 @@ class _CustomPracticeState extends State<CustomPractice> {
                         onTap: () => setState(() => mode = entry.key)),
                   Text('本次可练 $actual 题 · 预计 ${(actual * 1.5).ceil()} 分钟',
                       style: const TextStyle(color: Colors.blueGrey)),
-                  if (store.due.isNotEmpty)
-                    const Text('有到期复习时，自定义练习仅安排已学题。',
-                        style: TextStyle(fontSize: 12)),
+                  const Text('复习与学习新题可自主安排；新题仍计入今日目标。',
+                      style: TextStyle(fontSize: 12)),
                   const SizedBox(height: 12),
                   SizedBox(
                       width: double.infinity,
@@ -109,9 +108,7 @@ class _CustomPracticeState extends State<CustomPractice> {
                                         mode != 'speed' || q.answer != null)
                                   ];
                                   if (random) candidates.shuffle(Random());
-                                  var slots = store.due.isEmpty
-                                      ? store.remainingNew
-                                      : 0;
+                                  var slots = store.remainingNew;
                                   final selected = candidates
                                       .where((q) {
                                         if (state.states[q.id]?.lastDay != null)
