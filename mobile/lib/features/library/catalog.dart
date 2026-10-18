@@ -38,6 +38,7 @@ class QuestionCatalog {
     if (q.data['sourceType'] == 'recalled_paper') return '考生回忆题';
     if (q.data['sourceType'] == 'open_dataset') return '开放数据练习题';
     if (q.data['sourceType'] == 'user_material') return '资料整理题';
+    if (q.data['sourceType'] == 'mock') return '模拟练习题';
     return '来源待核验';
   }
 

@@ -55,21 +55,32 @@ void main() {
   }
 
   testWidgets(
-      'runtime bundle exposes the chapter-organized OMFS postgraduate bank',
+      'runtime bundle exposes the chapter-organized postgraduate banks',
       (tester) async {
     await prepare(tester, bundled: true);
-    expect(questions, hasLength(2110));
+    expect(questions, hasLength(4210));
     final catalog = QuestionCatalog(questions, '考研');
-    expect(catalog.learnable, hasLength(2110));
-    expect(catalog.subjects, ['口腔颌面外科学']);
-    expect(questions.map((q) => q.chapter).toSet(), hasLength(14));
+    expect(catalog.learnable, hasLength(4210));
+    expect(catalog.subjects, ['口腔颌面外科学', '口腔修复学']);
+    expect(questions.map((q) => q.chapter).toSet(), hasLength(22));
     expect(
         questions
             .where((q) => q.chapter == '总论（绪论与第一、二、三章）')
             .length,
         260);
     expect(questions.any((q) => q.chapter == '总论（绪论与基础）'), isFalse);
-    expect(questions.where((q) => q.type == '简答题'), hasLength(16));
+    expect(questions.where((q) => q.type == '简答题'), hasLength(17));
+    expect(
+        questions
+            .where((q) =>
+                q.subject == '口腔修复学' && q.chapter == '第三章 牙体缺损的修复')
+            .length,
+        700);
+    expect(
+        questions
+            .where((q) => q.subject == '口腔修复学' && q.data['sourceType'] == 'mock')
+            .length,
+        525);
     expect(ExamYearCatalog(questions, '执医').years, isEmpty);
   }, skip: kIsWeb); // The browser widget runner does not serve bundled assets.
 

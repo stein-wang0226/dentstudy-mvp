@@ -79,14 +79,14 @@ class CmbImportTests(unittest.TestCase):
         self.assertFalse(selected)
         self.assertEqual(len(skipped), 1)
 
-    def test_runtime_bank_is_the_current_chapter_organized_omfs_bank(self):
+    def test_runtime_bank_has_the_two_chapter_organized_postgraduate_subjects(self):
         bank = json.loads((ROOT / 'mobile/assets/all_questions.json').read_text())
-        self.assertEqual(len(bank['questions']), 2110)
+        self.assertEqual(len(bank['questions']), 4210)
         self.assertEqual(
             {question['subject'] for question in bank['questions']},
-            {'口腔颌面外科学'},
+            {'口腔颌面外科学', '口腔修复学'},
         )
-        self.assertEqual(len({question['chapter'] for question in bank['questions']}), 14)
+        self.assertEqual(len({question['chapter'] for question in bank['questions']}), 22)
 
 
 if __name__ == '__main__':

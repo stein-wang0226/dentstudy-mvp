@@ -124,7 +124,7 @@ void main() {
             (_) async => null);
     final store = StudyStore();
     await store.init();
-    expect(store.questions, hasLength(2110));
+    expect(store.questions, hasLength(4210));
     expect(store.prefs.getString('bank'), isNull);
     expect(store.prefs.getString('questionOverrides'), isNull);
     expect(store.prefs.getString('importedQuestionBank:guest'), isNull);
@@ -133,7 +133,7 @@ void main() {
     expect(store.prefs.getString('publicBankRevision'), '20261018-omfs-v1');
     final bundled =
         jsonDecode(await rootBundle.loadString('assets/all_questions.json'));
-    expect(bundled['questions'], hasLength(2110));
+    expect(bundled['questions'], hasLength(4210));
     expect(
         (bundled['questions'] as List)
             .every((question) => question['chapter'] is String),
