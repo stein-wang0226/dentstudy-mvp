@@ -22,6 +22,9 @@ SOURCE_BOOK = "《口外终版》讲义"
 WARNING = "题目依据用户提供的讲义资料整理，当前未完成平台医学审核；请结合教材、课程与专业教师意见核对。"
 LICENSE = "用户提供学习资料；仅供学习使用，公开传播前须核实著作权授权与医学审核。"
 OPTION_PREFIX = re.compile(r"^\s*([A-D])\s*[.．、]\s*(.*)$")
+CHAPTER_RENAMES = {
+    "总论（绪论与基础）": "总论（绪论与第一、二、三章）",
+}
 
 
 def _text(value: Any, fallback: str = "") -> str:
@@ -106,6 +109,7 @@ def convert(payload: dict[str, Any]) -> list[dict[str, Any]]:
         if not isinstance(chapter_entry, dict):
             raise ValueError("章节必须是对象")
         chapter = _text(chapter_entry.get("name"))
+        chapter = CHAPTER_RENAMES.get(chapter, chapter)
         chapter_index = chapter_entry.get("index")
         if not chapter or not isinstance(chapter_index, int):
             raise ValueError("章节缺少 name 或 index")

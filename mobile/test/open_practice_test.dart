@@ -63,6 +63,12 @@ void main() {
     expect(catalog.learnable, hasLength(2110));
     expect(catalog.subjects, ['口腔颌面外科学']);
     expect(questions.map((q) => q.chapter).toSet(), hasLength(14));
+    expect(
+        questions
+            .where((q) => q.chapter == '总论（绪论与第一、二、三章）')
+            .length,
+        260);
+    expect(questions.any((q) => q.chapter == '总论（绪论与基础）'), isFalse);
     expect(questions.where((q) => q.type == '简答题'), hasLength(16));
     expect(ExamYearCatalog(questions, '执医').years, isEmpty);
   }, skip: kIsWeb); // The browser widget runner does not serve bundled assets.
