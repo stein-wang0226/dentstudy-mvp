@@ -451,7 +451,7 @@ class _ProfilePageState extends State<ProfilePage> {
               leading: Icon(Icons.flag_outlined),
               title: Text('每日学习目标'),
               subtitle: Text(
-                  '新题上限 ${store.dailyNewLimit} · 复习目标 ${store.dailyReviewTarget == null ? '无限制' : store.dailyReviewTarget}'),
+                  '新题上限可自主设置，当前 ${store.dailyNewLimit} · 复习目标 ${store.dailyReviewTarget == null ? '无限制' : store.dailyReviewTarget}'),
               onTap: goalsDialog),
           Divider(),
           SwitchListTile(

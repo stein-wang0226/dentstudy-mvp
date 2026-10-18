@@ -92,6 +92,10 @@ class StudyStore extends ChangeNotifier {
   static const _questionOverridesKey = 'questionOverrides';
   static const _publicBankRevisionKey = 'publicBankRevision';
   static const _publicBankRevision = '20261018-omfs-v1';
+  static const _learningRecordResetKey = 'learningRecordReset:20261018';
+  static const _learningRecordResetVersion = 'v1';
+  static const _authorImportedBankCleanupKey =
+      'authorImportedBankCleanup:20261018';
   // Review-first is account-wide, including questions from other exam tracks.
   List<Question> get due => learning.due(questions, DateTime.now());
   String get today => dayOf(DateTime.now());
@@ -178,8 +182,89 @@ class StudyStore extends ChangeNotifier {
       for (final question in questions) question.id: question
     };
     _loadAccount();
+    await _resetLearningRecordsForAllLocalAccounts();
     await _migrateQuestionContentForBundledRevision();
     await _restoreQuestionCache();
+    await _removeAuthorFixedDentureImport();
+  }
+
+  /// The owner requested a one-time reset of study records. Accounts,
+  /// profiles, themes, goals and private imports stay intact; only events and
+  /// their derived local plan/session data are reset.
+  Future<void> _resetLearningRecordsForAllLocalAccounts() async {
+    if (prefs.getString(_learningRecordResetKey) ==
+        _learningRecordResetVersion) {
+      return;
+    }
+    for (final key
+        in prefs.getKeys().where((key) => key.startsWith('account:'))) {
+      try {
+        final existing = Map<String, dynamic>.from(
+            jsonDecode(prefs.getString(key) ?? '{}') as Map);
+        await prefs.setString(
+            key,
+            jsonEncode({
+              'events': <dynamic>[],
+              'pending': <dynamic>[],
+              'drafts': <String, dynamic>{},
+              'sessions': <dynamic>[],
+              'settings': existing['settings'] ?? <String, dynamic>{},
+            }));
+      } catch (_) {
+        await prefs.setString(
+            key,
+            jsonEncode({
+              'events': <dynamic>[],
+              'pending': <dynamic>[],
+              'drafts': <String, dynamic>{},
+              'sessions': <dynamic>[],
+            }));
+      }
+    }
+    events = <Map<String, dynamic>>[];
+    pending = <String>[];
+    continuation = null;
+    drafts = <String, Map<String, dynamic>>{};
+    sessions = <Map<String, dynamic>>[];
+    dailyPlan = null;
+    await prefs.setString(_learningRecordResetKey, _learningRecordResetVersion);
+  }
+
+  /// Removes only the author's two short test questions shown as “固定义齿”.
+  /// It does not touch any bundled question or another learner's private bank.
+  Future<void> _removeAuthorFixedDentureImport() async {
+    if (email.toLowerCase() != 'dentstudy1126@aka.yeah.net' ||
+        prefs.getBool(_authorImportedBankCleanupKey) == true) {
+      return;
+    }
+    final removed = importedQuestions
+        .where((question) => question.chapter.trim() == '固定义齿')
+        .map((question) => question.id)
+        .toSet();
+    if (removed.isNotEmpty) {
+      questions = questions
+          .where((question) => !removed.contains(question.id))
+          .toList();
+      importedQuestionIds.removeAll(removed);
+      final remaining = questions
+          .where((question) => importedQuestionIds.contains(question.id))
+          .toList();
+      if (remaining.isEmpty) {
+        await prefs.remove(_importedQuestionBankKey);
+        await prefs.remove(_importedQuestionIdsKey);
+        await prefs.remove(_lastImportedBankNameKey);
+        lastImportedBankName = null;
+      } else {
+        await prefs.setString(
+            _importedQuestionBankKey,
+            jsonEncode({
+              'questions': remaining.map((question) => question.data).toList()
+            }));
+        await prefs.setStringList(
+            _importedQuestionIdsKey, importedQuestionIds.toList()..sort());
+      }
+    }
+    await prefs.setBool(_authorImportedBankCleanupKey, true);
   }
 
   /// A learner may skip the short-lived empty-bank release. In that case an

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
@@ -19,6 +20,9 @@ class Reminders {
   }
 
   Future<bool> enable() async {
+    // The native notification plugin has no Safari implementation. Initializing
+    // it on the web produced the late-initialization error after saving goals.
+    if (kIsWeb) return false;
     if (!ready) await init();
     final android = await plugin
         .resolvePlatformSpecificImplementation<
@@ -32,6 +36,7 @@ class Reminders {
   }
 
   Future<void> refresh(StudyStore store) async {
+    if (kIsWeb) return;
     if (!ready) await init();
     await plugin.cancelAll();
     if (!(store.prefs.getBool('reminders') ?? false)) return;

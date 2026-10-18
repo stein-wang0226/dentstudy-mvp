@@ -43,6 +43,10 @@ AI_BASE_URL = os.environ.get(
     'https://ws-k2360sf19dbwaa6x.cn-beijing.maas.aliyuncs.com/compatible-mode/v1'
 ).rstrip('/')
 AI_MODEL = os.environ.get('DENTSTUDY_AI_MODEL', 'qwen3.7-flash').strip()
+# Optional production-only cutoff for a one-time study-history reset. Tests
+# and self-hosted installs keep normal event behavior unless they opt in.
+LEARNING_RECORDS_RESET_AT = os.environ.get(
+    'DENTSTUDY_LEARNING_RECORDS_RESET_AT', '').strip()
 
 
 def positive_int_env(name, default):
@@ -1088,6 +1092,9 @@ class Handler(BaseHTTPRequestHandler):
                     bank = {q['id']: q for q in questions()}
                     for event in incoming:
                         validate_event(event, bank)
+                        if (LEARNING_RECORDS_RESET_AT and
+                                event['at'] < LEARNING_RECORDS_RESET_AT):
+                            continue
                         payload = json.dumps(event, ensure_ascii=False, sort_keys=True)
                         existing = db.execute('SELECT payload FROM events WHERE user_id=? AND id=?', (uid, event['id'])).fetchone()
                         if existing and existing['payload'] != payload:
